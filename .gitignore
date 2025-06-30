@@ -1,0 +1,17 @@
+# Node & pnpm
+node_modules
+.pnpm-store
+pnpm-lock.yaml
+
+# dotenv secrets
+.env
+
+# Docker volumes
+db_data/
+
+# VS Code settings
+.vscode/
+
+# OS miscellany
+.DS_Store
+Thumbs.db
