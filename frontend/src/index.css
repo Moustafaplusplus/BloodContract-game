@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'BouyaMessy';
+  src: url('/fonts/ff-bouya-messy.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
