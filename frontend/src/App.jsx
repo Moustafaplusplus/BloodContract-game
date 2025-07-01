@@ -20,25 +20,27 @@ export default function App() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const endpoint = isRegister ? 'register' : 'login';
+  e.preventDefault();
+  const endpoint = isRegister ? 'signup' : 'login';
 
-    const payload = isRegister
-      ? form
-      : { username: form.username, password: form.password };
 
-    const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+  const payload = isRegister
+    ? form
+    : { username: form.username, password: form.password };
 
-    const data = await res.json();
-    setMessage(data.message || data.error || 'تم!');
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-    }
-  };
+  const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  setMessage(data.message || data.error || 'تم!');
+  if (data.token) {
+    localStorage.setItem('token', data.token);
+    window.location.href = '/dashboard'; // ✅ Redirect after login/register
+  }
+};
 
   return (
     <div

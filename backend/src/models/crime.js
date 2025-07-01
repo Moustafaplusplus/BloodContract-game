@@ -28,3 +28,5 @@ export const Crime = sequelize.define('crime', {
     defaultValue: 60, // seconds
   },
 });
+
+export default Crime;
