@@ -13,3 +13,8 @@ export const sequelize = new Sequelize(
     logging: false,         // set to console.log to see raw SQL
   }
 );
+
+// 🔧 Auto-sync model changes to DB
+sequelize.sync({ alter: true })
+  .then(() => console.log('🗄️  Database synced ✅'))
+  .catch((err) => console.error('❌ Database sync error:', err));

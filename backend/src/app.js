@@ -1,3 +1,4 @@
+// src/app.js
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -5,16 +6,20 @@ import dotenv from 'dotenv';
 
 import { sequelize } from './config/db.js';
 
-// Register models to ensure Sequelize links them
+// Register models
 import './models/user.js';
 import './models/character.js';
 import './models/crime.js';
+import './models/weapon.js';
 
 // Routes
 import crimeRoutes from './routes/crimes.js';
 import authRoutes from './routes/auth.js';
+import characterRoutes from './routes/character.js';
+import weaponRoutes from './routes/weapons.js';
 
-dotenv.config({ path: '../.env' }); // optional fallback
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -26,21 +31,25 @@ app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
 
 // API routes
 app.use('/api/crimes', crimeRoutes);
-app.use('/api/auth', authRoutes); // ✅ New route for login/register
+app.use('/api/auth', authRoutes);
+app.use('/api/character', characterRoutes);
+app.use('/api/weapons', weaponRoutes);
 
-// ---------- Boot strap ----------
+// ---------- Bootstrapping ----------
 const PORT = process.env.API_PORT || 5000;
 
-(async () => {
+const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log('🗄️  Postgres connection: OK');
 
-    await sequelize.sync(); // Create tables if they don’t exist
-    app.listen(PORT, () =>
-      console.log(`✅ Server listening on http://localhost:${PORT}`),
-    );
+    await sequelize.sync({ alter: true });
+    console.log('📦 Database synced ✅');
+
+    app.listen(PORT, () => console.log(`✅ Server listening on http://localhost:${PORT}`));
   } catch (err) {
-    console.error('❌ Unable to connect to DB:', err);
+    console.error('❌ Database sync error:', err);
   }
-})();
+};
+
+startServer();

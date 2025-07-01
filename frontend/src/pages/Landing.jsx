@@ -11,7 +11,7 @@ export default function Landing() {
       }}
     >
       {/* Header Top */}
-      <div className="space-y-2 text-center sm:text-left rtl text-right">
+      <div className="space-y-2 text-center sm:text-right rtl">
         <h1
           className="text-[36px] sm:text-[64px] text-red-600 drop-shadow-[0_0_30px_rgba(255,0,0,0.7)]"
           style={{ fontFamily: 'BouyaMessy' }}
