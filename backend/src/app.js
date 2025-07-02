@@ -12,6 +12,7 @@ import './models/character.js';
 import './models/crime.js';
 import './models/weapon.js';
 import './models/house.js';
+import './models/fight.js';
 
 // Routes
 import crimeRoutes from './routes/crimes.js';
@@ -19,6 +20,8 @@ import authRoutes from './routes/auth.js';
 import characterRoutes from './routes/character.js';
 import weaponRoutes from './routes/weapons.js';
 import houseRoutes from './routes/houses.js';
+import fightRoutes from './routes/fight.js';
+import userRoutes from './routes/users.js'; // ✅ added
 
 // Load environment variables from .env file
 dotenv.config();
@@ -37,6 +40,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
 app.use('/api/weapons', weaponRoutes);
 app.use('/api/houses', houseRoutes);
+app.use('/api/fight', fightRoutes);
+app.use('/api/users', userRoutes); // ✅ registered
 
 // Start stamina regen job in background
 import './jobs/staminaRegen.js'; // ✅ starts auto loop
