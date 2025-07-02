@@ -27,7 +27,15 @@ export default function CrimesList() {
       body: JSON.stringify({ crimeId }),
     });
     const data = await res.json();
-    setMessage(data.success ? `✅ نجحت العملية: حصلت على ${data.reward}$` : '❌ فشلت المحاولة');
+    if (res.ok) {
+      setMessage(
+        data.success
+          ? `✅ نجحت العملية: حصلت على ${data.reward}$ + ${data.xpGained}XP (المستوى ${data.level})`
+          : `❌ فشلت المحاولة + ${data.xpGained}XP (المستوى ${data.level})`
+      );
+    } else {
+      setMessage(data.message || 'حدث خطأ أثناء تنفيذ الجريمة');
+    }
   };
 
   return (

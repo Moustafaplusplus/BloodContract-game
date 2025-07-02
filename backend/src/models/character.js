@@ -13,12 +13,24 @@ Character.init(
     stamina: { type: DataTypes.INTEGER, defaultValue: 100 },       // اللياقة
     hp: { type: DataTypes.INTEGER, defaultValue: 100 },            // الصحة
     lastCrimeAt: { type: DataTypes.DATE, allowNull: true },
+    xp: { type: DataTypes.INTEGER, defaultValue: 0 },              // الخبرة
+    level: { type: DataTypes.INTEGER, defaultValue: 1 },           // المستوى
   },
   {
     sequelize,
     modelName: 'character',
   }
 );
+
+Character.prototype.addXp = async function (amount) {
+  this.xp += amount;
+  const xpForNextLevel = this.level * 100;
+  if (this.xp >= xpForNextLevel) {
+    this.level += 1;
+    this.xp -= xpForNextLevel;
+  }
+  await this.save();
+};
 
 Character.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Character, { foreignKey: 'userId' });

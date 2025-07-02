@@ -27,14 +27,23 @@ router.post('/commit', auth, async (req, res) => {
 
   const success = Math.random() <= crime.successRate;
   const reward = randomInt(crime.minReward, crime.maxReward + 1);
+  const xpGain = success ? 25 : 5;
 
-  await char.update({
-    energy: char.energy - crime.energyCost,
-    money: success ? char.money + reward : char.money,
-    lastCrimeAt: new Date(),
+  char.energy -= crime.energyCost;
+  if (success) char.money += reward;
+  char.lastCrimeAt = new Date();
+
+  await char.save();
+  await char.addXp(xpGain);
+
+  res.json({
+    success,
+    reward: success ? reward : 0,
+    xpGained: xpGain,
+    level: char.level,
+    xp: char.xp,
+    xpToNext: char.level * 100,
   });
-
-  res.json({ success, reward: success ? reward : 0 });
 });
 
 export default router;

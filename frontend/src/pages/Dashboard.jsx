@@ -1,9 +1,9 @@
 // frontend/src/pages/Dashboard.jsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import CharacterProfile from '../components/CharacterProfile';
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
   const [message, setMessage] = useState('');
   const token = localStorage.getItem('token');
 
@@ -12,10 +12,7 @@ export default function Dashboard() {
 
     fetch('http://localhost:5000/api/character/me', {
       headers: { Authorization: 'Bearer ' + token },
-    })
-      .then((res) => res.json())
-      .then(setStats)
-      .catch(() => setMessage('فشل تحميل إحصائيات اللاعب'));
+    }).catch(() => setMessage('فشل تحميل إحصائيات اللاعب'));
   }, []);
 
   return (
@@ -31,17 +28,8 @@ export default function Dashboard() {
         </Link>
       </nav>
 
-      {stats && (
-        <div className="mb-6 bg-gray-800 p-4 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-2">إحصائيات اللاعب</h2>
-          <p>💰 المال: {stats.money}$</p>
-          <p>⚡ الطاقة: {stats.energy}</p>
-          <p>❤️ الصحة: {stats.hp}</p>
-          <p>🏃‍♂️ اللياقة: {stats.stamina}</p>
-          <p>🗡️ الهجوم: {stats.attackPower}</p>
-          <p>🛡️ الدفاع: {stats.defense}</p>
-        </div>
-      )}
+      {/* 👤 Full Character Profile Card */}
+      <CharacterProfile />
 
       {message && <p className="mt-4 text-red-400">{message}</p>}
     </div>
