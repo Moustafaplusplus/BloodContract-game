@@ -10,16 +10,52 @@ class User extends Model {
 
 User.init(
   {
-    username: { type: DataTypes.STRING, allowNull: false, unique: true },
-    nickname: { type: DataTypes.STRING },
-    email: { type: DataTypes.STRING, allowNull: false, unique: true },
-    age: { type: DataTypes.INTEGER },
-    password: { type: DataTypes.STRING, allowNull: false },
-    energy: { type: DataTypes.INTEGER, defaultValue: 100 },
-    money: { type: DataTypes.INTEGER, defaultValue: 0 },
+    username: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [3, 30],
+      },
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true,
+      },
+    },
+    age: {
+      type: DataTypes.INTEGER,
+      validate: {
+        min: 13,
+        max: 120,
+      },
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        len: [6, 100],
+      },
+    },
+    energy: {
+      type: DataTypes.INTEGER,
+      defaultValue: 100,
+    },
+    money: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
     stats: {
       type: DataTypes.JSONB,
-      defaultValue: { strength: 1, speed: 1, intelligence: 1 }
+      defaultValue: {
+        strength: 1,
+        speed: 1,
+        intelligence: 1,
+      },
     },
   },
   {

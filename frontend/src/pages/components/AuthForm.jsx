@@ -7,22 +7,26 @@ export default function AuthForm() {
 
   const [form, setForm] = useState({
     username: '',
-    nickname: '',
     email: '',
     age: '',
     password: '',
+    confirmPassword: '',
+    agree: false,
   });
 
   const [message, setMessage] = useState('');
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const endpoint = isRegister ? 'signup' : 'login';
-    const payload = isRegister ? form : { username: form.username, password: form.password };
+    const payload = isRegister
+      ? form
+      : { username: form.username, password: form.password };
     const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     try {
@@ -68,13 +72,6 @@ export default function AuthForm() {
         {isRegister && (
           <>
             <input
-              name="nickname"
-              placeholder="اللقب"
-              value={form.nickname}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
-            />
-            <input
               name="email"
               placeholder="البريد الإلكتروني"
               value={form.email}
@@ -83,23 +80,51 @@ export default function AuthForm() {
             />
             <input
               name="age"
-              placeholder="العمر"
+              placeholder="السن"
               type="number"
               value={form.age}
               onChange={handleChange}
               className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
+            <input
+              name="password"
+              placeholder="كلمة المرور"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
+            />
+            <input
+              name="confirmPassword"
+              placeholder="تأكيد كلمة المرور"
+              type="password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
+            />
+            <label className="flex items-center space-x-2 rtl:space-x-reverse">
+              <input
+                type="checkbox"
+                name="agree"
+                checked={form.agree}
+                onChange={handleChange}
+                className="accent-red-600"
+              />
+              <span className="text-sm">أوافق على الشروط والأحكام</span>
+            </label>
           </>
         )}
 
-        <input
-          name="password"
-          placeholder="كلمة المرور"
-          type="password"
-          value={form.password}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
-        />
+        {!isRegister && (
+          <input
+            name="password"
+            placeholder="كلمة المرور"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600"
+          />
+        )}
 
         <button
           type="submit"
