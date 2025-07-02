@@ -5,6 +5,7 @@ import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard'
 import WeaponsShop from './pages/WeaponsShop';
 import CrimesList from './pages/CrimesList';
+import RealEstate from './pages/RealEstate';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/shop" element={<WeaponsShop />} />
         <Route path="/crimes" element={<CrimesList />} />
+        <Route path="/realestate" element={<RealEstate />} />
       </Routes>
   );
 }

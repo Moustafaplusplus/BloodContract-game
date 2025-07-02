@@ -1,12 +1,11 @@
 import express from 'express';
-import auth from '../middlewares/auth.js'; // ✅ Import auth middleware
+import auth from '../middlewares/auth.js';
 import Crime from '../models/crime.js';
 import Character from '../models/character.js';
 import { randomInt } from 'crypto';
 
 const router = express.Router();
 
-// 🔒 Protect both routes with auth middleware
 router.get('/', auth, async (_req, res) => {
   const crimes = await Crime.findAll();
   res.json(crimes);
@@ -31,9 +30,14 @@ router.post('/commit', auth, async (req, res) => {
 
   char.energy -= crime.energyCost;
   if (success) char.money += reward;
-  char.lastCrimeAt = new Date();
 
-  await char.save();
+  // ✅ Regenerate stamina slightly (max 100)
+  const STAMINA_REGEN = 3;
+  char.stamina = Math.min(char.stamina + STAMINA_REGEN, 100);
+
+  char.lastCrimeAt = new Date();
+  await char.save(); // ✅ save energy, money, stamina
+
   await char.addXp(xpGain);
 
   res.json({
@@ -43,6 +47,8 @@ router.post('/commit', auth, async (req, res) => {
     level: char.level,
     xp: char.xp,
     xpToNext: char.level * 100,
+    stamina: char.stamina,
+    money: char.money,
   });
 });
 

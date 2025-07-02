@@ -1,5 +1,4 @@
-// File: frontend/src/components/CharacterProfile.jsx
-
+// frontend/src/pages/components/CharacterProfile.jsx
 import { useEffect, useState } from 'react';
 
 export default function CharacterProfile() {
@@ -8,7 +7,7 @@ export default function CharacterProfile() {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/character', {
+    fetch('http://localhost:5000/api/character/me', {
       headers: {
         Authorization: 'Bearer ' + token,
       },
@@ -22,7 +21,7 @@ export default function CharacterProfile() {
         Authorization: 'Bearer ' + token,
       },
     })
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then(setHouse)
       .catch(console.error);
   }, []);
@@ -50,7 +49,6 @@ export default function CharacterProfile() {
           </div>
         </div>
       </div>
-
       <ul className="text-sm text-gray-300 space-y-1 mb-3">
         <li>💰 المال: {char.money}</li>
         <li>⚡ الطاقة: {char.energy}</li>
