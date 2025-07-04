@@ -1,55 +1,99 @@
+// backend/src/routes/crimes.js
 import express from 'express';
-import auth from '../middlewares/auth.js';
+import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
+
 import Crime from '../models/crime.js';
 import Character from '../models/character.js';
-import { randomInt } from 'crypto';
+import CrimeLog from '../models/crimeLog.js';       // <- new table, see 2
+import Jail     from '../models/jail.js';           // -> simple placeholder model
+import Hospital from '../models/hospital.js';       // -> simple placeholder model
 
 const router = express.Router();
 
-router.get('/', auth, async (_req, res) => {
-  const crimes = await Crime.findAll();
+// GET /api/crimes               → list crimes filtered by player level
+router.get('/', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.sendStatus(401);
+
+  const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
+  const char = await Character.findOne({ where: { userId } });
+
+  const crimes = await Crime.findAll({
+    where: { req_level: { [Op.lte]: char.level } },
+    order: [['id', 'ASC']],
+  });
   res.json(crimes);
 });
 
-router.post('/commit', auth, async (req, res) => {
-  const { crimeId } = req.body;
-  const crime = await Crime.findByPk(crimeId);
-  const char = await Character.findOne({ where: { userId: req.user.id } });
+// POST /api/crimes/execute/:crimeId
+router.post('/execute/:crimeId', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.sendStatus(401);
+    const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
 
-  if (!crime || !char) {
-    return res.status(404).json({ message: 'بيانات غير متوفرة' });
+    const crimeId = Number(req.params.crimeId);
+    const crime   = await Crime.findByPk(crimeId);
+    if (!crime) return res.status(404).send('crime not found');
+
+    const char = await Character.findOne({ where: { userId } });
+
+    // cooldown = 60 s
+    const lastLog = await CrimeLog.findOne({
+      where: { userId, crimeId },
+      order: [['ts', 'DESC']],
+    });
+    if (lastLog && Date.now() - lastLog.ts.getTime() < 60_000) {
+      return res.status(429).send('cooldown');
+    }
+
+    // costs
+    if (char.courage < crime.courage_cost)
+      return res.status(400).send('not enough courage');
+
+    char.courage -= crime.courage_cost;
+
+    // ---------- success formula ----------
+    const courageWeight = 0.55;
+    const intelWeight   = 0.35;
+    const randFactor    = Math.random() * 0.20; // 0-0.2
+
+    const score =
+      courageWeight * (char.courage / 100) +
+      intelWeight * (char.intel / crime.req_intel) +
+      randFactor;
+
+    const success = score >= 0.65; // tweakable threshold
+
+    let payout = 0;
+
+    if (success) {
+      payout = crime.base_payout + Math.floor(Math.random() * 8);
+      char.money += payout;
+      char.xp    += Math.floor(crime.req_level * 2);
+    } else {
+      // 50 % chance jail, 50 % hospital
+      if (Math.random() < 0.5) {
+        await Jail.create({ userId, minutes: 3 });
+      } else {
+        await Hospital.create({ userId, hpLost: 20, minutes: 2 });
+        char.hp = Math.max(0, char.hp - 20);
+      }
+    }
+
+    await char.save();
+    await CrimeLog.create({ userId, crimeId, success, payout });
+
+    res.json({
+      success,
+      payout,
+      courageLeft: char.courage,
+    });
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
   }
-
-  if (char.energy < crime.energyCost) {
-    return res.status(400).json({ message: 'طاقة غير كافية' });
-  }
-
-  const success = Math.random() <= crime.successRate;
-  const reward = randomInt(crime.minReward, crime.maxReward + 1);
-  const xpGain = success ? 25 : 5;
-
-  char.energy -= crime.energyCost;
-  if (success) char.money += reward;
-
-  // ✅ Regenerate stamina slightly (max 100)
-  const STAMINA_REGEN = 3;
-  char.stamina = Math.min(char.stamina + STAMINA_REGEN, 100);
-
-  char.lastCrimeAt = new Date();
-  await char.save(); // ✅ save energy, money, stamina
-
-  await char.addXp(xpGain);
-
-  res.json({
-    success,
-    reward: success ? reward : 0,
-    xpGained: xpGain,
-    level: char.level,
-    xp: char.xp,
-    xpToNext: char.level * 100,
-    stamina: char.stamina,
-    money: char.money,
-  });
 });
 
 export default router;

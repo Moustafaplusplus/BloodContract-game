@@ -1,62 +1,84 @@
 // frontend/src/pages/Dashboard.jsx
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import CharacterProfile from './components/CharacterProfile';
+import CharacterProfile from '../components/CharacterProfile.jsx';
 
 export default function Dashboard() {
-  const [message, setMessage] = useState('');
   const [character, setCharacter] = useState(null);
-  const token = localStorage.getItem('token');
+  const [message,   setMessage]   = useState('');
+
+  const token    = localStorage.getItem('token');
   const navigate = useNavigate();
 
+  /* ───────────────────── Fetch character once ───────────────────── */
   useEffect(() => {
     if (!token) {
-      navigate('/signin');
+      navigate('/login');
       return;
     }
 
-    fetch('http://localhost:5000/api/character/me', {
-      headers: { Authorization: 'Bearer ' + token },
+    fetch(`${import.meta.env.VITE_API_URL}/api/character/me`, {
+      headers: { Authorization: `Bearer ${token}` },
     })
-      .then(res => res.json())
-      .then(data => setCharacter(data))
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        setCharacter(data);
+        localStorage.setItem(
+          'char_snapshot',
+          JSON.stringify({ energy: data.energy, will: data.will }),
+        );
+      })
       .catch(() => setMessage('فشل تحميل إحصائيات اللاعب'));
   }, [token, navigate]);
 
+  /* ──────────────────────  Styles shortcuts  ────────────────────── */
+  const navBtn =
+    'px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition text-sm';
+  const placeholder =
+    'bg-gray-800 p-4 rounded-md min-h-[120px] flex flex-col justify-center';
+
+  /* ────────────────────────  Render  ───────────────────────────── */
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6 space-y-6">
+    <div className="min-h-screen bg-gray-950 text-white p-6 space-y-8">
+      {/* title */}
       <h1 className="text-3xl font-bold text-red-500">لوحة التحكم</h1>
 
-      <nav className="flex gap-4 flex-wrap">
-        <Link to="/shop" className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">🛒 متجر الأسلحة</Link>
-        <Link to="/crimes" className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">🧨 قائمة الجرائم</Link>
-        <Link to="/realestate" className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">🏠 سوق العقارات</Link>
-        <Link to="/players" className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">⚔️ تحدَّ لاعبين</Link>
+      {/* shortcuts */}
+      <nav className="flex flex-wrap gap-3">
+        <Link to="/shop"         className={navBtn}>🛒 متجر الأسلحة</Link>
+        <Link to="/gym"          className={navBtn}>💪 صالة التدريب</Link>
+        <Link to="/crimes"       className={navBtn}>🧨 قائمة الجرائم</Link>
+        <Link to="/realestate"   className={navBtn}>🏠 سوق العقارات</Link>
+        <Link to="/bank"         className={navBtn}>🏦 البنك</Link>
+        <Link to="/black-market" className={navBtn}>🕶️ السوق السوداء</Link>
+        <Link to="/gold-market"  className={navBtn}>🪙 سوق الذهب / VIP</Link>
+        <Link to="/gangs"        className={navBtn}>👥 العصابات</Link>
+        <Link to="/players"      className={navBtn}>⚔️ تحدَّ لاعبين</Link>
+        <Link to="/events"       className={navBtn}>📜 موجز الأحداث</Link>
+        <Link to="/jail"         className={navBtn}>🚔 السجن</Link>
+        <Link to="/inventory"   className={navBtn}>🎒 الحقيبة</Link>
       </nav>
 
-      {/* Player Profile Overview */}
+      {/* profile + inventory placeholder */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CharacterProfile character={character} />
-
-        <div className="bg-gray-800 p-4 rounded-md">
-          <h2 className="text-xl font-semibold mb-2">📊 إحصائيات اللاعب</h2>
-          <p>⭐ المستوى: {character?.level}</p>
-          <p>🩸 الصحة: {character?.stats?.hp}</p>
-          <p>⚡ الطاقة: {character?.stats?.energy}</p>
-          <p>🎖️ نقاط الاحترام: {character?.respect ?? '؟'}</p>
-        </div>
       </section>
 
-      {/* Placeholder Sections */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gray-800 p-4 rounded-md min-h-[120px]">
-          <h2 className="text-lg font-semibold">🗓️ المهمات النشطة</h2>
-          <p className="text-sm text-gray-400">Placeholder for current missions</p>
+      {/* future features grid */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={placeholder}>
+          <h2 className="text-lg font-semibold mb-1">🗓️ المهمات النشطة</h2>
+          <p className="text-sm text-gray-400">قريباً: نظام المهام اليومية</p>
         </div>
 
-        <div className="bg-gray-800 p-4 rounded-md min-h-[120px]">
-          <h2 className="text-lg font-semibold">📣 آخر الأخبار / الإشعارات</h2>
-          <p className="text-sm text-gray-400">Placeholder for announcements</p>
+        <div className={placeholder}>
+          <h2 className="text-lg font-semibold mb-1">📣 الإشعارات</h2>
+          <p className="text-sm text-gray-400">قريباً: تنبيهات قتال / جريمة / بنك</p>
+        </div>
+
+        <div className={placeholder}>
+          <h2 className="text-lg font-semibold mb-1">📰 جريدة المدينة</h2>
+          <p className="text-sm text-gray-400">قريباً: أحدث القصص والشائعات</p>
         </div>
       </section>
 
@@ -64,3 +86,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

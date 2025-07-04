@@ -1,43 +1,51 @@
-// backend/utils/fightEngine.js
+// backend/src/utils/fightEngine.js
 export function calculateFightResult(attacker, defender) {
-  const rounds = 20;
-  const fightLog = [];
+  const MAX_ROUNDS = 20;
+  const log = [];
+
+  // clone so we can mutate HP
   let atk = { ...attacker, hp: 500 };
   let def = { ...defender, hp: 500 };
-  let turn = 1;
+
+  const wMult = (w) => (w?.rarity === 'legendary' ? 2.5 : 1.5);
+  const aRed  = (a) => (a?.def ?? 0) * 0.3;
+
   let totalDamage = 0;
+  let round       = 1;
 
-  function weaponMultiplier(w) { return w?.rarity === 'legendary' ? 2.5 : 1.5; }
-  function armorReduction(a) { return a?.def ? a.def * 0.3 : 0; }
-
-  for (let i = 0; i < rounds; i++) {
-    const hitChance = 50 + (atk.dex - def.dex) * 0.15;
+  for (; round <= MAX_ROUNDS; round++) {
+    const hitChance =
+      50 + ((atk.dex ?? 5) - (def.dex ?? 5)) * 0.15;
     const hitRoll = Math.random() * 100;
 
     if (hitRoll < hitChance) {
-      const baseDmg = atk.str * weaponMultiplier(atk.weapon);
-      const mitigated = def.def * armorReduction(def.armor);
-      const dmg = Math.max(5, baseDmg - mitigated);
+      const base = (atk.str ?? 10) * wMult(atk.weapon);
+      const dmg  = Math.max(5, base - aRed(def.armor));
+
       def.hp -= dmg;
       totalDamage += dmg;
 
-      fightLog.push(`Round ${turn}: ${atk.username} hits ${def.username} for ${dmg.toFixed(1)} dmg.`);
+      log.push(
+        `الجولة ${round}: ${atk.username ?? 'المهاجم'} أصاب `
+        + `${def.username ?? 'المدافع'} بـ ${dmg.toFixed(1)} ضرر.`
+      );
     } else {
-      fightLog.push(`Round ${turn}: ${atk.username} missed.`);
+      log.push(
+        `الجولة ${round}: ${atk.username ?? 'المهاجم'} أخطأ الهجوم.`
+      );
     }
 
     if (def.hp <= 0 || atk.hp <= 0) break;
-    [atk, def] = [def, atk];
-    turn++;
+    [atk, def] = [def, atk];  // swap
   }
 
   const winner = atk.hp > def.hp ? atk : def;
 
   return {
-    winner: winner.username,
-    winnerId: winner.id,
-    rounds: turn,
+    winner:    winner.username ?? 'غير معروف',
+    winnerId:  winner.id,
+    rounds:    round,
     totalDamage,
-    log: fightLog
+    log,
   };
 }
