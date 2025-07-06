@@ -1,99 +1,144 @@
 // backend/src/routes/crimes.js
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import { Op } from 'sequelize';
+// Crime listing + execution (user-centric version)
 
-import Crime from '../models/crime.js';
+import express from 'express';
+import auth    from '../middlewares/auth.js';
+
+/* ─── models ───────────────────────────────────────────── */
+import Crime     from '../models/crime.js';
 import Character from '../models/character.js';
-import CrimeLog from '../models/crimeLog.js';       // <- new table, see 2
-import Jail     from '../models/jail.js';           // -> simple placeholder model
-import Hospital from '../models/hospital.js';       // -> simple placeholder model
+import Hospital  from '../models/hospital.js';
+import Jail      from '../models/jail.js';
+/* ──────────────────────────────────────────────────────── */
+
+import { giveReward, ACTIONS } from '../services/rewardService.js';
 
 const router = express.Router();
 
-// GET /api/crimes               → list crimes filtered by player level
-router.get('/', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+/* helper: success chance (0-1) */
+const calcChance = (level, baseRate) =>
+  Math.min(baseRate + Math.max(level - 1, 0) * 0.03, 0.95);   // +3 %/lvl, cap 95 %
 
-  const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-  const char = await Character.findOne({ where: { userId } });
+const randInt = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
-  const crimes = await Crime.findAll({
-    where: { req_level: { [Op.lte]: char.level } },
-    order: [['id', 'ASC']],
-  });
-  res.json(crimes);
+/* ─────────────────────────────────────────────────────────
+ * GET /api/crimes
+ * ──────────────────────────────────────────────────────── */
+router.get('/', auth, async (req, res) => {
+  try {
+    const level  = req.user.level ?? 1;
+    const crimes = await Crime.findAll({ where: { isEnabled: true } });
+
+    const list = crimes
+      .filter(c => c.req_level <= level)
+      .map(c => ({
+        id:         c.id,
+        name:       c.name,
+        req_level:  c.req_level,
+        energyCost: c.energyCost,
+        minReward:  c.minReward,
+        maxReward:  c.maxReward,
+        cooldown:   c.cooldown,
+        chance:     Math.round(calcChance(level, c.successRate) * 100), // 0-100 %
+      }));
+
+    res.json(list);
+  } catch (err) {
+    console.error('GET /crimes error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-// POST /api/crimes/execute/:crimeId
-router.post('/execute/:crimeId', async (req, res) => {
+/* core executor shared by both POST styles */
+const runCrime = async (req, res) => {
+  const crimeId = parseInt(req.params.crimeId ?? req.body.crimeId, 10);
+  if (!crimeId) return res.status(400).json({ error: 'crimeId required' });
+
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
-    const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
+    const crime = await Crime.findByPk(crimeId);
+    if (!crime || !crime.isEnabled)
+      return res.status(404).json({ error: 'Crime not found' });
 
-    const crimeId = Number(req.params.crimeId);
-    const crime   = await Crime.findByPk(crimeId);
-    if (!crime) return res.status(404).send('crime not found');
+    const character = await Character.findOne({ where: { userId: req.user.id } });
+    if (!character)
+      return res.status(404).json({ error: 'Character not found' });
 
-    const char = await Character.findOne({ where: { userId } });
+    if (character.level   < crime.req_level)
+      return res.status(400).json({ error: 'Level too low' });
+    if (character.energy < crime.energyCost)
+      return res.status(400).json({ error: 'Not enough energy' });
 
-    // cooldown = 60 s
-    const lastLog = await CrimeLog.findOne({
-      where: { userId, crimeId },
-      order: [['ts', 'DESC']],
-    });
-    if (lastLog && Date.now() - lastLog.ts.getTime() < 60_000) {
-      return res.status(429).send('cooldown');
-    }
+    if (crime.req_intel && character.intel < crime.req_intel)
+      return res.status(400).json({ error: 'Not enough intelligence' });
 
-    // costs
-    if (char.courage < crime.courage_cost)
-      return res.status(400).send('not enough courage');
+    const nowMs = Date.now();
+    if (character.crimeCooldown && character.crimeCooldown > nowMs)
+      return res.status(429).json({
+        error:        'Crime on cooldown',
+        cooldownLeft: Math.ceil((character.crimeCooldown - nowMs) / 1000),
+      });
 
-    char.courage -= crime.courage_cost;
-
-    // ---------- success formula ----------
-    const courageWeight = 0.55;
-    const intelWeight   = 0.35;
-    const randFactor    = Math.random() * 0.20; // 0-0.2
-
-    const score =
-      courageWeight * (char.courage / 100) +
-      intelWeight * (char.intel / crime.req_intel) +
-      randFactor;
-
-    const success = score >= 0.65; // tweakable threshold
-
-    let payout = 0;
+    const baseRate = parseFloat(crime.successRate);
+    const chance   = calcChance(character.level, baseRate);
+    const success  = Math.random() < chance;
+    let   payout   = 0;
+    let   redirect = null;
 
     if (success) {
-      payout = crime.base_payout + Math.floor(Math.random() * 8);
-      char.money += payout;
-      char.xp    += Math.floor(crime.req_level * 2);
+      payout       = randInt(crime.minReward, crime.maxReward);
+      character.money += payout;
+
+      await giveReward({
+        character,
+        action: ACTIONS.CRIME_SUCCESS,
+        context: { energyCost: crime.energyCost },
+      });
+
+    } else if (crime.jailMinutes) {
+      redirect = 'jail';
+      await Jail.create({
+        userId:     character.id,
+        minutes:    crime.jailMinutes,
+        bailRate:   crime.bailRate,
+        releasedAt: new Date(nowMs + crime.jailMinutes * 60000),
+      });
+
+      await giveReward({ character, action: ACTIONS.CRIME_FAIL });
+
     } else {
-      // 50 % chance jail, 50 % hospital
-      if (Math.random() < 0.5) {
-        await Jail.create({ userId, minutes: 3 });
-      } else {
-        await Hospital.create({ userId, hpLost: 20, minutes: 2 });
-        char.hp = Math.max(0, char.hp - 20);
-      }
+      redirect = 'hospital';
+      await Hospital.create({
+        userId:     character.id,
+        minutes:    crime.hospitalMinutes,
+        hpLoss:     crime.hpLoss,
+        healRate:   crime.healRate,
+        releasedAt: new Date(nowMs + crime.hospitalMinutes * 60000),
+      });
+
+      await giveReward({ character, action: ACTIONS.CRIME_FAIL });
     }
 
-    await char.save();
-    await CrimeLog.create({ userId, crimeId, success, payout });
+    character.energy       -= crime.energyCost;
+    character.crimeCooldown = nowMs + crime.cooldown * 1000;
+    await character.save();
 
     res.json({
       success,
       payout,
-      courageLeft: char.courage,
+      energyLeft:   character.energy,
+      cooldownLeft: crime.cooldown,
+      redirect,
     });
   } catch (err) {
-    console.error(err);
-    res.sendStatus(500);
+    console.error('POST /crimes/execute error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
-});
+};
+
+/* POST /api/crimes/execute/:crimeId */
+router.post('/execute/:crimeId', auth, runCrime);
+/* POST /api/crimes/execute        { crimeId } */
+router.post('/execute',           auth, runCrime);
 
 export default router;

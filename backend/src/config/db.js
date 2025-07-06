@@ -2,19 +2,17 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export const sequelize = new Sequelize(
-  process.env.DB_NAME,      // database
-  process.env.DB_USER,      // user
-  process.env.DB_PASS,      // password
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: 'postgres',
-    logging: false,         // set to console.log to see raw SQL
-  }
-);
+const dbConfig = {
+  username: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  host:     process.env.DB_HOST,
+  port:     Number(process.env.DB_PORT),
+  dialect:  'postgres',
+  logging: false,
+};
 
-// 🔧 Auto-sync model changes to DB
-sequelize.sync({ alter: true })
-  .then(() => console.log('🗄️  Database synced ✅'))
-  .catch((err) => console.error('❌ Database sync error:', err));
+const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, dbConfig);
+
+export { sequelize };
+export default dbConfig;

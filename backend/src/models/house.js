@@ -1,41 +1,48 @@
-// File: backend/src/models/house.js
+// ============================
+// backend/src/models/house.js – final
+// ============================
+import { Model, DataTypes } from 'sequelize';
 
-import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/db.js';
-import User from './user.js';
-
-class House extends Model {}
-
-House.init(
-  {
-    name: { type: DataTypes.STRING, allowNull: false },
-    cost: { type: DataTypes.INTEGER, allowNull: false },
-    energyRegen: { type: DataTypes.INTEGER, defaultValue: 10 },
-    defenseBonus: { type: DataTypes.INTEGER, defaultValue: 0 },
-    description: { type: DataTypes.STRING },
-  },
-  {
-    sequelize,
-    modelName: 'house',
+/* ─────────── House catalog ─────────── */
+export class House extends Model {
+  static init(sequelize) {
+    return super.init(
+      {
+        name:          { type: DataTypes.STRING,  allowNull: false },
+        cost:          { type: DataTypes.INTEGER, allowNull: false },  // ← was “price”
+        energyRegen:   { type: DataTypes.INTEGER, allowNull: false },
+        defenseBonus:  { type: DataTypes.INTEGER, allowNull: false },
+        description:   { type: DataTypes.TEXT,    allowNull: false },
+      },
+      { sequelize, modelName: 'House', tableName: 'Houses', timestamps: false },
+    );
   }
-);
 
-class UserHouse extends Model {}
-
-UserHouse.init(
-  {
-    userId: { type: DataTypes.INTEGER, allowNull: false },
-    houseId: { type: DataTypes.INTEGER, allowNull: false },
-    purchasedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  },
-  {
-    sequelize,
-    modelName: 'user_house',
+  static associate(models) {
+    // Users buy exactly one house, so we model it through UserHouse
+    this.belongsToMany(models.User, {
+      through: models.UserHouse,
+      foreignKey: 'houseId',
+      as: 'owners',
+    });
   }
-);
+}
 
-UserHouse.belongsTo(User, { foreignKey: 'userId' });
-User.hasOne(UserHouse, { foreignKey: 'userId' });
-UserHouse.belongsTo(House, { foreignKey: 'houseId' });
+/* ─────────── Junction: which user owns which house ─────────── */
+export class UserHouse extends Model {
+  static init(sequelize) {
+    return super.init(
+      {
+        userId:     { type: DataTypes.INTEGER, allowNull: false },
+        houseId:    { type: DataTypes.INTEGER, allowNull: false },
+        purchasedAt:{ type: DataTypes.DATE,    defaultValue: DataTypes.NOW },
+      },
+      { sequelize, modelName: 'UserHouse', tableName: 'UserHouses', timestamps: false },
+    );
+  }
 
-export { House, UserHouse };
+  static associate(models) {
+    this.belongsTo(models.User,  { foreignKey: 'userId'  });
+    this.belongsTo(models.House, { foreignKey: 'houseId', as: 'house' }); // ← alias “house”
+  }
+}

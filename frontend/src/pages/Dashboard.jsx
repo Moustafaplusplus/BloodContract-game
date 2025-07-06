@@ -1,4 +1,6 @@
-// frontend/src/pages/Dashboard.jsx
+// ============================
+// frontend/src/pages/Dashboard.jsx – Final version
+// ============================
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CharacterProfile from '../components/CharacterProfile.jsx';
@@ -10,7 +12,7 @@ export default function Dashboard() {
   const token    = localStorage.getItem('token');
   const navigate = useNavigate();
 
-  /* ───────────────────── Fetch character once ───────────────────── */
+  /* ─────────────────── Fetch current player once ─────────────────── */
   useEffect(() => {
     if (!token) {
       navigate('/login');
@@ -23,25 +25,26 @@ export default function Dashboard() {
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
         setCharacter(data);
+        // snapshot core stats for quick HUD elsewhere
         localStorage.setItem(
           'char_snapshot',
-          JSON.stringify({ energy: data.energy, will: data.will }),
+          JSON.stringify({ energy: data.energy, will: data.will })
         );
       })
       .catch(() => setMessage('فشل تحميل إحصائيات اللاعب'));
   }, [token, navigate]);
 
-  /* ──────────────────────  Styles shortcuts  ────────────────────── */
+  /* ──────────────────────  Style shorthands  ─────────────────────── */
   const navBtn =
     'px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition text-sm';
   const placeholder =
     'bg-gray-800 p-4 rounded-md min-h-[120px] flex flex-col justify-center';
 
-  /* ────────────────────────  Render  ───────────────────────────── */
+  /* ───────────────────────────  Render  ──────────────────────────── */
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6 space-y-8">
       {/* title */}
-      <h1 className="text-3xl font-bold text-red-500">لوحة التحكم</h1>
+      <h1 className="text-3xl font-bold text-red-500 mb-4">لوحة التحكم</h1>
 
       {/* shortcuts */}
       <nav className="flex flex-wrap gap-3">
@@ -56,10 +59,14 @@ export default function Dashboard() {
         <Link to="/players"      className={navBtn}>⚔️ تحدَّ لاعبين</Link>
         <Link to="/events"       className={navBtn}>📜 موجز الأحداث</Link>
         <Link to="/jail"         className={navBtn}>🚔 السجن</Link>
-        <Link to="/inventory"   className={navBtn}>🎒 الحقيبة</Link>
+        <Link to="/hospital"     className={navBtn}>🏥 المستشفى</Link>
+        <Link to="/inventory"    className={navBtn}>🎒 الحقيبة</Link>
+        <Link to="/city"         className={navBtn}>🗺️ خريطة المدينة</Link>
+        <Link to="/allies" className={navBtn}>الحلفاء</Link>
+        <Link to="/profile" className={navBtn}>الملف الشخصى</Link>
       </nav>
 
-      {/* profile + inventory placeholder */}
+      {/* profile */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CharacterProfile character={character} />
       </section>
@@ -86,4 +93,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

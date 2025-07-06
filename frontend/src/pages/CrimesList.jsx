@@ -1,104 +1,125 @@
-// frontend/src/pages/CrimesList.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+import api from "../lib/api";
+
+function formatSecs(sec) {
+  const m = Math.floor(sec / 60);
+  const s = String(sec % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function CrimeCard({ crime, cooldown, onCooldown }) {
+  const id = crime.id;
+  const cost = crime.energyCost;
+  const pct = crime.chance ?? 0;
+  const bar = pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-yellow-500" : "bg-red-600";
+
+  const handle = async () => {
+    try {
+      const result = await api.post(`/crimes/execute/${id}`);
+      alert(result.success ? `تمت بنجاح! +$${result.payout}` : "فشلت العملية!");
+      if (result.cooldownLeft) {
+        onCooldown(id, result.cooldownLeft);
+      }
+      if (result.redirect) {
+        window.location.href = result.redirect;
+      }
+    } catch (e) {
+      const errPayload = typeof e === 'object' ? e : {};
+      const remaining = errPayload.cooldownLeft;
+      if (remaining) {
+        onCooldown(id, remaining);
+      } else {
+        alert(errPayload.error || "خطأ");
+      }
+    }
+  };
+
+  return (
+    <article className="bg-neutral-900 rounded-2xl p-5 shadow-lg shadow-black/40">
+      <header className="flex justify-between mb-2">
+        <h2 className="font-semibold text-gray-100 truncate" title={crime.name}>
+          {crime.name}
+        </h2>
+        <span className="text-xs text-gray-400">المستوى ≥ {crime.req_level}</span>
+      </header>
+
+      <div className="mb-3">
+        <div className="h-2 bg-neutral-700 rounded-full overflow-hidden">
+          <div className={`h-full ${bar}`} style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-1 text-xs text-gray-400">نسبة النجاح {pct}%</p>
+      </div>
+
+      <ul className="text-xs text-gray-400 space-y-1 mb-4">
+        <li>⚡ التكلفة <span className="text-gray-200">{cost}</span></li>
+        <li>⏱️ الانتظار <span className="text-gray-200">{formatSecs(crime.cooldown)}</span></li>
+        <li>💰 المكافأة <span className="text-gray-200">${crime.minReward}–{crime.maxReward}</span></li>
+      </ul>
+
+      <button
+        className="w-full py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 disabled:bg-neutral-700 disabled:text-gray-500"
+        disabled={cooldown > 0}
+        onClick={handle}
+      >
+        {cooldown > 0 ? `انتظار ${formatSecs(cooldown)}` : "جريمة"}
+      </button>
+    </article>
+  );
+}
 
 export default function CrimesList() {
-  const [crimes, setCrimes]   = useState([]);
-  const [cooldowns, setCD]    = useState({});
-  const [msg, setMsg]         = useState('');
+  const [list, setList] = useState([]);
+  const [cd, setCd] = useState({});
+  const [error, setError] = useState(null);
 
-  const token = localStorage.getItem('token');
-  const api   = `${import.meta.env.VITE_API_URL}/api/crimes`;
-
-  /* ── fetch crimes once ─────────────────────────── */
   useEffect(() => {
-    fetch(api, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then(setCrimes)
-      .catch(() => setMsg('⚠️ فشل تحميل الجرائم'));
-  }, [api, token]);
-
-  /* ── 1-second tick for cooldown labels only ─────── */
-  useEffect(() => {
-    const id = setInterval(() => setCD((c) => ({ ...c })), 1_000);
-    return () => clearInterval(id);
+    (async () => {
+      try {
+        const crimes = await api.get("/crimes");
+        setList(Array.isArray(crimes) ? crimes : []);
+      } catch (e) {
+        const errPayload = typeof e === 'object' ? e : {};
+        setError(errPayload.error || "تعذّر تحميل الجرائم");
+      }
+    })();
   }, []);
 
-  /* helpers */
-  const cdLeft = (crimeId) => {
-    if (!cooldowns[crimeId]) return 0;
-    return Math.max(
-      0,
-      60 - Math.floor((Date.now() - cooldowns[crimeId]) / 1000),
-    );
-  };
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCd(prev => {
+        const next = { ...prev };
+        for (const k in next) next[k] = Math.max(0, next[k] - 1);
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const execute = async (crimeId) => {
-    const res = await fetch(`${api}/execute/${crimeId}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const setCooldown = (id, secs) => setCd(prev => ({ ...prev, [id]: secs }));
 
-    if (!res.ok) {
-      setMsg('❌ فشل التنفيذ أو مهلة التبريد');
-      return;
-    }
-
-    const data = await res.json();
-    setMsg(
-      data.success
-        ? `✅ غنيمة: ${data.payout} 💵`
-        : '🚔 فشلت! قد تكون في السجن أو المستشفى',
-    );
-    setCD((c) => ({ ...c, [crimeId]: Date.now() }));
-  };
-
-  /* ── UI ────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-4">🧨 قائمة الجرائم</h1>
+    <div className="min-h-screen bg-black/95 text-gray-100 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center">الجرائم</h1>
 
-      {msg && <p className="text-green-400">{msg}</p>}
+        {error && <p className="text-center text-red-500 mb-4">{error}</p>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {crimes.map((c) => {
-          /* one-time success%: use backend field or deterministic clamp */
-          const rawPct   = (c.successRate ?? 0.6) * 100;
-          const successPct = Math.min(90, Math.max(15, Math.round(rawPct)));
+        {!error && list.length === 0 && (
+          <p className="text-center text-gray-400">لا توجد جرائم متاحة لمستواك.</p>
+        )}
 
-          const cd = cdLeft(c.id);
-
-          return (
-            <div
-              key={c.id}
-              className="bg-gray-800 p-4 rounded shadow flex flex-col gap-2"
-            >
-              <h2 className="text-lg font-semibold">{c.name ?? c.title}</h2>
-
-              <div className="text-sm text-gray-300 space-y-0.5">
-                <p>🔒 المستوى المطلوب: {c.req_level ?? 1}</p>
-                <p>🧠 Intel مطلوب: {c.req_intel ?? 1}</p>
-                <p>⚔️ شجاعة: –{c.energyCost ?? c.courage_cost}</p>
-                <p>💵 عائد أساسي: {c.minReward ?? c.base_payout}</p>
-              </div>
-
-              {/* fixed success bar */}
-              <div className="w-full bg-gray-700 rounded h-2">
-                <div
-                  className="h-2 bg-emerald-500 rounded"
-                  style={{ width: `${successPct}%` }}
-                />
-              </div>
-
-              <button
-                onClick={() => execute(c.id)}
-                disabled={cd > 0}
-                className="mt-2 bg-red-600 hover:bg-red-500 rounded px-4 py-2 disabled:opacity-40"
-              >
-                {cd > 0 ? `⏳ ${cd}s` : '🚨 تنفيذ'}
-              </button>
-            </div>
-          );
-        })}
+        {list.length > 0 && (
+          <div className="grid gap-6">
+            {list.map(c => (
+              <CrimeCard
+                key={c.id}
+                crime={c}
+                cooldown={cd[c.id] ?? 0}
+                onCooldown={setCooldown}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

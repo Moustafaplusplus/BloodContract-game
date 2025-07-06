@@ -1,57 +1,109 @@
-import { DataTypes, Model } from 'sequelize';
-import { sequelize }        from '../config/db.js';
+// backend/src/models/character.js
+// ------------------------------------------------------------
+// Character model + progressive XP/level system
+// ------------------------------------------------------------
+import { Model, DataTypes } from 'sequelize';
 
-import User   from './user.js';
-import Weapon from './weapon.js';
-import Armor  from './armor.js';
-
-class Character extends Model {}
-
-Character.init(
-  {
-    /* core resources */
-    energy:  { type: DataTypes.INTEGER, defaultValue: 100 }, // الطاقة
-    money:   { type: DataTypes.INTEGER, defaultValue: 0 },   // المال
-    hp:      { type: DataTypes.INTEGER, defaultValue: 100 }, // الصحة
-
-    /* combat stats */
-    str:          { type: DataTypes.INTEGER, defaultValue: 10 }, // القوة
-    dex:          { type: DataTypes.INTEGER, defaultValue: 5  }, // الرشاقة
-    defense:      { type: DataTypes.INTEGER, defaultValue: 5  }, // الدفاع
-    stamina:      { type: DataTypes.INTEGER, defaultValue: 100 },// اللياقة
-
-    /* progression */
-    xp:    { type: DataTypes.INTEGER, defaultValue: 0 },
-    level: { type: DataTypes.INTEGER, defaultValue: 1 },
-
-    lastCrimeAt: { type: DataTypes.DATE, allowNull: true },
-
-    /* equipped items (FKs) */
-    equippedWeaponId: { type: DataTypes.INTEGER, allowNull: true },
-    equippedArmorId:  { type: DataTypes.INTEGER, allowNull: true },
-  },
-  {
-    sequelize,
-    modelName: 'character',
-  },
-);
-
-/* ---- instance helpers ---- */
-Character.prototype.addXp = async function (amount) {
-  this.xp += amount;
-  const xpNeeded = this.level * 100;
-  if (this.xp >= xpNeeded) {
-    this.level += 1;
-    this.xp -= xpNeeded;
+export default class Character extends Model {
+  /* ---------------------------------------------------------
+   *   XP / Level‑up helpers (centralised, tweak one spot)
+   * -------------------------------------------------------*/
+  /**
+   * EXP curve — quadratic‑ish:  L1 →100, L2 →250, L3 →450 …
+   * Customize here; all routes use this single source of truth.
+   */
+  static expNeeded(level) {
+    // avoid 0 * 0 giving 0 for L0 guard
+    return Math.round(50 * level ** 2 + 50 * level);
   }
-  await this.save();
-};
 
-/* ---- associations ---- */
-Character.belongsTo(User,   { foreignKey: 'userId' });
-User.hasOne(Character,      { foreignKey: 'userId' });
+  /**
+   * Adds EXP, handles multi‑level‑ups in a single transaction‑safe call.
+   * Accepts an optional external transaction for race‑safe usage.
+   */
+  async addExp(amount, { transaction: extTx } = {}) {
+    const sequelize = this.sequelize; // shorthand
+    const useTx = extTx || (await sequelize.transaction());
 
-Character.belongsTo(Weapon, { foreignKey: 'equippedWeaponId', as: 'equippedWeapon' });
-Character.belongsTo(Armor,  { foreignKey: 'equippedArmorId',  as: 'equippedArmor' });
+    try {
+      // 🔒 row‑level lock to avoid double‑spend EXP in concurrent rewards
+      const fresh = await Character.findByPk(this.id, {
+        transaction: useTx,
+        lock: useTx.LOCK.UPDATE,
+      });
 
-export default Character;
+      fresh.exp += amount;
+
+      // loop handles multiple level jumps (e.g., huge quest reward)
+      while (fresh.exp >= Character.expNeeded(fresh.level)) {
+        fresh.exp -= Character.expNeeded(fresh.level);
+        fresh.level += 1;
+      }
+
+      await fresh.save({ transaction: useTx });
+
+      // reflect in current instance so caller sees latest numbers
+      Object.assign(this, fresh.get());
+
+      if (!extTx) await useTx.commit();
+    } catch (err) {
+      if (!extTx) await useTx.rollback();
+      throw err;
+    }
+  }
+
+  /* ---------------------------------------------------------
+   *   Sequelize init
+   * -------------------------------------------------------*/
+  static init(sequelize) {
+    return super.init(
+      {
+        userId: { type: DataTypes.INTEGER, allowNull: false },
+
+        // Core stats
+        money:   { type: DataTypes.BIGINT,  defaultValue: 0,  validate: { min: 0 } },
+        power:   { type: DataTypes.INTEGER, defaultValue: 10, validate: { min: 0 } },
+        defense: { type: DataTypes.INTEGER, defaultValue: 5,  validate: { min: 0 } },
+        energy:  { type: DataTypes.INTEGER, defaultValue: 100,validate: { min: 0 } },
+        hp:      { type: DataTypes.INTEGER, defaultValue: 100,validate: { min: 0 } },
+
+        // Progression
+        level: { type: DataTypes.INTEGER, defaultValue: 1,  validate: { min: 1 } },
+        exp:   { type: DataTypes.BIGINT,  defaultValue: 0,  validate: { min: 0 } },
+
+        // Cooldowns (ms epoch)
+        crimeCooldown: { type: DataTypes.BIGINT, defaultValue: 0 },
+      },
+      {
+        sequelize,
+        modelName: 'Character',
+        tableName: 'Characters',
+        timestamps: true, // createdAt, updatedAt
+      }
+    );
+  }
+
+  /* ---------------------------------------------------------
+   *   Associations
+   * -------------------------------------------------------*/
+  static associate(models) {
+    this.belongsTo(models.User, { foreignKey: 'userId' });
+  }
+
+  /* ---------------------------------------------------------
+   *   Convenience: safe JSON for API responses
+   * -------------------------------------------------------*/
+  toSafeJSON() {
+    const { money, power, defense, energy, level, exp, hp } = this;
+    return {
+      money,
+      power,
+      defense,
+      energy,
+      level,
+      exp,
+      hp,
+      expToNext: Character.expNeeded(level) - exp,
+    };
+  }
+}

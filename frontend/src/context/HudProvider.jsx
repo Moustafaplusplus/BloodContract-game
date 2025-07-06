@@ -1,56 +1,76 @@
-// frontend/src/context/HudProvider.jsx
-import { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
-import { jwtDecode } from 'jwt-decode';          // pnpm add jwt-decode (small, no deps)
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { connectSocket } from '../services/socket'; // ← keep your helper
 
-const HudContext = createContext(null);
+/* ---------- Helpers ---------- */
 
-/* ------------------------------------------------------------------ */
-/*  🔌  Convenience hooks                                              */
-/* ------------------------------------------------------------------ */
-export const useHud   = () => useContext(HudContext);      // stats-only (legacy)
-export const useAuth  = () => useContext(HudContext);      // user + stats  (new)
+/** Tiny, dependency-free JWT decoder (payload only). */
+function decodeJwt(token) {
+  try {
+    const [, base64] = token.split('.');
+    return JSON.parse(atob(base64));
+  } catch (err) {
+    console.warn('JWT decode error:', err);
+    return null;
+  }
+}
 
-/* ------------------------------------------------------------------ */
-/*  🌐  Provider                                                       */
-/* ------------------------------------------------------------------ */
-export function HudProvider({ children }) {
-  // live HUD bars
-  const [stats, setStats] = useState({
+/* ---------- Context ---------- */
+
+const HudContext = createContext({
+  user: null,
+  stats: {
+    money: 0,
+    power: 0,
+    defense: 0,
     energy: 0,
-    health: 0,
-    courage: 0,
-    will:   0,
+    level: 1,
+    exp: 0,
+    hp: 0,
+  },
+  setUser: () => {},
+});
+
+/* ---------- Public Hooks ---------- */
+
+export const useAuth = () => {
+  const { user, setUser } = useContext(HudContext);
+  return { user, setUser, isAuthenticated: Boolean(user) };
+};
+
+export const useHud = () => useContext(HudContext).stats;
+
+/* ---------- Provider ---------- */
+
+export function HudProvider({ children }) {
+  const [stats, setStats] = useState({
+    money: 0,
+    power: 0,
+    defense: 0,
+    energy: 0,
+    level: 1,
+    exp: 0,
+    hp: 0,
   });
+  const [user, setUser] = useState(null);
 
-  // logged-in player
-  const [user, setUser]   = useState(null);
-
-  /* -------- Establish WebSocket & fetch user from localStorage ---- */
+  /* 1️⃣  Bootstrapping & WebSocket */
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return; // not logged in
+    if (!token) return;
 
-    try {
-      setUser(jwtDecode(token));            // { _id, username, … }
-    } catch { /* invalid token – ignore */ }
+    setUser(decodeJwt(token));
 
-    const socket = io(import.meta.env.VITE_API_URL, {
-      path: '/ws',
-      auth: { token },
-    });
-
+    const socket = connectSocket(token);
     socket.on('hud:update', setStats);
+    socket.on('connect_error', (err) =>
+      console.warn('WebSocket error:', err.message),
+    );
 
     return () => socket.disconnect();
   }, []);
 
-  /* -------- Provider value ---------------------------------------- */
-  const value = {
-    user,            // the decoded player object
-    stats,           // live energy / health etc.
-    setUser,         // expose setter in case you later add login / logout
-  };
+  /* Avoid prop-drilling re-renders */
+  const ctxValue = useMemo(() => ({ user, stats, setUser }), [user, stats]);
 
-  return <HudContext.Provider value={value}>{children}</HudContext.Provider>;
+  return <HudContext.Provider value={ctxValue}>{children}</HudContext.Provider>;
 }

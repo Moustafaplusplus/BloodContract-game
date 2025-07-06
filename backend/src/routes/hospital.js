@@ -1,75 +1,66 @@
-// src/routes/hospital.js
-import express from 'express';
-import jwt from 'jsonwebtoken';
+// ── backend/src/routes/hospital.js
+import { Router } from 'express';
+import { Op } from 'sequelize';
+import auth from '../middlewares/auth.js';
 import Hospital from '../models/hospital.js';
-import Character from '../models/character.js';
+import User from '../models/user.js';
 
-const router = express.Router();
+const router = Router();
 
-/* helper: seconds left from minutes + startedAt */
-const secsLeft = (rec) =>
-  Math.max(
-    0,
-    rec.minutes * 60 - Math.floor((Date.now() - new Date(rec.startedAt)) / 1000),
-  );
+const BASE_HEAL_FEE = 40;        // flat charge in $
+const PER_MINUTE_FEE = 4;        // $ per remaining minute
 
-/* ── GET /api/hospital/me ───────────────────────── */
-router.get('/me', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
+router.get('/', auth, async (req, res) => {
+  const { id: userId } = req.user;
+  const now = new Date();
 
-    const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-    const hosp = await Hospital.findOne({ where: { userId } });
+  const record = await Hospital.findOne({
+    where: {
+      userId,
+      releasedAt: { [Op.gt]: now },
+    },
+  });
 
-    if (!hosp) return res.json({ inHospital: false });
+  if (!record) return res.json({ inHospital: false });
 
-    const remaining = secsLeft(hosp);
+  const remainingMs = record.releasedAt.getTime() - now.getTime();
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const remainingMinutes = Math.ceil(remainingSeconds / 60);
+  const cost = BASE_HEAL_FEE + remainingMinutes * PER_MINUTE_FEE;
 
-    if (remaining === 0) {
-      await hosp.destroy();
-      return res.json({ inHospital: false });
-    }
-
-    res.json({
-      inHospital: true,
-      remaining,
-      hpLost: hosp.hpLost,
-    });
-  } catch (e) {
-    console.error(e);
-    res.sendStatus(500);
-  }
+  res.json({
+    inHospital: true,
+    remainingSeconds,
+    cost,
+    crimeId: record.crimeId,
+    hpLoss: record.hpLoss,
+  });
 });
 
-/* ── POST /api/hospital/heal  (pay doctor, heal instantly) ── */
-router.post('/heal', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
+router.post('/heal', auth, async (req, res) => {
+  const { id: userId } = req.user;
+  const now = new Date();
 
-    const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-    const hosp = await Hospital.findOne({ where: { userId } });
-    if (!hosp) return res.status(400).json({ message: 'لست في المستشفى' });
+  const record = await Hospital.findOne({
+    where: {
+      userId,
+      releasedAt: { [Op.gt]: now },
+    },
+  });
 
-    const doctorFee = 200;                          // tweak as you like
-    const char = await Character.findOne({ where: { userId } });
+  if (!record) return res.status(400).json({ error: 'Not in hospital' });
 
-    if (char.money < doctorFee)
-      return res
-        .status(400)
-        .json({ message: 'لا تملك مالًا كافيًا لدفع الطبيب' });
+  const remainingMs = record.releasedAt.getTime() - now.getTime();
+  const remainingMinutes = Math.ceil(remainingMs / 60000);
+  const cost = BASE_HEAL_FEE + remainingMinutes * PER_MINUTE_FEE;
 
-    char.money -= doctorFee;
-    char.hp    += hosp.hpLost;                      // restore lost HP
-    await char.save();
-    await hosp.destroy();
+  const user = await User.findByPk(userId);
+  if (user.cash < cost) return res.status(400).json({ error: 'Insufficient funds' });
 
-    res.json({ message: 'تم شفاؤك بالكامل' });
-  } catch (e) {
-    console.error(e);
-    res.sendStatus(500);
-  }
+  await user.update({ cash: user.cash - cost, hp: Math.min(user.hp + record.hpLoss, user.maxHp) });
+  await record.destroy();
+
+  res.json({ success: true, newCash: user.cash, hp: user.hp });
 });
 
 export default router;

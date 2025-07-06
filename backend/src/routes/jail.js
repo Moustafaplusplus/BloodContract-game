@@ -1,70 +1,70 @@
-// src/routes/jail.js
-import express from 'express';
-import jwt from 'jsonwebtoken';
+// ── backend/src/routes/jail.js
+import { Router } from 'express';
+import { Op } from 'sequelize';
+import auth from '../middlewares/auth.js';
 import Jail from '../models/jail.js';
-import Character from '../models/character.js';
+import User from '../models/user.js';
 
-const router = express.Router();
+const router = Router();
 
-/* helper: seconds remaining for this record */
-const remainingSecs = (j) =>
-  Math.max(
-    0,
-    j.minutes * 60 - Math.floor((Date.now() - new Date(j.startedAt)) / 1000),
-  );
+// Constants for bail calculation (designer‑tweakable)
+const BASE_BAIL_FEE = 50;        // flat charge in $
+const PER_MINUTE_FEE = 5;        // additional $ per remaining minute
 
-/* ── GET /api/jail/me ───────────────────────────── */
-router.get('/me', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
+// GET /api/jail  – return current jail status for the authed user
+router.get('/', auth, async (req, res) => {
+  const { id: userId } = req.user;
+  const now = new Date();
 
-    const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-    const jail = await Jail.findOne({ where: { userId } });
+  const record = await Jail.findOne({
+    where: {
+      userId,
+      releasedAt: { [Op.gt]: now },
+    },
+  });
 
-    if (!jail) return res.json({ inJail: false });
+  if (!record) return res.json({ inJail: false });
 
-    const remaining = remainingSecs(jail);
+  const remainingMs = record.releasedAt.getTime() - now.getTime();
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const remainingMinutes = Math.ceil(remainingSeconds / 60);
 
-    if (remaining === 0) {
-      await jail.destroy();
-      return res.json({ inJail: false });
-    }
+  const cost = BASE_BAIL_FEE + remainingMinutes * PER_MINUTE_FEE;
 
-    return res.json({ inJail: true, remaining });
-  } catch (e) {
-    console.error(e);
-    res.sendStatus(500);
-  }
+  res.json({
+    inJail: true,
+    remainingSeconds,
+    cost,           // cost to bail out right now
+    crimeId: record.crimeId,
+  });
 });
 
-/* ── POST /api/jail/bail ────────────────────────── */
-router.post('/bail', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
+// POST /api/jail/bail – pay and leave jail immediately
+router.post('/bail', auth, async (req, res) => {
+  const { id: userId } = req.user;
+  const now = new Date();
 
-    const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-    const jail = await Jail.findOne({ where: { userId } });
-    if (!jail) return res.status(400).json({ message: 'لست في السجن' });
+  const record = await Jail.findOne({
+    where: {
+      userId,
+      releasedAt: { [Op.gt]: now },
+    },
+  });
 
-    const bailCost = 250;
-    const char = await Character.findOne({ where: { userId } });
+  if (!record) return res.status(400).json({ error: 'Not in jail' });
 
-    if (char.money < bailCost)
-      return res
-        .status(400)
-        .json({ message: 'لا تملك مالًا كافيًا لدفع الكفالة' });
+  const remainingMs = record.releasedAt.getTime() - now.getTime();
+  const remainingMinutes = Math.ceil(remainingMs / 60000);
+  const cost = BASE_BAIL_FEE + remainingMinutes * PER_MINUTE_FEE;
 
-    char.money -= bailCost;
-    await char.save();
-    await jail.destroy();
+  // Check balance & deduct money atomically
+  const user = await User.findByPk(userId);
+  if (user.cash < cost) return res.status(400).json({ error: 'Insufficient funds' });
 
-    res.json({ message: 'تم إطلاق سراحك' });
-  } catch (e) {
-    console.error(e);
-    res.sendStatus(500);
-  }
+  await user.update({ cash: user.cash - cost });
+  await record.destroy();
+
+  res.json({ success: true, newCash: user.cash });
 });
 
 export default router;
