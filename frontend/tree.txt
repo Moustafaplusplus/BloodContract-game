@@ -1,0 +1,70 @@
+src/
+├─ hooks/
+│  ├─ ① useAuth.js
+│  ├─ ③ useHud.js
+│  └─ ③ useSocket.js
+│
+├─ layouts/
+│  └─ ② DashboardLayout.jsx
+│
+├─ components/
+│  ├─ ③ HUD/
+│  │  └─ index.jsx
+│  ├─ 10 JailDialog.jsx
+│  ├─ 10 HospitalDialog.jsx
+│  ├─ 25 PlayerSearch.jsx
+│  ├─ 17 EquippedCarBanner.jsx
+│  └─ RouteGuard.jsx            (used by App, no standalone step)
+│
+├─ features/
+│  ├─ auth/
+│  │  ├─ ① Login.jsx
+│  │  └─ ① Signup.jsx
+│  ├─ dashboard/
+│  │  └─ ⑤ Home.jsx
+│  ├─ events/
+│  │  └─ 24 LatestEvents.jsx
+│  ├─ character/
+│  │  ├─ 06 Overview.jsx
+│  │  ├─ 11 Gym.jsx
+│  │  └─ 15 Achievements.jsx
+│  ├─ crimes/
+│  │  └─ 09 Crimes.jsx
+│  ├─ fight/
+│  │  └─ 13 Arena.jsx
+│  ├─ bank/
+│  │  ├─ 07 Bank.jsx
+│  │  └─ 20 InterestHistory.jsx
+│  ├─ gold/
+│  │  └─ 08 GoldMarket.jsx
+│  ├─ shop/
+│  │  ├─ 12 WeaponShop.jsx
+│  │  └─ 16 ArmorShop.jsx
+│  ├─ car/
+│  │  └─ 17 CarShop.jsx
+│  ├─ houses/
+│  │  ├─ 16 HouseShop.jsx
+│  │  └─ 16 MyHouse.jsx
+│  ├─ inventory/
+│  │  └─ 12 Inventory.jsx
+│  ├─ blackMarket/
+│  │  └─ 18 BlackMarket.jsx
+│  ├─ jobs/
+│  │  └─ 19 Jobs.jsx
+│  ├─ friends/
+│  │  └─ 21 Friends.jsx
+│  ├─ chat/
+│  │  └─ 22 Thread.jsx
+│  ├─ gangs/
+│  │  ├─ 23 List.jsx
+│  │  └─ 23 Dashboard.jsx
+│  ├─ leaderboard/
+│  │  └─ 14 Leaderboard.jsx
+│  ├─ profile/
+│  │  ├─ 26 MyProfile.jsx
+│  │  └─ 26 View.jsx
+│  └─ NotFound.jsx               (27 NotFound.jsx)
+│
+├─ App.jsx                    applied to contain the above elements
+├─ router.js                     (optional wrapper)
+└─ main.jsx

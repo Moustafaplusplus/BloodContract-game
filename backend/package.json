@@ -5,7 +5,8 @@
   "description": "",
   "main": "src/app.js",
   "scripts": {
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "seed:crimes": "node --no-warnings scripts/seedCrimes.js"
   },
   "keywords": [],
   "author": "",

@@ -1,5 +1,5 @@
 // ============================
-// backend/src/app.js – unified DB + Socket.IO bootstrap
+//  backend/src/app.js – unified DB + Socket.IO bootstrap (feature barrels)
 // ============================
 
 import express  from 'express';
@@ -10,111 +10,88 @@ import http     from 'http';
 
 import { DataTypes } from 'sequelize';
 import { sequelize } from './config/db.js';
+dotenv.config();
 
-// ─────────── DB & Models bootstrap ───────────
-export { sequelize };                 // reuse in tests if needed
+/* ─────────── Export for tests ─────────── */
+export { sequelize };
 
-import Jail                 from './models/jail.js';
-import Hospital             from './models/hospital.js';
-import Crime                from './models/crime.js';
-import CrimeLog             from './models/crimeLog.js';
-import User                 from './models/user.js';
-import Character            from './models/character.js';
-import Weapon               from './models/weapon.js';
-import { House, UserHouse } from './models/house.js';
-import Fight                from './models/fight.js';
-import Event                from './models/event.js';
-import Job                  from './models/job.js';
-import Armor                from './models/armor.js';
-import InventoryItem        from './models/inventoryItem.js';
-import Achievement          from './models/achievement.js';
-import CharacterAchievement from './models/characterAchievement.js';
+/* ─────────── Feature barrels ─────────── */
+import { User, router as userRouter }                      from './features/user.js';
+import { crimeRouter, Crime, CrimeLog }                    from './features/crimes.js';
+import { characterRouter, Character as CharacterModel, startEnergyRegen, startHealthRegen } from './features/character.js';
+import { fightRouter, Fight as FightModel }                from './features/fights.js';
+import { bankRouter, BankAccount, startBankInterest }      from './features/bank.js';
+import { jailRouter, hospitalRouter, Jail as JailModel, Hospital as HospitalModel } from './features/confinement.js';
+import { achievementRouter, leaderboardRouter, Achievement as AchievementModel, CharacterAchievement as CharacterAchievementModel, startAchievementChecker as startAchCron } from './features/achievements.js';
+import { router as goldMarketRouter }                      from './features/gold.js';
+import { router as housesRouter, House as HouseModel, UserHouse as UserHouseModel } from './features/houses.js';
+import { router as shopRouter, Weapon, Armor }             from './features/shop.js';
+import { router as inventoryRouter, InventoryItem }        from './features/inventory.js';
+import { router as blackMarketRouter }                     from './features/blackMarket.js';
+import { jobsRouter, gymRouter, startJobPayoutCron }       from './features/jobs.js';
+import { friendsRouter, messengerRouter }                  from './features/social.js';
+import { gangRouter }                                      from './features/gang.js';
+import { eventRouter, Event as EventModel }                from './features/events.js';
+import { profileRouter, searchRouter, errorHandler }       from './features/profile.js';
+import { carRouter, Car as CarModel }                      from './features/car.js';
 
-// auto-init any class-style models that haven’t self-registered
+/* ─────────── Sequelize model auto-init (skip if already inited) ─────────── */
 [
-  User, Character, Achievement, CharacterAchievement,
-  Jail, Hospital, Crime, CrimeLog, Weapon,
-  House, UserHouse, Fight, Event, Job, Armor, InventoryItem,
+  User, CharacterModel, AchievementModel, CharacterAchievementModel,
+  JailModel, HospitalModel, Crime, CrimeLog,
+  Weapon, Armor, InventoryItem,
+  HouseModel, UserHouseModel,
+  FightModel, BankAccount,
+  EventModel, CarModel,
 ].forEach((M) => {
-  if (M.sequelize || typeof M.init !== 'function') return;
+  if (M.sequelize || typeof M.init !== 'function') return; // already initialised
   M.init.length === 1 ? M.init(sequelize) : M.init(sequelize, DataTypes);
 });
 
-// ─────────── Env & Express setup ───────────
-dotenv.config();
+/* ─────────── Express bootstrapping ─────────── */
 const app = express();
-
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
-
-// ─────────── Routes ───────────
-import crimeRoutes       from './routes/crimes.js';
-import authRoutes        from './routes/auth.js';
-import characterRoutes   from './routes/character.js';
-import shopRoutes        from './routes/shop.js';
-import houseRoutes       from './routes/houses.js';
-import fightRoutes       from './routes/fight.js';
-import userRoutes        from './routes/users.js';
-import jobRoutes         from './routes/jobs.js';
-import eventsRoutes      from './routes/events.js';
-import gymRoutes         from './routes/gym.js';
-import bankRoutes        from './routes/bank.js';
-import jailRoutes        from './routes/jail.js';
-import hospitalRoutes    from './routes/hospital.js';
-import inventoryRoutes   from './routes/inventory.js';
-import blackMarketRouter from './routes/blackMarket.js';
-import goldMarketRouter  from './routes/goldMarket.js';
-import gangRoutes        from './routes/gang.js';
-import messengerRouter   from './routes/messenger.js';
-import searchRouter      from './routes/search.js';
-import leaderboardRoutes from './routes/leaderboard.js';
-import friendsRouter from './routes/friends.js';
-import profileRouter from './routes/profile.js';
-
-
 app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
 
-app.use('/api/crimes',       crimeRoutes);
-app.use('/api/auth',         authRoutes);
-app.use('/api/character',    characterRoutes);
-app.use('/api/shop',         shopRoutes);
-app.use('/api/houses',       houseRoutes);
-app.use('/api/fight',        fightRoutes);
-app.use('/api/users',        userRoutes);
-app.use('/api/jobs',         jobRoutes);
-app.use('/api/events',       eventsRoutes);
-app.use('/api/gym',          gymRoutes);
-app.use('/api/bank',         bankRoutes);
-app.use('/api/jail',         jailRoutes);
-app.use('/api/hospital',     hospitalRoutes);
-app.use('/api/inventory',    inventoryRoutes);
-app.use('/black-market',     blackMarketRouter);
-app.use('/gold-market',      goldMarketRouter);
-app.use('/api',              gangRoutes);
-app.use('/api/v1/messenger', messengerRouter);
-app.use('/api/v1/search',    searchRouter);
-app.use('/api/leaderboard',  leaderboardRoutes);
-app.use('/api/friends', friendsRouter);
-app.use('/api/profile', profileRouter);
+/* ─────────── Feature-barrel routers ─────────── */
+app.use('/api',                  userRouter);          // /api/signup, /api/login …
+app.use('/api/crimes',           crimeRouter);
+app.use('/api/character',        characterRouter);
+app.use('/api/fight',            fightRouter);
+app.use('/api/bank',             bankRouter);
+app.use('/api/jail',             jailRouter);
+app.use('/api/hospital',         hospitalRouter);
+app.use('/api/achievements',     achievementRouter);
+app.use('/api/leaderboard',      leaderboardRouter);
+app.use('/gold-market',          goldMarketRouter);
+app.use('/api/houses',           housesRouter);
+app.use('/api/shop',             shopRouter);
+app.use('/api/inventory',        inventoryRouter);
+app.use('/black-market',         blackMarketRouter);
+app.use('/api/jobs',             jobsRouter);
+app.use('/api/gym',              gymRouter);
+app.use('/api/events',           eventRouter);
+app.use('/api/friends',          friendsRouter);
+app.use('/api/v1/messenger',     messengerRouter);
+app.use('/api',                  gangRouter);          // keeps /api/gangs*
+app.use('/api/profile',          profileRouter);
+app.use('/api/v1/search',        searchRouter);
+app.use('/api/car-shop',         carRouter);
 
-
-import errorHandler from './middlewares/errorHandler.js';
+/* ─────────── Global error handler ─────────── */
 app.use(errorHandler);
 
-// ─────────── Background jobs ───────────
-import { startAchievementChecker } from './jobs/achievementChecker.js';
-import { startEnergyRegen }        from './jobs/energyRegen.js';
-import { startHealthRegen }        from './jobs/healthRegen.js';
-import './jobs/bankInterest.js';
-
+/* ─────────── Background jobs ─────────── */
 startEnergyRegen();
 startHealthRegen();
-startAchievementChecker();
+startAchCron();
+startBankInterest();
+startJobPayoutCron();
 
-// ─────────── Bootstrapping ───────────
-import { initSocket } from './socket.js';      // ← your new socket file
-
+/* ─────────── Bootstrapping ─────────── */
+import { initSocket } from './socket.js';
 const PORT = process.env.API_PORT || 5000;
 
 const startServer = async () => {
@@ -126,8 +103,8 @@ const startServer = async () => {
     console.log('📦 Database synced ✅');
 
     const server = http.createServer(app);
-    const io = initSocket(server);             // attach Socket.IO
-    app.set('io', io);                         // share via req.app.get('io')
+    const io = initSocket(server);
+    app.set('io', io);
 
     server.listen(PORT, () => {
       console.log(`✅ Server listening on http://localhost:${PORT}`);

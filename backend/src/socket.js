@@ -1,26 +1,23 @@
-// backend/src/socket.js
 // ------------------------------------------------------------
-// Centralised Socket-IO bootstrap + HUD ticker
+//  backend/src/socket.js – unified Socket.IO bootstrap
 // ------------------------------------------------------------
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import Character from './models/character.js';
+import { Character } from './features/character.js';
 
 let io = null;
 
 /**
  * Attach Socket-IO to an existing HTTP server.
- * @param {http.Server} server
- * @returns {import('socket.io').Server}
+ * Each client sends `{ token }` in `auth` during connection.
+ *  – Joins a personal room named by userId so other modules can emit
+ *  – Emits `hud:update` snapshot every 5 s or on manual request
  */
 export function initSocket(server) {
   io = new Server(server, {
     path: '/ws',
-    cors: {
-      origin: process.env.CLIENT_URL || '*',
-      credentials: true,
-    },
-    transports: ['websocket'], // matches frontend's preference
+    cors: { origin: process.env.CLIENT_URL || '*', credentials: true },
+    transports: ['websocket'],
   });
 
   io.on('connection', async (socket) => {
@@ -29,19 +26,23 @@ export function initSocket(server) {
 
     try {
       const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
+      socket.data.userId = userId; // store for middleware use
+      socket.join(String(userId)); // personal room for DM / notifications
       console.log('🔌 WS connected:', userId);
 
-      // Helper to push full HUD payload
+      /* ─ Helper: push HUD snapshot ─ */
       const pushHud = async () => {
         const character = await Character.findOne({ where: { userId } });
         if (character) socket.emit('hud:update', character.toSafeJSON());
       };
+      pushHud();
+      const tick = setInterval(pushHud, 5000);
 
-      pushHud();                         // initial snapshot
-      const tickId = setInterval(pushHud, 5000); // periodic updates
+      /* ─ Manual HUD refresh from client ─ */
+      socket.on('hud:request', pushHud);
 
       socket.on('disconnect', () => {
-        clearInterval(tickId);
+        clearInterval(tick);
         console.log('🛑 WS disconnected:', userId);
       });
     } catch (err) {
@@ -53,5 +54,4 @@ export function initSocket(server) {
   return io;
 }
 
-// Allow other modules to import { io } for emits
 export { io };
