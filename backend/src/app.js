@@ -1,7 +1,4 @@
-// ============================
 //  backend/src/app.js – unified DB + Socket.IO bootstrap (feature barrels)
-// ============================
-
 import express  from 'express';
 import cors     from 'cors';
 import morgan   from 'morgan';
@@ -25,7 +22,7 @@ import { jailRouter, hospitalRouter, Jail as JailModel, Hospital as HospitalMode
 import { achievementRouter, leaderboardRouter, Achievement as AchievementModel, CharacterAchievement as CharacterAchievementModel, startAchievementChecker as startAchCron } from './features/achievements.js';
 import { router as goldMarketRouter }                      from './features/gold.js';
 import { router as housesRouter, House as HouseModel, UserHouse as UserHouseModel } from './features/houses.js';
-import { router as shopRouter, Weapon, Armor }             from './features/shop.js';
+import { router as shopRouter, Weapon, Armor, seedShopItems } from './features/shop.js';   // ← seed
 import { router as inventoryRouter, InventoryItem }        from './features/inventory.js';
 import { router as blackMarketRouter }                     from './features/blackMarket.js';
 import { jobsRouter, gymRouter, startJobPayoutCron }       from './features/jobs.js';
@@ -50,13 +47,15 @@ import { carRouter, Car as CarModel }                      from './features/car.
 
 /* ─────────── Express bootstrapping ─────────── */
 const app = express();
+
+app.set('etag', false);                     // prevents 304 responses with empty body
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
 
 /* ─────────── Feature-barrel routers ─────────── */
-app.use('/api',                  userRouter);          // /api/signup, /api/login …
+app.use('/api',                  userRouter);
 app.use('/api/crimes',           crimeRouter);
 app.use('/api/character',        characterRouter);
 app.use('/api/fight',            fightRouter);
@@ -100,6 +99,7 @@ const startServer = async () => {
     console.log('🗄️  Postgres connection: OK');
 
     await sequelize.sync({ alter: true });
+    await seedShopItems();                 // ← seed weapons + armors once
     console.log('📦 Database synced ✅');
 
     const server = http.createServer(app);

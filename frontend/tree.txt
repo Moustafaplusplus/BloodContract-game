@@ -1,70 +1,70 @@
 src/
 ├─ hooks/
-│  ├─ ① useAuth.js
-│  ├─ ③ useHud.js
-│  └─ ③ useSocket.js
+│  ├─ useAuth.js              ✅
+│  ├─ useHud.js               ✅
+│  └─ useSocket.js            ✅
 │
 ├─ layouts/
-│  └─ ② DashboardLayout.jsx
+│  └─ DashboardLayout.jsx     ✅
 │
 ├─ components/
-│  ├─ ③ HUD/
-│  │  └─ index.jsx
-│  ├─ 10 JailDialog.jsx
-│  ├─ 10 HospitalDialog.jsx
-│  ├─ 25 PlayerSearch.jsx
-│  ├─ 17 EquippedCarBanner.jsx
-│  └─ RouteGuard.jsx            (used by App, no standalone step)
+│  ├─ HUD/
+│  │  └─ index.jsx            ✅
+│  ├─ JailDialog.jsx          ✅
+│  ├─ HospitalDialog.jsx      ✅
+│  ├─ PlayerSearch.jsx        ⬜
+│  ├─ EquippedCarBanner.jsx   ⬜
+│  └─ RouteGuard.jsx          ⬜
 │
 ├─ features/
 │  ├─ auth/
-│  │  ├─ ① Login.jsx
-│  │  └─ ① Signup.jsx
+│  │  ├─ Login.jsx            ✅
+│  │  └─ Signup.jsx           ✅
 │  ├─ dashboard/
-│  │  └─ ⑤ Home.jsx
+│  │  └─ Home.jsx             ✅
 │  ├─ events/
-│  │  └─ 24 LatestEvents.jsx
+│  │  └─ LatestEvents.jsx     ⬜
 │  ├─ character/
-│  │  ├─ 06 Overview.jsx
-│  │  ├─ 11 Gym.jsx
-│  │  └─ 15 Achievements.jsx
+│  │  ├─ Overview.jsx         ✅
+│  │  ├─ Gym.jsx              ✅
+│  │  └─ Achievements.jsx     ⬜
 │  ├─ crimes/
-│  │  └─ 09 Crimes.jsx
+│  │  └─ Crimes.jsx           ✅
 │  ├─ fight/
-│  │  └─ 13 Arena.jsx
+│  │  └─ Arena.jsx            ⬜
 │  ├─ bank/
-│  │  ├─ 07 Bank.jsx
-│  │  └─ 20 InterestHistory.jsx
+│  │  ├─ Bank.jsx             ✅
+│  │  └─ InterestHistory.jsx  ✅
 │  ├─ gold/
-│  │  └─ 08 GoldMarket.jsx
+│  │  └─ GoldMarket.jsx       ⬜
 │  ├─ shop/
-│  │  ├─ 12 WeaponShop.jsx
-│  │  └─ 16 ArmorShop.jsx
+│  │  ├─ WeaponShop.jsx       ⬜
+│  │  └─ ArmorShop.jsx        ⬜
 │  ├─ car/
-│  │  └─ 17 CarShop.jsx
+│  │  └─ CarShop.jsx          ⬜
 │  ├─ houses/
-│  │  ├─ 16 HouseShop.jsx
-│  │  └─ 16 MyHouse.jsx
+│  │  ├─ HouseShop.jsx        ⬜
+│  │  └─ MyHouse.jsx          ⬜
 │  ├─ inventory/
-│  │  └─ 12 Inventory.jsx
+│  │  └─ Inventory.jsx        ✅
 │  ├─ blackMarket/
-│  │  └─ 18 BlackMarket.jsx
+│  │  └─ BlackMarket.jsx      ⬜
 │  ├─ jobs/
-│  │  └─ 19 Jobs.jsx
+│  │  └─ Jobs.jsx             ⬜
 │  ├─ friends/
-│  │  └─ 21 Friends.jsx
+│  │  └─ Friends.jsx          ⬜
 │  ├─ chat/
-│  │  └─ 22 Thread.jsx
+│  │  └─ Thread.jsx           ⬜
 │  ├─ gangs/
-│  │  ├─ 23 List.jsx
-│  │  └─ 23 Dashboard.jsx
+│  │  ├─ List.jsx             ⬜
+│  │  └─ Dashboard.jsx        ⬜
 │  ├─ leaderboard/
-│  │  └─ 14 Leaderboard.jsx
+│  │  └─ Leaderboard.jsx      ⬜
 │  ├─ profile/
-│  │  ├─ 26 MyProfile.jsx
-│  │  └─ 26 View.jsx
-│  └─ NotFound.jsx               (27 NotFound.jsx)
+│  │  ├─ MyProfile.jsx        ⬜
+│  │  └─ View.jsx             ⬜
+│  └─ NotFound.jsx            ✅
 │
-├─ App.jsx                    applied to contain the above elements
-├─ router.js                     (optional wrapper)
-└─ main.jsx
+├─ App.jsx                    ✅
+├─ router.js                  ⬜
+└─ main.jsx                   ✅
