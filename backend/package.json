@@ -6,7 +6,8 @@
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon src/app.js",
-    "seed:crimes": "node --no-warnings scripts/seedCrimes.js"
+    "seed:crimes": "node --no-warnings scripts/seedCrimes.js",
+    "seed:all": "node src/seedAll.js"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +31,7 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "sequelize-cli": "^6.6.3"
   }
 }

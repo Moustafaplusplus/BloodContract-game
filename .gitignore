@@ -15,3 +15,5 @@ db_data/
 # OS miscellany
 .DS_Store
 Thumbs.db
+
+.config/

@@ -53,29 +53,32 @@ export default function Overview() {
   const expMax = nextLevelExp || level * 1000;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <h2 className="text-2xl font-bold flex items-center gap-2">
-        شخصيتك
-        <span className="text-base font-normal ml-auto px-2 py-0.5 rounded bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-800">
-          المستوى {level}
-        </span>
-      </h2>
-
-      {/* Bars */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <StatBar label="الصحة" value={hp}   max={maxHp}    colorClass="bg-red-600"    />
-        <StatBar label="الطاقة" value={energy} max={maxEnergy} colorClass="bg-green-500"  />
-        <StatBar label="الخبرة" value={exp}  max={expMax}  colorClass="bg-amber-400" />
+    <section className="bg-black min-h-screen text-white p-4 space-y-8 w-full min-w-0">
+      <h1 className="text-2xl font-bold text-red-600 mb-4">👤 الشخصية</h1>
+      <div className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 text-white max-w-xs w-full mx-auto">
+        <div className="flex flex-col items-center space-y-2 mb-4">
+          <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center text-3xl text-red-500">
+            {character.avatar || character.name[0]}
+          </div>
+          <h2 className="text-xl font-bold text-red-500">{character.name}</h2>
+          <p className="text-gray-300">{character.email}</p>
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span>المستوى:</span>
+            <span className="text-red-400 font-mono">{character.level}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>الخبرة:</span>
+            <span className="text-red-400 font-mono">{character.exp}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>النقود:</span>
+            <span className="text-red-400 font-mono">{character.money}$</span>
+          </div>
+        </div>
       </div>
-
-      {/* Numeric stats */}
-      <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-1 text-sm">
-        <li>💰 المال: ${money}</li>
-        <li>💪 القوة: {strength}</li>
-        <li>🛡️ الدفاع: {defense}</li>
-      </ul>
-    </div>
+    </section>
   );
 }
 /* ------ END src/features/character/Overview.jsx ------- */

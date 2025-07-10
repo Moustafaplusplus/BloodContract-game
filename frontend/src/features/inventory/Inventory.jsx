@@ -141,19 +141,27 @@ export default function Inventory() {
   }
 
   return (
-    <section className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold">🎒 الحقيبة</h2>
-
-      {items.length === 0 ? (
-        <p className="text-slate-400">لا تملك أي عناصر بعد.</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {items.map((it) => (
-            <ItemCard key={`${it.type}-${it.id}`} item={it}
-                      onEquip={equip} onUnequip={unequip} onSell={sell} />
-          ))}
-        </div>
-      )}
+    <section className="bg-black min-h-screen text-white p-4 space-y-8">
+      <h1 className="text-2xl font-bold text-red-600 mb-4">🎒 المخزون</h1>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {items.map((item) => (
+          <div key={item.id} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white">
+            <h3 className="font-bold text-lg text-red-500 mb-2">{item.name}</h3>
+            <p className="text-gray-300 mb-2">{item.description}</p>
+            <div className="flex justify-between text-sm mb-2">
+              <span>الكمية:</span>
+              <span className="text-red-400 font-mono">{item.quantity}</span>
+            </div>
+            <button
+              onClick={() => useItem(item.id)}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg mt-2"
+              disabled={usingId === item.id}
+            >
+              {usingId === item.id ? 'جاري الاستخدام...' : 'استخدم'}
+            </button>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

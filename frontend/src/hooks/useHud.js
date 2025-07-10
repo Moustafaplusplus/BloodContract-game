@@ -20,7 +20,10 @@ export function useHud() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleUpdate = (snapshot) => setHud(snapshot);
+    const handleUpdate = (snapshot) => {
+      console.log('🔍 HUD Data received:', snapshot);
+      setHud(snapshot);
+    };
 
     socket.on('hud:update', handleUpdate);
     invalidateHud();            // grab initial state
@@ -29,9 +32,9 @@ export function useHud() {
   }, [socket, invalidateHud]);
 
   return {
-    hud,
+    stats: hud,
     loading: hud === null,
-    invalidateHud,              // <— NEW
+    invalidateHud,
   };
 }
 

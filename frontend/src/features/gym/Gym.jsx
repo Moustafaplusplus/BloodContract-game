@@ -39,13 +39,11 @@ export default function Gym() {
   const maxSpend = Math.min(20, hud.energy);
 
   return (
-    <section className="max-w-md mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-center">🏋️‍♂️ النادي الرياضي</h1>
-
-      <p className="text-sm text-gray-700 dark:text-gray-300">
-        كل نقطة طاقة تمنحك زيادة تقريبية <strong>0.2‑5</strong> قوة و نصفها دفاع.
+    <section className="max-w-md mx-auto space-y-6 bg-black min-h-screen text-white p-4">
+      <h1 className="text-2xl font-bold text-center text-red-600">🏋️‍♂️ النادي الرياضي</h1>
+      <p className="text-sm text-gray-200">
+        كل نقطة طاقة تمنحك زيادة تقريبية <strong className="text-red-500">0.2‑5</strong> قوة و نصفها دفاع.
       </p>
-
       <label className="block space-y-1">
         <span className="text-sm">كم طاقة تريد إنفاقها؟ (1‑{maxSpend})</span>
         <input
@@ -54,20 +52,18 @@ export default function Gym() {
           max={maxSpend}
           value={energy}
           onChange={(e) => setEnergy(Math.max(1, Math.min(maxSpend, Number(e.target.value))))}
-          className="w-full rounded border p-2"
+          className="w-full rounded border p-2 bg-zinc-900 border-zinc-700 text-white"
         />
       </label>
-
       <button
         disabled={train.isLoading}
         onClick={() => train.mutate()}
-        className="w-full py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+        className="w-full py-2 rounded bg-red-600 text-white hover:bg-red-700 font-bold disabled:opacity-60"
       >
         {train.isLoading ? 'جاري التمرين…' : 'ابدأ التمرين'}
       </button>
-
-      <div className="text-center text-sm text-gray-500">
-        طاقتك الحالية: <strong>{hud.energy}</strong>
+      <div className="text-center text-sm text-gray-400">
+        طاقتك الحالية: <strong className="text-red-500">{hud.energy}</strong>
       </div>
     </section>
   );

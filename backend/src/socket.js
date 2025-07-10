@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 import { Server } from 'socket.io';
 import jwt        from 'jsonwebtoken';
-import { Character } from './features/character.js';
+import { Character } from './models/Character.js';
 
 let io = null;
 
@@ -16,7 +16,12 @@ export function initSocket(server) {
 
   io.on('connection', async (socket) => {
     const token = socket.handshake.auth?.token;
-    if (!token) return socket.disconnect();
+    console.log('🔌 Socket connection attempt - token present:', !!token);
+    
+    if (!token) {
+      console.log('❌ Socket disconnected - no token provided');
+      return socket.disconnect();
+    }
 
     try {
       const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
@@ -27,7 +32,21 @@ export function initSocket(server) {
       /* helper to push one HUD snapshot */
       const pushHud = async () => {
         const char = await Character.findOne({ where: { userId } });
-        if (char) socket.emit('hud:update', await char.toSafeJSON()); // ← await!
+        if (char) {
+          const hudData = await char.toSafeJSON();
+          console.log('📊 Sending HUD data to user', userId, ':', {
+            hp: hudData.hp,
+            maxHp: hudData.maxHp,
+            energy: hudData.energy,
+            maxEnergy: hudData.maxEnergy,
+            exp: hudData.exp,
+            nextLevelExp: hudData.nextLevelExp,
+            money: hudData.money
+          });
+          socket.emit('hud:update', hudData);
+        } else {
+          console.log('❌ No character found for user:', userId);
+        }
       };
 
       /* initial snapshot + 5-second heartbeat */
@@ -35,7 +54,10 @@ export function initSocket(server) {
       const tick = setInterval(pushHud, 5000);
 
       /* manual refresh from client */
-      socket.on('hud:request', pushHud);
+      socket.on('hud:request', () => {
+        console.log('🔄 Manual HUD refresh requested by user:', userId);
+        pushHud();
+      });
 
       socket.on('disconnect', () => {
         clearInterval(tick);

@@ -49,10 +49,19 @@ export default function HospitalDialog() {
   };
 
   return (
-    <div dir="rtl" className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-xs text-center space-y-4">
-        <h2 className="text-xl font-bold">أنت الآن في المستشفى</h2>
-        <p>وقت الخروج: {formatTime(remaining)}</p>
+    <div className="fixed inset-0 bg-black/70 dark:bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="card p-6 max-w-sm text-center space-y-4">
+        <div className="text-4xl mb-2">🏥</div>
+        <h2 className="text-xl font-bold text-accent-red">أنت الآن في المستشفى</h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          وقت الخروج: <span className="font-mono text-accent-orange">{formatTime(remaining)}</span>
+        </p>
+        <div className="w-full bg-gray-200 dark:bg-dark-700 rounded-full h-2">
+          <div 
+            className="bg-gradient-to-r from-accent-red to-accent-orange h-2 rounded-full transition-all duration-1000"
+            style={{ width: `${Math.max(0, (remaining / (24 * 3600)) * 100)}%` }}
+          ></div>
+        </div>
       </div>
     </div>
   );

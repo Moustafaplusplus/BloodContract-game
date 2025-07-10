@@ -1,8 +1,12 @@
 // src/features/NotFound.jsx
+import { Link } from 'react-router-dom';
+
 export default function NotFound() {
   return (
-    <div className="h-screen flex items-center justify-center text-xl font-bold">
-      404 – Page Not Found
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white">
+      <h1 className="text-6xl font-bold text-red-600 mb-4">404</h1>
+      <p className="text-xl text-gray-200 mb-8">الصفحة غير موجودة</p>
+      <Link to="/" className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">العودة للرئيسية</Link>
     </div>
   );
 }

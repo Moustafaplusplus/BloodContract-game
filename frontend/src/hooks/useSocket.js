@@ -18,9 +18,11 @@ function createSocket({ userId, token }) {
     process.env.REACT_APP_API_URL ||
     'http://localhost:5000';
 
+  console.log('🔌 Creating socket connection to:', API_URL, 'with userId:', userId);
+  
   return io(API_URL, {
     path: '/ws',
-    auth: { userId, token },
+    auth: { token }, // Backend only expects token, not userId
     transports: ['websocket'],
   });
 }
@@ -37,32 +39,48 @@ function useSocket(passedUserId) {
 
     try {
       const { id } = jwtDecode(token);
+      console.log('🔑 Decoded userId from token:', id);
       return id;
-    } catch {
+    } catch (error) {
+      console.error('❌ Failed to decode token:', error);
       return null;
     }
   }, [passedUserId, token]);
 
   /* ------------------- Connect ------------------ */
   useEffect(() => {
-    if (!userId || !token) return;
+    if (!userId || !token) {
+      console.log('⚠️ Socket connection skipped - missing userId or token:', { userId: !!userId, token: !!token });
+      return;
+    }
 
+    console.log('🔌 Attempting socket connection...');
     const s = createSocket({ userId, token });
 
-    s.on('connect', () => console.debug('[socket] connected', s.id));
-    s.on('disconnect', (reason) =>
-      console.debug('[socket] disconnected:', reason)
-    );
-    s.on('connect_error', (err) =>
-      console.error('[socket] connect_error:', err.message)
-    );
-    s.on('error', (err) => console.error('[socket] error:', err));
+    s.on('connect', () => {
+      console.log('✅ Socket connected successfully:', s.id);
+    });
+    s.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected:', reason);
+    });
+    s.on('connect_error', (err) => {
+      console.error('❌ Socket connection error:', err.message);
+    });
+    s.on('error', (err) => {
+      console.error('❌ Socket error:', err);
+    });
 
     /* ---------- Auxiliary server channels ---------- */
-    s.on('cooldown:update', setCooldowns);
+    s.on('cooldown:update', (data) => {
+      console.log('⏰ Cooldown update received:', data);
+      setCooldowns(data);
+    });
 
     setSocket(s);
-    return () => s.disconnect();
+    return () => {
+      console.log('🔌 Cleaning up socket connection');
+      s.disconnect();
+    };
   }, [userId, token]);
 
   return { socket, cooldowns };

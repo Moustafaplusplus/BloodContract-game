@@ -61,13 +61,13 @@ export default function Bank() {
 
   /* ───── UI ───── */
   return (
-    <section className="bg-slate-900 text-white rounded shadow p-6 space-y-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold">💰 البنك</h2>
+    <section className="bg-black text-white rounded shadow p-6 space-y-6 max-w-md mx-auto border border-zinc-800">
+      <h2 className="text-2xl font-bold text-red-600">💰 البنك</h2>
 
-      <div className="bg-slate-800 border border-slate-700 rounded p-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded p-4">
         <p className="text-lg font-semibold">
           الرصيد الحالي:&nbsp;
-          <span className="text-emerald-400">
+          <span className="text-red-500">
             {balance !== null ? `${balance}$` : '...'}
           </span>
         </p>
@@ -78,7 +78,7 @@ export default function Bank() {
         <input
           type="number"
           min="1"
-          className="mt-1 w-full rounded border border-slate-600 p-2 bg-slate-700 text-white"
+          className="mt-1 w-full rounded border border-zinc-700 p-2 bg-zinc-900 text-white"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
@@ -87,13 +87,13 @@ export default function Bank() {
       <div className="flex gap-2">
         <button
           onClick={() => tx('deposit')}
-          className="flex-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white py-2"
+          className="flex-1 rounded bg-red-600 hover:bg-red-700 text-white py-2 font-bold"
         >
           إيداع
         </button>
         <button
           onClick={() => tx('withdraw')}
-          className="flex-1 rounded bg-rose-500 hover:bg-rose-600 text-white py-2"
+          className="flex-1 rounded bg-zinc-800 hover:bg-zinc-700 text-red-500 border border-red-600 py-2 font-bold"
         >
           سحب
         </button>
