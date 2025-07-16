@@ -1,6 +1,7 @@
 import express from 'express';
 import { ProfileController } from '../controllers/ProfileController.js';
 import { auth } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -14,10 +15,10 @@ router.get('/', ProfileController.getOwnProfile);
 router.get('/stats', ProfileController.getUserStats);
 
 // PUT /api/profile - Update own profile
-router.put('/', ProfileController.updateOwnProfile);
+router.put('/', validate('updateProfile'), ProfileController.updateOwnProfile);
 
 // GET /api/profile/check-username - Check username availability
-router.get('/check-username', ProfileController.checkUsernameAvailability);
+router.get('/check-username', validate('checkUsername'), ProfileController.checkUsernameAvailability);
 
 // GET /api/profile/:id - Get user profile by ID
 router.get('/:id', ProfileController.getUserProfileById);

@@ -76,6 +76,20 @@ function useSocket(passedUserId) {
       setCooldowns(data);
     });
 
+    // Confinement events
+    s.on('jail:enter', (data) => {
+      console.log('🔒 Jail enter event received:', data);
+    });
+    s.on('jail:leave', (data) => {
+      console.log('🔓 Jail leave event received:', data);
+    });
+    s.on('hospital:enter', (data) => {
+      console.log('🏥 Hospital enter event received:', data);
+    });
+    s.on('hospital:leave', (data) => {
+      console.log('💊 Hospital leave event received:', data);
+    });
+
     setSocket(s);
     return () => {
       console.log('🔌 Cleaning up socket connection');

@@ -1,5 +1,4 @@
 import { ShopService } from '../services/ShopService.js';
-import { auth } from '../middleware/auth.js';
 
 export class ShopController {
   static async getWeapons(req, res) {
@@ -24,7 +23,8 @@ export class ShopController {
 
   static async buyWeapon(req, res) {
     try {
-      const result = await ShopService.purchaseWeapon(req.user.id, req.params.id);
+      const quantity = parseInt(req.body.quantity) || 1;
+      const result = await ShopService.purchaseWeapon(req.user.id, req.params.id, quantity);
       res.json(result);
     } catch (error) {
       console.error('Buy weapon error:', error);
@@ -40,7 +40,8 @@ export class ShopController {
 
   static async buyArmor(req, res) {
     try {
-      const result = await ShopService.purchaseArmor(req.user.id, req.params.id);
+      const quantity = parseInt(req.body.quantity) || 1;
+      const result = await ShopService.purchaseArmor(req.user.id, req.params.id, quantity);
       res.json(result);
     } catch (error) {
       console.error('Buy armor error:', error);

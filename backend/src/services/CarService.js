@@ -5,44 +5,8 @@ import { sequelize } from '../config/db.js';
 export class CarService {
   // Seed default cars
   static async seedCars() {
-    const defaults = [
-      {
-        name: 'سيارة عادية',
-        description: 'سيارة بسيطة للتنقل اليومي',
-        cost: 1000,
-        defenseBonus: 2,
-        energyRegen: 1,
-        rarity: 'COMMON'
-      },
-      {
-        name: 'سيارة رياضية',
-        description: 'سيارة سريعة وأنيقة',
-        cost: 5000,
-        defenseBonus: 5,
-        energyRegen: 3,
-        rarity: 'RARE'
-      },
-      {
-        name: 'سيارة فاخرة',
-        description: 'سيارة فاخرة مع حماية عالية',
-        cost: 15000,
-        defenseBonus: 10,
-        energyRegen: 5,
-        rarity: 'EPIC'
-      },
-      {
-        name: 'سيارة مدرعة',
-        description: 'سيارة مدرعة للعمليات الخاصة',
-        cost: 50000,
-        defenseBonus: 20,
-        energyRegen: 8,
-        rarity: 'LEGENDARY'
-      }
-    ];
-
-    await Car.destroy({ where: {} });
-    await Car.bulkCreate(defaults);
-    console.log(`✅ Seeded ${defaults.length} cars`);
+    // No longer used. Seeding is now handled in seedAll.js
+    return;
   }
 
   // Get all available cars
@@ -122,39 +86,29 @@ export class CarService {
   // Activate a car
   static async activateCar(userId, carId) {
     const t = await sequelize.transaction();
-
     try {
       // Check if user owns this car
       const userCar = await UserCar.findOne({
         where: { userId, carId },
         transaction: t
       });
-
       if (!userCar) {
         throw new Error('Car not owned');
       }
-
       // Deactivate all other cars
       await UserCar.update(
         { isActive: false },
         { where: { userId }, transaction: t }
       );
-
       // Activate this car
       userCar.isActive = true;
       await userCar.save({ transaction: t });
-
       // Update character stats
-      const character = await Character.findOne({
-        where: { userId },
-        transaction: t
-      });
-
+      const character = await Character.findOne({ where: { userId }, transaction: t });
       const car = await Car.findByPk(carId, { transaction: t });
       character.defense += car.defenseBonus;
-      character.maxEnergy += car.energyRegen;
+      character.strength += car.attackBonus;
       await character.save({ transaction: t });
-
       await t.commit();
       return { userCar, car };
     } catch (error) {
@@ -166,32 +120,23 @@ export class CarService {
   // Deactivate current car
   static async deactivateCar(userId) {
     const t = await sequelize.transaction();
-
     try {
       const activeCar = await UserCar.findOne({
         where: { userId, isActive: true },
         include: [{ model: Car }],
         transaction: t
       });
-
       if (!activeCar) {
         throw new Error('No active car to deactivate');
       }
-
       // Deactivate the car
       activeCar.isActive = false;
       await activeCar.save({ transaction: t });
-
       // Remove car bonuses from character
-      const character = await Character.findOne({
-        where: { userId },
-        transaction: t
-      });
-
+      const character = await Character.findOne({ where: { userId }, transaction: t });
       character.defense -= activeCar.Car.defenseBonus;
-      character.maxEnergy -= activeCar.Car.energyRegen;
+      character.strength -= activeCar.Car.attackBonus;
       await character.save({ transaction: t });
-
       await t.commit();
       return { message: 'Car deactivated successfully' };
     } catch (error) {
@@ -203,35 +148,25 @@ export class CarService {
   // Sell a car
   static async sellCar(userId, carId) {
     const t = await sequelize.transaction();
-
     try {
       const userCar = await UserCar.findOne({
         where: { userId, carId },
         include: [{ model: Car }],
         transaction: t
       });
-
       if (!userCar) {
         throw new Error('Car not owned');
       }
-
       if (userCar.isActive) {
         throw new Error('Cannot sell active car. Deactivate it first.');
       }
-
-      const character = await Character.findOne({
-        where: { userId },
-        transaction: t
-      });
-
-      // Sell for 70% of original cost
-      const refund = Math.round(userCar.Car.cost * 0.7);
+      const character = await Character.findOne({ where: { userId }, transaction: t });
+      // Sell for 25% of original cost
+      const refund = Math.round(userCar.Car.cost * 0.25);
       character.money += refund;
       await character.save({ transaction: t });
-
       await userCar.destroy({ transaction: t });
       await t.commit();
-
       return { refund, remainingMoney: character.money };
     } catch (error) {
       await t.rollback();

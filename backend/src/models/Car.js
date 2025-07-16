@@ -29,6 +29,10 @@ Car.init({
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
+  attackBonus: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
   rarity: {
     type: DataTypes.STRING,
     defaultValue: 'COMMON'

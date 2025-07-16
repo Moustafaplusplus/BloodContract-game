@@ -4,6 +4,7 @@ import cors     from 'cors';
 import morgan   from 'morgan';
 import dotenv   from 'dotenv';
 import http     from 'http';
+import path from 'path';
 
 import { DataTypes } from 'sequelize';
 import { sequelize } from './config/db.js';
@@ -21,29 +22,29 @@ import { Character as CharacterModel } from './models/Character.js';
 import characterRouter from './routes/character.js';
 import { startEnergyRegen } from './jobs/energyRegen.js';
 import { startHealthRegen } from './jobs/healthRegen.js';
+import { startJailRelease } from './jobs/jailRelease.js';
+import { startHospitalRelease } from './jobs/hospitalRelease.js';
 import { Fight as FightModel } from './models/Fight.js';
 import fightRouter from './routes/fight.js';
 import { BankAccount } from './models/Bank.js';
 import bankRouter from './routes/bank.js';
 import { startBankInterest } from './jobs/bankInterest.js';
+import { startJobPayouts } from './jobs/jobPayouts.js';
 import { Jail as JailModel, Hospital as HospitalModel } from './models/Confinement.js';
 import confinementRouter from './routes/confinement.js';
-import { Achievement, CharacterAchievement } from './models/Achievement.js';
-import achievementRouter from './routes/achievements.js';
-import { AchievementService } from './services/AchievementService.js';
-import goldMarketRouter from './routes/gold.js';
+
 import { House as HouseModel, UserHouse as UserHouseModel } from './models/House.js';
 import housesRouter from './routes/houses.js';
 import { InventoryItem } from './models/Inventory.js';
 import { Weapon, Armor } from './models/Shop.js';
 import shopRouter from './routes/shop.js';
+import specialShopRouter from './routes/specialShop.js';
 import inventoryRouter from './routes/inventory.js';
-import { ShopService } from './services/ShopService.js';
-import blackMarketRouter from './routes/blackMarket.js';
+
 import jobsRouter from './routes/jobs.js';
 import { Friendship, Message, Notification } from './models/Social.js';
 import socialRouter from './routes/social.js';
-import gangRouter from './routes/gang.js';
+
 import { Event, EventParticipation } from './models/Event.js';
 import eventRouter from './routes/events.js';
 import profileRouter from './routes/profile.js';
@@ -51,16 +52,22 @@ import searchRouter from './routes/search.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { Car as CarModel } from './models/Car.js';
 import carRouter from './routes/car.js';
+import { Job as JobModel, JobHistory as JobHistoryModel } from './models/Job.js';
+import blackMarketRouter from './routes/blackMarket.js';
+import dogRoutes from './routes/dog.js';
+import messageRoutes from './routes/message.js';
+import friendshipRoutes from './routes/friendship.js';
 
 /* ─────────── Sequelize model auto-init (skip if already inited) ─────────── */
 [
-  User, CharacterModel, Achievement, CharacterAchievement,
+  User, CharacterModel,
   JailModel, HospitalModel, Crime, CrimeLog,
   Weapon, Armor, InventoryItem,
   HouseModel, UserHouseModel,
   FightModel, BankAccount,
   Event, EventParticipation, CarModel,
   Friendship, Message, Notification,
+  JobModel, JobHistoryModel,
 ].forEach((M) => {
   if (M.sequelize || typeof M.init !== 'function') return; // already initialised
   M.init.length === 1 ? M.init(sequelize) : M.init(sequelize, DataTypes);
@@ -69,6 +76,8 @@ import carRouter from './routes/car.js';
 /* ─────────── Express bootstrapping ─────────── */
 const app = express();
 
+// Serve static files from the public directory
+app.use(express.static(path.join(process.cwd(), 'public')));
 app.set('etag', false);                     // prevents 304 responses with empty body
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
@@ -83,16 +92,20 @@ app.use('/api/character',        characterRouter);
 app.use('/api/fight',            fightRouter);
 app.use('/api/bank',             bankRouter);
 app.use('/api/confinement',      confinementRouter);
-app.use('/api/achievements',     achievementRouter);
-app.use('/gold-market',          goldMarketRouter);
+app.use('/api/black-market',    blackMarketRouter);
+app.use('/api/dogs', dogRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/friendship', friendshipRoutes);
+
 app.use('/api/houses',           housesRouter);
 app.use('/api/shop',             shopRouter);
+app.use('/api/special-shop',     specialShopRouter);
 app.use('/api/inventory',        inventoryRouter);
-app.use('/black-market',         blackMarketRouter);
+
 app.use('/api/jobs',             jobsRouter);
 app.use('/api/events',           eventRouter);
 app.use('/api/social',           socialRouter);
-app.use('/api',                  gangRouter);          // keeps /api/gangs*
+
 app.use('/api/profile',          profileRouter);
 app.use('/api/cars',             carRouter);
 
@@ -102,8 +115,11 @@ app.use(errorHandler);
 /* ─────────── Background jobs ─────────── */
 startEnergyRegen();
 startHealthRegen();
-AchievementService.startAchievementChecker();
+
 startBankInterest();
+startJobPayouts();
+startJailRelease();
+startHospitalRelease();
 
 /* ─────────── Bootstrapping ─────────── */
 import { initSocket } from './socket.js';
@@ -115,7 +131,6 @@ const startServer = async () => {
     console.log('🗄️  Postgres connection: OK');
 
     await sequelize.sync({ alter: true });
-    await ShopService.seedShopItems();     // ← seed weapons + armors once
     console.log('📦 Database synced ✅');
 
     const server = http.createServer(app);

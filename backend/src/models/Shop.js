@@ -9,6 +9,8 @@ Weapon.init({
   energyBonus:  DataTypes.INTEGER,  // extra max-energy
   price:        DataTypes.INTEGER,
   rarity:       DataTypes.STRING,
+  imageUrl:     DataTypes.STRING,   // placeholder for item image
+  currency:    { type: DataTypes.ENUM('money', 'blackcoin'), defaultValue: 'money' },
 }, { sequelize, modelName: 'Weapon', timestamps: false });
 
 export class Armor extends Model {}
@@ -18,4 +20,14 @@ Armor.init({
   hpBonus:   DataTypes.INTEGER,     // extra max-hp
   price:     DataTypes.INTEGER,
   rarity:    DataTypes.STRING,
-}, { sequelize, modelName: 'Armor', timestamps: false }); 
+  imageUrl:  DataTypes.STRING,      // placeholder for item image
+  currency:    { type: DataTypes.ENUM('money', 'blackcoin'), defaultValue: 'money' },
+}, { sequelize, modelName: 'Armor', timestamps: false });
+
+export class VIPPackage extends Model {}
+VIPPackage.init({
+  name:         DataTypes.STRING,
+  durationDays: DataTypes.INTEGER,
+  price:        DataTypes.INTEGER,
+  isActive:     { type: DataTypes.BOOLEAN, defaultValue: true },
+}, { sequelize, modelName: 'VIPPackage', timestamps: false }); 

@@ -39,6 +39,21 @@ export class ConfinementController {
     }
   }
 
+  // Get hospital status for any user by userId (admin/public)
+  static async getHospitalStatusForUser(req, res) {
+    try {
+      const userId = Number(req.params.userId);
+      if (!userId || isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid userId' });
+      }
+      const status = await ConfinementService.getHospitalStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error('Hospital status for user error:', error);
+      res.sendStatus(500);
+    }
+  }
+
   static async healOut(req, res) {
     try {
       const result = await ConfinementService.healOut(req.user.id);
@@ -52,6 +67,26 @@ export class ConfinementController {
         return res.status(400).json({ error: error.message });
       }
       res.status(500).json({ error: "Heal failed" });
+    }
+  }
+
+  static async getJailCount(req, res) {
+    try {
+      const count = await ConfinementService.getJailCount();
+      res.json({ count });
+    } catch (error) {
+      console.error('Jail count error:', error);
+      res.status(500).json({ error: 'Failed to get jail count' });
+    }
+  }
+
+  static async getHospitalCount(req, res) {
+    try {
+      const count = await ConfinementService.getHospitalCount();
+      res.json({ count });
+    } catch (error) {
+      console.error('Hospital count error:', error);
+      res.status(500).json({ error: 'Failed to get hospital count' });
     }
   }
 } 

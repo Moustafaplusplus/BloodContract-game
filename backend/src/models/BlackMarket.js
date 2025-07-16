@@ -40,6 +40,11 @@ BlackMarketItem.init({
   stock: {
     type: DataTypes.INTEGER,
     defaultValue: -1 // -1 means unlimited
+  },
+  currency: {
+    type: DataTypes.ENUM('money', 'blackcoin'),
+    allowNull: false,
+    defaultValue: 'blackcoin'
   }
 }, {
   sequelize,

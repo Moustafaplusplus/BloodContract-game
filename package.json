@@ -1,0 +1,6 @@
+{
+	"dependencies": {
+		"emoji-picker-react": "^4.13.2",
+		"socket.io-client": "^4.8.1"
+	}
+}

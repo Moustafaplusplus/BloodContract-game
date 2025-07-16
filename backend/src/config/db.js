@@ -15,4 +15,4 @@ const dbConfig = {
 const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, dbConfig);
 
 export { sequelize };
-export default dbConfig;
+export default sequelize;

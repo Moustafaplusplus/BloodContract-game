@@ -44,4 +44,18 @@ export class CharacterController {
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  static async getCharacterByUsername(req, res) {
+    try {
+      const { username } = req.params;
+      const char = await CharacterService.getCharacterByUsername(username);
+      if (!char) {
+        return res.status(404).json({ error: 'Character not found' });
+      }
+      return res.json(await char.toSafeJSON());
+    } catch (error) {
+      console.error('Error getting character by username:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 } 

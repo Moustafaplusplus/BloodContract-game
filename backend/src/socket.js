@@ -2,8 +2,10 @@
 //  backend/src/socket.js  –  unified Socket.IO bootstrap (await fixes)
 // -----------------------------------------------------------------------------
 import { Server } from 'socket.io';
-import jwt        from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { Character } from './models/Character.js';
+import { Message } from './models/Message.js';
+import { User } from './models/User.js';
 
 let io = null;
 
@@ -34,18 +36,7 @@ export function initSocket(server) {
         const char = await Character.findOne({ where: { userId } });
         if (char) {
           const hudData = await char.toSafeJSON();
-          console.log('📊 Sending HUD data to user', userId, ':', {
-            hp: hudData.hp,
-            maxHp: hudData.maxHp,
-            energy: hudData.energy,
-            maxEnergy: hudData.maxEnergy,
-            exp: hudData.exp,
-            nextLevelExp: hudData.nextLevelExp,
-            money: hudData.money
-          });
           socket.emit('hud:update', hudData);
-        } else {
-          console.log('❌ No character found for user:', userId);
         }
       };
 
@@ -55,8 +46,22 @@ export function initSocket(server) {
 
       /* manual refresh from client */
       socket.on('hud:request', () => {
-        console.log('🔄 Manual HUD refresh requested by user:', userId);
         pushHud();
+      });
+
+      // --- Messaging system ---
+      socket.on('join', (userId) => {
+        socket.join(`user_${userId}`);
+      });
+
+      socket.on('send_message', async (data) => {
+        const { senderId, receiverId, content } = data;
+        // Save message to DB
+        const message = await Message.create({ senderId, receiverId, content });
+        // Emit to receiver if online
+        io.to(`user_${receiverId}`).emit('receive_message', message);
+        // Optionally, emit to sender for confirmation
+        socket.emit('message_sent', message);
       });
 
       socket.on('disconnect', () => {

@@ -1,9 +1,27 @@
 // src/components/HUD/index.jsx
 import React from "react";
 import { useHud } from "@/hooks/useHud";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import PlayerSearch from "@/features/profile/PlayerSearch";
+
+// Temporary Blackcoin icon
+const BlackcoinIcon = () => (
+  <span className="inline-block w-5 h-5 rounded-full bg-gradient-to-br from-black via-zinc-900 to-zinc-800 border-2 border-accent-red flex items-center justify-center mr-1">
+    <span className="text-xs text-accent-red font-bold">B</span>
+  </span>
+);
+
+// Search icon (copied from Navigation.jsx)
+const SearchIcon = () => (
+  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M15.5 14h-.79l-.28-.27c.98-1.14 1.57-2.62 1.57-4.23 0-3.59-2.91-6.5-6.5-6.5S3 5.91 3 9.5s2.91 6.5 6.5 6.5c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+  </svg>
+);
 
 export default function HUD({ menuButton }) {
   const { stats, loading } = useHud();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -28,6 +46,14 @@ export default function HUD({ menuButton }) {
 
   return (
     <div className="fixed top-0 left-0 right-0 bg-black/95 text-white py-2 px-4 flex flex-row items-center justify-between text-xs z-50 backdrop-blur-sm border-b border-red-900 gap-4">
+      {/* Search Icon (very left) */}
+      <button
+        className="mr-2 p-2 rounded-full bg-zinc-900 hover:bg-accent-red/30 border border-accent-red/40 transition-colors"
+        onClick={() => navigate("/players")}
+        aria-label="بحث اللاعبين"
+      >
+        <SearchIcon />
+      </button>
       {/* Bars Column */}
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         {/* Health Bar */}
@@ -73,8 +99,8 @@ export default function HUD({ menuButton }) {
           </div>
         </div>
       </div>
-      {/* Level & Money Column */}
-      <div className="flex flex-row items-center gap-4 flex-shrink-0">
+      {/* Level, Money, and Blackcoin Column */}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 min-w-[80px]">
         <div className="flex items-center gap-1">
           <span className="text-red-400">⭐</span>
           <span className="font-mono text-sm whitespace-nowrap">
@@ -86,6 +112,11 @@ export default function HUD({ menuButton }) {
           <span className="font-mono text-sm whitespace-nowrap">
             {stats.money?.toLocaleString()}
           </span>
+        </div>
+        {/* Blackcoin below money, icon and number only */}
+        <div className="flex items-center gap-1 mt-1">
+          <BlackcoinIcon />
+          <span className="font-mono text-sm whitespace-nowrap text-accent-red">{stats.blackcoins?.toLocaleString() ?? 0}</span>
         </div>
       </div>
       {/* Menu Button Slot */}

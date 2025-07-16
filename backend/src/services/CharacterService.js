@@ -21,6 +21,11 @@ export class CharacterService {
     [this.ACTIONS.TRAIN_DEFENSE]:   3,
   };
 
+  static expNeeded(level) {
+    // Example formula: 100 * level
+    return 100 * level;
+  }
+
   static async giveReward({ character, action }, tx = null) {
     const xp = this.EXP_RULES[action] ?? 0;
     if (xp) {
@@ -41,7 +46,7 @@ export class CharacterService {
   }
 
   static async maybeLevelUp(char) {
-    let needed = char.expNeeded();
+    let needed = char.expNeeded ? char.expNeeded() : this.expNeeded(char.level);
     while (char.exp >= needed) {
       char.exp   -= needed;
       char.level += 1;
@@ -52,12 +57,24 @@ export class CharacterService {
       char.energy = Math.min(char.energy + 2, char.maxEnergy);
       char.hp     = Math.min(char.hp + 2, char.maxHp);
 
-      needed = char.expNeeded();
+      needed = char.expNeeded ? char.expNeeded() : this.expNeeded(char.level);
     }
   }
 
   static async addStat(userId, field, delta = 1) {
-    await Statistic.updateOne({ userId }, { $inc: { [field]: delta } }, { upsert: true });
+    let stat = await Statistic.findOne({ where: { userId } });
+    if (!stat) {
+      stat = await Statistic.create({ userId });
+    }
+    stat[field] = (stat[field] || 0) + delta;
+    await stat.save();
+  }
+  // Helper to increment both wins and losses
+  static async addFightResult(winnerId, loserId) {
+    await this.addStat(winnerId, 'wins');
+    await this.addStat(loserId, 'losses');
+    await this.addStat(winnerId, 'fights');
+    await this.addStat(loserId, 'fights');
   }
 
   // Training logic
@@ -84,14 +101,37 @@ export class CharacterService {
 
   // Character retrieval
   static async getCharacterByUserId(userId) {
-    return await Character.findOne({ 
+    const char = await Character.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ['username', 'nickname', 'email', 'avatarUrl'] }]
+      include: [{
+        model: User,
+        attributes: ['username', 'email', 'avatarUrl']
+      }]
+    });
+    if (!char) return null;
+    // Increment daysInGame if lastActive is from a previous day
+    const now = new Date();
+    const lastActive = char.lastActive ? new Date(char.lastActive) : null;
+    if (!lastActive || now.toDateString() !== lastActive.toDateString()) {
+      char.daysInGame = (char.daysInGame || 0) + 1;
+      char.lastActive = now;
+      await char.save();
+    }
+    return char;
+  }
+
+  static async getCharacterByUsername(username) {
+    return await Character.findOne({
+      include: [{
+        model: User,
+        where: { username },
+        attributes: ['username', 'email', 'avatarUrl']
+      }]
     });
   }
 
   static async getCharacterStats(userId) {
-    return await Statistic.findOne({ userId }).lean();
+    return await Statistic.findOne({ where: { userId } });
   }
 
   // Add methods to update lastActive, increment daysInGame, manage buffs, and increment killCount

@@ -1,24 +1,9 @@
 import { InventoryService } from '../services/InventoryService.js';
-import jwt from 'jsonwebtoken';
 
 export class InventoryController {
-  // Helper to get userId from token
-  static getUserId(req) {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return null;
-    try { 
-      return jwt.verify(token, process.env.JWT_SECRET).id; 
-    } catch { 
-      return null; 
-    }
-  }
-
   static async getInventory(req, res) {
-    const userId = this.getUserId(req);
-    if (!userId) return res.sendStatus(401);
-
     try {
-      const inventory = await InventoryService.getUserInventory(userId);
+      const inventory = await InventoryService.getUserInventory(req.user.id);
       res.json(inventory);
     } catch (error) {
       console.error('[Inventory] GET failed', error);
@@ -27,15 +12,18 @@ export class InventoryController {
   }
 
   static async equipItem(req, res) {
-    const userId = this.getUserId(req);
-    if (!userId) return res.sendStatus(401);
-
     try {
-      const { type, itemId } = req.body;
-      const result = await InventoryService.equipItem(userId, type, itemId);
+      const { type, itemId, slot } = req.body;
+      if (!slot) {
+        return res.status(400).json({ message: 'slot is required' });
+      }
+      const result = await InventoryService.equipItem(req.user.id, type, itemId, slot);
       res.json(result);
     } catch (error) {
       if (error.message === 'invalid type') {
+        return res.status(400).json({ message: error.message });
+      }
+      if (error.message === 'invalid weapon slot' || error.message === 'invalid armor slot') {
         return res.status(400).json({ message: error.message });
       }
       if (error.message === 'item not owned') {
@@ -47,12 +35,9 @@ export class InventoryController {
   }
 
   static async unequipItem(req, res) {
-    const userId = this.getUserId(req);
-    if (!userId) return res.sendStatus(401);
-
     try {
-      const { type } = req.body;
-      const result = await InventoryService.unequipItem(userId, type);
+      const { type, slot } = req.body;
+      const result = await InventoryService.unequipItem(req.user.id, type, slot);
       res.json(result);
     } catch (error) {
       if (error.message === 'invalid type') {
@@ -64,12 +49,9 @@ export class InventoryController {
   }
 
   static async sellItem(req, res) {
-    const userId = this.getUserId(req);
-    if (!userId) return res.sendStatus(401);
-
     try {
       const { type, itemId } = req.body;
-      const result = await InventoryService.sellItem(userId, type, itemId);
+      const result = await InventoryService.sellItem(req.user.id, type, itemId);
       res.json(result);
     } catch (error) {
       if (error.message === 'invalid type') {

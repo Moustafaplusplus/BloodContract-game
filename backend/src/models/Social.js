@@ -117,8 +117,8 @@ Notification.init({
 });
 
 // Associations
-Friendship.belongsTo(Character, { as: 'Requester', foreignKey: 'requesterId' });
-Friendship.belongsTo(Character, { as: 'Addressee', foreignKey: 'addresseeId' });
+Friendship.belongsTo(Character, { as: 'Requester', foreignKey: 'requesterId', targetKey: 'id' });
+Friendship.belongsTo(Character, { as: 'Addressee', foreignKey: 'addresseeId', targetKey: 'id' });
 
 Message.belongsTo(Character, { as: 'Sender', foreignKey: 'senderId' });
 Message.belongsTo(Character, { as: 'Receiver', foreignKey: 'receiverId' });

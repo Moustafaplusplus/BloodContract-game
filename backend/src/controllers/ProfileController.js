@@ -77,7 +77,8 @@ export class ProfileController {
   // Check username availability
   static async checkUsernameAvailability(req, res) {
     try {
-      const { username } = req.query;
+      const queryData = req.validatedQuery || req.query;
+      const { username } = queryData;
       if (!username) {
         return res.status(400).json({ error: 'Username parameter required' });
       }

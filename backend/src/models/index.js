@@ -11,6 +11,16 @@ import { InventoryItem } from './Inventory.js';
 import { Car } from './Car.js';
 import { House } from './House.js';
 import { Gang } from './Gang.js';
+import { Job, JobHistory } from './Job.js';
+import { BlackMarketListing } from './BlackMarketListing.js';
+import { BlackcoinTransaction, BlackcoinPackage } from './Blackcoin.js';
+import { Dog, UserDog } from './Dog.js';
+import { Message } from './Message.js';
+import { Friendship } from './Friendship.js';
+import { Notification } from './Social.js';
+
+Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
+Message.belongsTo(User, { as: 'receiver', foreignKey: 'receiverId' });
 
 // Define associations
 User.hasOne(Character, { foreignKey: 'userId' });
@@ -33,5 +43,15 @@ export {
   BankAccount,
   BankTxn,
   InventoryItem,
-  Car
+  Car,
+  Job,
+  JobHistory,
+  BlackMarketListing,
+  BlackcoinTransaction,
+  BlackcoinPackage,
+  Dog,
+  UserDog,
+  Friendship,
+  Message,
+  Notification
 }; 

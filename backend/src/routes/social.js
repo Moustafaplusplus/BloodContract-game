@@ -1,6 +1,7 @@
 import express from 'express';
 import { SocialController } from '../controllers/SocialController.js';
 import { auth } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ router.use(auth);
 
 // Friendship routes
 // POST /api/social/friends/request - Send friend request
-router.post('/friends/request', SocialController.sendFriendRequest);
+router.post('/friends/request', validate('sendFriendRequest'), SocialController.sendFriendRequest);
 
 // POST /api/social/friends/:friendshipId/accept - Accept friend request
 router.post('/friends/:friendshipId/accept', SocialController.acceptFriendRequest);
@@ -28,7 +29,7 @@ router.get('/friendships', SocialController.getFriendships);
 
 // Messaging routes
 // POST /api/social/messages - Send message
-router.post('/messages', SocialController.sendMessage);
+router.post('/messages', validate('sendMessage'), SocialController.sendMessage);
 
 // GET /api/social/messages/:otherUserId - Get conversation with user
 router.get('/messages/:otherUserId', SocialController.getMessages);
@@ -54,6 +55,6 @@ router.get('/notifications/unread/count', SocialController.getUnreadNotification
 
 // Search routes
 // GET /api/social/search/users - Search users
-router.get('/search/users', SocialController.searchUsers);
+router.get('/search/users', validate('searchUsers'), SocialController.searchUsers);
 
 export default router; 

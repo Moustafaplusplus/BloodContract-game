@@ -21,7 +21,6 @@ export function useHud() {
     if (!socket) return;
 
     const handleUpdate = (snapshot) => {
-      console.log('🔍 HUD Data received:', snapshot);
       setHud(snapshot);
     };
 

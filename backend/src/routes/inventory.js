@@ -1,7 +1,11 @@
 import express from 'express';
 import { InventoryController } from '../controllers/InventoryController.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Apply auth middleware to all inventory routes
+router.use(auth);
 
 // GET /api/inventory - Get user's inventory
 router.get('/', InventoryController.getInventory);

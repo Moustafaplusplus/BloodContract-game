@@ -1,6 +1,7 @@
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
+import { Fight } from '../models/Fight.js';
 
 export class ProfileService {
   // Get user profile by ID
@@ -9,7 +10,7 @@ export class ProfileService {
       include: [
         {
           model: Character,
-          attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'health', 'maxHealth', 'title', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
+          attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'hp', 'maxHp', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
         }
       ]
     });
@@ -18,7 +19,28 @@ export class ProfileService {
       throw new Error('User not found');
     }
 
-    return user;
+    // Add fightsLost to character
+    if (user.Character) {
+      const fightsLost = await Fight.count({
+        where: {
+          [Op.or]: [
+            { attacker_id: user.Character.userId },
+            { defender_id: user.Character.userId }
+          ],
+          winner_id: { [Op.ne]: user.Character.userId }
+        }
+      });
+      user.Character.setDataValue('fightsLost', fightsLost);
+    }
+
+    // Remove email from user object before returning
+    const userObj = user.toJSON();
+    delete userObj.email;
+    return {
+      ...userObj,
+      isVIP: user.Character && user.Character.vipExpiresAt && new Date(user.Character.vipExpiresAt) > new Date(),
+      vipExpiresAt: user.Character ? user.Character.vipExpiresAt : null,
+    };
   }
 
   // Get user profile by username
@@ -28,7 +50,7 @@ export class ProfileService {
       include: [
         {
           model: Character,
-          attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'health', 'maxHealth', 'title', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
+          attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'hp', 'maxHp', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
         }
       ]
     });
@@ -37,7 +59,28 @@ export class ProfileService {
       throw new Error('User not found');
     }
 
-    return user;
+    // Add fightsLost to character
+    if (user.Character) {
+      const fightsLost = await Fight.count({
+        where: {
+          [Op.or]: [
+            { attacker_id: user.Character.userId },
+            { defender_id: user.Character.userId }
+          ],
+          winner_id: { [Op.ne]: user.Character.userId }
+        }
+      });
+      user.Character.setDataValue('fightsLost', fightsLost);
+    }
+
+    // Remove email from user object before returning
+    const userObj = user.toJSON();
+    delete userObj.email;
+    return {
+      ...userObj,
+      isVIP: user.Character && user.Character.vipExpiresAt && new Date(user.Character.vipExpiresAt) > new Date(),
+      vipExpiresAt: user.Character ? user.Character.vipExpiresAt : null,
+    };
   }
 
   // Update user profile
@@ -58,31 +101,93 @@ export class ProfileService {
     }
 
     await user.update(filteredData);
-    return user;
+
+    // Update character quote if provided
+    if (updateData.quote !== undefined) {
+      const character = await Character.findOne({ where: { userId } });
+      if (character) {
+        character.quote = updateData.quote;
+        await character.save();
+      }
+    }
+
+    // Return updated user with character
+    const updatedUser = await User.findByPk(userId, {
+      include: [
+        {
+          model: Character,
+          attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'hp', 'maxHp', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
+        }
+      ]
+    });
+    return updatedUser;
   }
 
   // Search users
   static async searchUsers(query, limit = 10, sort = 'username', filters = {}) {
     let where = {};
+    let characterWhere = {};
+    
     if (query && query.trim().length >= 2) {
       where = {
         username: {
           [Op.iLike]: `%${query.trim()}%`
         }
       };
+      // Also search by character name
+      characterWhere = {
+        name: {
+          [Op.iLike]: `%${query.trim()}%`
+        }
+      };
     }
+    
     // TODO: Add filter support here using filters param
+    // Determine if sort is a character field
+    const characterFields = ['level', 'killCount', 'daysInGame', 'lastActive'];
+    let order = [];
+    if (characterFields.includes(sort)) {
+      order = [[{ model: Character }, sort, 'DESC']];
+    } else {
+      order = [[sort || 'username', 'ASC']];
+    }
+    
     const users = await User.findAll({
       where,
       include: [
         {
           model: Character,
-          attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'health', 'maxHealth', 'title', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
+          where: Object.keys(characterWhere).length > 0 ? characterWhere : undefined,
+          attributes: ['userId', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'hp', 'maxHp', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
         }
       ],
       limit,
-      order: [[sort || 'username', 'ASC']]
+      order,
     });
+    
+    // If we searched by character name, we need to also find users whose characters match
+    if (query && query.trim().length >= 2 && Object.keys(characterWhere).length > 0) {
+      const characterUsers = await User.findAll({
+        include: [
+          {
+            model: Character,
+            where: characterWhere,
+            attributes: ['id', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'hp', 'maxHp', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
+          }
+        ],
+        limit,
+        order,
+      });
+      
+      // Combine and deduplicate results
+      const allUsers = [...users, ...characterUsers];
+      const uniqueUsers = allUsers.filter((user, index, self) => 
+        index === self.findIndex(u => u.id === user.id)
+      );
+      
+      return uniqueUsers.slice(0, limit);
+    }
+    
     return users;
   }
 
@@ -136,8 +241,8 @@ export class ProfileService {
       defense: character.defense,
       energy: character.energy,
       maxEnergy: character.maxEnergy,
-      health: character.health,
-      maxHealth: character.maxHealth,
+      health: character.hp,
+      maxHealth: character.maxHp,
       joinedAt: character.User.createdAt,
       // Add more calculated stats here as needed
     };
@@ -160,7 +265,7 @@ export class ProfileService {
       include: [
         {
           model: Character,
-          attributes: ['id', 'name', 'level', 'strength', 'defense', 'title', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
+          attributes: ['id', 'name', 'level', 'strength', 'defense', 'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote']
         }
       ]
     });
@@ -169,12 +274,33 @@ export class ProfileService {
       throw new Error('User not found');
     }
 
+    let fightsLost = 0;
+    if (user.Character) {
+      fightsLost = await Fight.count({
+        where: {
+          [Op.or]: [
+            { attacker_id: user.Character.userId },
+            { defender_id: user.Character.userId }
+          ],
+          winner_id: { [Op.ne]: user.Character.userId }
+        }
+      });
+    }
+
+    // Remove email from user object before returning
+    const userObj = user.toJSON();
+    delete userObj.email;
     return {
-      id: user.id,
-      username: user.username,
-      bio: user.bio,
-      avatar: user.avatar,
-      character: user.Character
+      id: userObj.id,
+      username: userObj.username,
+      bio: userObj.bio,
+      avatar: userObj.avatar,
+      isVIP: user.Character && user.Character.vipExpiresAt && new Date(user.Character.vipExpiresAt) > new Date(),
+      vipExpiresAt: user.Character ? user.Character.vipExpiresAt : null,
+      character: {
+        ...user.Character?.toJSON(),
+        fightsLost
+      }
     };
   }
 } 

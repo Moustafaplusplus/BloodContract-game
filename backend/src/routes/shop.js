@@ -1,6 +1,7 @@
 import express from 'express';
 import { ShopController } from '../controllers/ShopController.js';
 import { auth } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ router.get('/armors', ShopController.getArmors);
 router.use(auth);
 
 // POST /api/shop/buy/weapon/:id - Buy a weapon
-router.post('/buy/weapon/:id', ShopController.buyWeapon);
+router.post('/buy/weapon/:id', validate('buyItem'), ShopController.buyWeapon);
 
 // POST /api/shop/buy/armor/:id - Buy an armor
-router.post('/buy/armor/:id', ShopController.buyArmor);
+router.post('/buy/armor/:id', validate('buyItem'), ShopController.buyArmor);
 
 export default router; 

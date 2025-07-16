@@ -143,18 +143,18 @@ export class SocialService {
         {
           model: Character,
           as: 'Requester',
-          attributes: ['id', 'name', 'level', 'online']
+          attributes: ['id', 'name', 'level']
         },
         {
           model: Character,
           as: 'Addressee',
-          attributes: ['id', 'name', 'level', 'online']
+          attributes: ['id', 'name', 'level']
         }
       ]
     });
 
     return friendships.map(friendship => {
-      const friend = friendship.Requester.id === userId ? friendship.Addressee : friendship.Requester;
+      const friend = friendship.Requester.userId === userId ? friendship.Addressee : friendship.Requester;
       return friend;
     });
   }
@@ -164,31 +164,14 @@ export class SocialService {
     if (senderId === receiverId) {
       throw new Error('Cannot send message to yourself');
     }
-
-    // Check if they are friends
-    const friendship = await Friendship.findOne({
-      where: {
-        status: 'ACCEPTED',
-        [Op.or]: [
-          { requesterId: senderId, addresseeId: receiverId },
-          { requesterId: receiverId, addresseeId: senderId }
-        ]
-      }
-    });
-
-    if (!friendship) {
-      throw new Error('Can only send messages to friends');
-    }
-
+    // Remove friendship check, allow sending to any user
     const message = await Message.create({
       senderId,
       receiverId,
       content
     });
-
     // Create notification
     await this.createNotification(receiverId, 'MESSAGE', 'New Message', `You have a new message from ${senderId}`, { senderId });
-
     return message;
   }
 

@@ -1,6 +1,7 @@
 import { BlackMarketItem, BlackMarketTransaction } from '../models/BlackMarket.js';
 import { Character } from '../models/Character.js';
 import { InventoryItem } from '../models/Inventory.js';
+import { User } from '../models/User.js';
 import { sequelize } from '../config/db.js';
 
 export class BlackMarketService {
@@ -82,9 +83,14 @@ export class BlackMarketService {
       }
 
       const totalCost = item.cost * quantity;
-
-      if (character.money < totalCost) {
-        throw new Error('Not enough money');
+      if (item.currency === 'blackcoin') {
+        if (character.blackcoins < totalCost) {
+          throw new Error('Not enough blackcoins');
+        }
+      } else {
+        if (character.money < totalCost) {
+          throw new Error('Not enough money');
+        }
       }
 
       // Check stock if limited
@@ -96,8 +102,12 @@ export class BlackMarketService {
         await item.save({ transaction: t });
       }
 
-      // Deduct money from character
-      character.money -= totalCost;
+      // Deduct currency from character
+      if (item.currency === 'blackcoin') {
+        character.blackcoins -= totalCost;
+      } else {
+        character.money -= totalCost;
+      }
       await character.save({ transaction: t });
 
       // Add item to inventory
@@ -127,7 +137,7 @@ export class BlackMarketService {
       }, { transaction: t });
 
       await t.commit();
-      return { item, quantity, totalCost, remainingMoney: character.money };
+      return { item, quantity, totalCost, remainingMoney: character.money, remainingBlackcoins: character.blackcoins };
     } catch (error) {
       await t.rollback();
       throw error;

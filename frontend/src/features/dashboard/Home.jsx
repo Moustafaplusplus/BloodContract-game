@@ -19,6 +19,8 @@ import {
   Clock,
   MapPin,
   Briefcase,
+  Activity,
+  Calendar,
 } from "lucide-react";
 
 export default function Home() {
@@ -137,6 +139,44 @@ export default function Home() {
       text: "انضممت إلى عصابة جديدة",
       time: "منذ ساعتين",
       color: "text-accent-blue",
+    },
+  ];
+
+  // Unified stat extraction from backend fields
+  const fightsLost = displayCharacter.fightsLost ?? 0;
+  const fightsWon = displayCharacter.fightsWon ?? 0;
+  const fightsTotal = displayCharacter.fightsTotal ?? (fightsWon + fightsLost);
+
+  const stats = [
+    {
+      icon: Target,
+      label: "الجرائم المرتكبة",
+      value: displayCharacter.crimesCommitted ?? 0,
+      color: "text-accent-red",
+    },
+    {
+      icon: Shield,
+      label: "عدد الخسائر",
+      value: fightsLost,
+      color: "text-accent-gray",
+    },
+    {
+      icon: Activity,
+      label: "إجمالي المعارك",
+      value: fightsTotal,
+      color: "text-accent-purple",
+    },
+    {
+      icon: Calendar,
+      label: "الأيام في اللعبة",
+      value: displayCharacter.daysInGame ?? 0,
+      color: "text-accent-green",
+    },
+    {
+      icon: Activity,
+      label: "عدد القتل",
+      value: displayCharacter.killCount ?? 0,
+      color: "text-accent-orange",
     },
   ];
 
@@ -275,7 +315,7 @@ export default function Home() {
                 ))}
               </div>
               <Link
-                to="/profile"
+                to={`/dashboard/profile/${displayCharacter.username}`}
                 className="block mt-6 text-center py-3 bg-hitman-700 hover:bg-hitman-600 rounded-lg transition-colors"
               >
                 عرض جميع الأنشطة
@@ -316,28 +356,20 @@ export default function Home() {
                 إحصائيات سريعة
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-hitman-300">الجرائم المرتكبة</span>
-                  <span className="font-bold text-accent-red">
-                    {displayCharacter.crimesCommitted || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-hitman-300">المعارك المكسوبة</span>
-                  <span className="font-bold text-accent-blue">
-                    {displayCharacter.fightsWon || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-hitman-300">الترتيب العام</span>
-                  <span className="font-bold text-accent-yellow">#42</span>
-                </div>
+                {stats.map((stat, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-hitman-300">{stat.label}:</span>
+                    <span className={`font-bold ${stat.color}`}>
+                      {stat.value}
+                    </span>
+                  </div>
+                ))}
               </div>
               <Link
-                to="/achievements"
+                to={`/dashboard/profile/${displayCharacter.username}`}
                 className="block mt-4 text-center py-2 bg-accent-purple hover:bg-purple-700 rounded-lg transition-colors"
               >
-                عرض الإنجازات
+                عرض الملف الشخصى
               </Link>
             </div>
           </div>

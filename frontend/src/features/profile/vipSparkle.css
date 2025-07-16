@@ -1,0 +1,29 @@
+/* Move file content from character/vipSparkle.css here for shared use in profile components. */
+/* Sparkle effect for VIP names */
+.vip-sparkle-text {
+  position: relative;
+  display: inline-block;
+  color: #ffe066;
+  text-shadow: 0 0 8px #fffbe6, 0 0 16px #ffd700;
+}
+
+.vip-sparkle-anim {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle, #fffbe6 0%, #ffd700 40%, transparent 70%);
+  opacity: 0.7;
+  animation: vip-sparkle 1.5s infinite linear;
+  border-radius: 0.3em;
+  mix-blend-mode: lighten;
+}
+
+@keyframes vip-sparkle {
+  0% { opacity: 0.7; transform: scale(0.9) translateY(0); }
+  20% { opacity: 1; transform: scale(1.1) translateY(-2px); }
+  40% { opacity: 0.8; transform: scale(1.05) translateY(2px); }
+  60% { opacity: 1; transform: scale(1.1) translateY(-1px); }
+  80% { opacity: 0.7; transform: scale(0.95) translateY(1px); }
+  100% { opacity: 0.7; transform: scale(0.9) translateY(0); }
+} 

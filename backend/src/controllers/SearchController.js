@@ -4,7 +4,8 @@ export class SearchController {
   // Search users
   static async searchUsers(req, res) {
     try {
-      const { query, limit = 10, sort, ...filters } = req.query;
+      const queryData = req.validatedQuery || req.query;
+      const { query, limit = 10, sort, ...filters } = queryData;
       const users = await ProfileService.searchUsers(query, parseInt(limit), sort, filters);
       res.json(users);
     } catch (error) {
@@ -16,7 +17,8 @@ export class SearchController {
   // Get top players
   static async getTopPlayers(req, res) {
     try {
-      const { metric = 'level', limit = 10 } = req.query;
+      const queryData = req.validatedQuery || req.query;
+      const { metric = 'level', limit = 10 } = queryData;
       const players = await ProfileService.getTopPlayers(metric, parseInt(limit));
       res.json(players);
     } catch (error) {

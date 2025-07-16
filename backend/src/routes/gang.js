@@ -1,6 +1,7 @@
 import express from 'express';
 import { GangController } from '../controllers/GangController.js';
 import { auth } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -8,7 +9,7 @@ const router = express.Router();
 router.use(auth);
 
 // Gang management
-router.post('/gangs', GangController.createGang);
+router.post('/gangs', validate('createGang'), GangController.createGang);
 router.get('/gangs', GangController.getAllGangs);
 router.get('/gangs/:id', GangController.getGangById);
 router.get('/gangs/user/mine', GangController.getUserGang);

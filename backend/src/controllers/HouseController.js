@@ -24,40 +24,49 @@ export class HouseController {
     }
   }
 
+  static async getUserHouses(req, res) {
+    try {
+      const userHouses = await HouseService.getUserHouses(req.user.id);
+      res.json(userHouses);
+    } catch (error) {
+      console.error('Get user houses error:', error);
+      res.status(500).json({ error: 'Failed to get user houses' });
+    }
+  }
+
+  static async equipHouse(req, res) {
+    try {
+      const { houseId } = req.body;
+      if (!houseId) return res.status(400).json({ message: 'houseId required' });
+      const house = await HouseService.equipHouse(req.user.id, houseId);
+      res.json({ message: 'House equipped', house });
+    } catch (error) {
+      console.error('Equip house error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   static async buyHouse(req, res) {
     try {
       const { houseId } = req.body;
-      if (!houseId) {
-        return res.status(400).json({ message: 'houseId required' });
-      }
-
+      if (!houseId) return res.status(400).json({ message: 'houseId required' });
       const house = await HouseService.buyHouse(req.user.id, houseId);
       res.json({ message: 'House purchased successfully', house });
     } catch (error) {
       console.error('Buy house error:', error);
-      if (error.message === 'Character or house not found') {
-        return res.status(404).json({ message: error.message });
-      }
-      if (error.message === 'Not enough money') {
-        return res.status(400).json({ message: error.message });
-      }
-      if (error.message === 'Already owns a house') {
-        return res.status(400).json({ message: error.message });
-      }
-      res.status(500).json({ error: 'Failed to buy house' });
+      res.status(400).json({ message: error.message });
     }
   }
 
   static async sellHouse(req, res) {
     try {
-      const result = await HouseService.sellHouse(req.user.id);
-      res.json({ message: 'House sold', refund: result.refund });
+      const { houseId } = req.body;
+      if (!houseId) return res.status(400).json({ message: 'houseId required' });
+      const result = await HouseService.sellHouse(req.user.id, houseId);
+      res.json({ message: 'House sold', refund: result.refund, houseId: result.houseId });
     } catch (error) {
       console.error('Sell house error:', error);
-      if (error.message === 'No house to sell') {
-        return res.status(400).json({ message: error.message });
-      }
-      res.status(500).json({ error: 'Failed to sell house' });
+      res.status(400).json({ message: error.message });
     }
   }
 } 

@@ -7,6 +7,13 @@ const router = express.Router();
 // GET /black-market - Get all available items (no auth required)
 router.get('/', BlackMarketController.getAvailableItems);
 
+// USER-TO-USER LISTINGS
+router.get('/listings', BlackMarketController.getAllListings); // public
+router.get('/listings/my', auth, BlackMarketController.getMyListings); // user only
+router.post('/listings', auth, BlackMarketController.postListing); // user only
+router.post('/listings/buy', auth, BlackMarketController.buyListing); // user only
+router.post('/listings/cancel', auth, BlackMarketController.cancelListing); // user only
+
 // GET /black-market/:id - Get item by ID (no auth required)
 router.get('/:id', BlackMarketController.getItemById);
 

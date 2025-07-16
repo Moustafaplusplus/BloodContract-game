@@ -8,6 +8,12 @@ import {
 } from "react";
 import axios from "axios";
 
+// Set axios base URL
+const API = import.meta.env.VITE_API_URL;
+if (API) {
+  axios.defaults.baseURL = API;
+}
+
 const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {

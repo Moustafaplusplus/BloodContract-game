@@ -1,9 +1,9 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
 
-export class GoldTransaction extends Model {}
+export class BlackcoinTransaction extends Model {}
 
-GoldTransaction.init({
+BlackcoinTransaction.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -35,13 +35,13 @@ GoldTransaction.init({
   }
 }, {
   sequelize,
-  modelName: 'GoldTransaction',
-  tableName: 'GoldTransactions'
+  modelName: 'BlackcoinTransaction',
+  tableName: 'BlackcoinTransactions'
 });
 
-export class GoldPackage extends Model {}
+export class BlackcoinPackage extends Model {}
 
-GoldPackage.init({
+BlackcoinPackage.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -55,7 +55,7 @@ GoldPackage.init({
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false
   },
-  goldAmount: {
+  blackcoinAmount: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
@@ -69,45 +69,7 @@ GoldPackage.init({
   }
 }, {
   sequelize,
-  modelName: 'GoldPackage',
-  tableName: 'GoldPackages',
+  modelName: 'BlackcoinPackage',
+  tableName: 'BlackcoinPackages',
   timestamps: false
-});
-
-export class VIPMembership extends Model {}
-
-VIPMembership.init({
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  tier: {
-    type: DataTypes.ENUM('SILVER', 'GOLD', 'PLATINUM'),
-    allowNull: false
-  },
-  startDate: {
-    type: DataTypes.DATE,
-    allowNull: false
-  },
-  endDate: {
-    type: DataTypes.DATE,
-    allowNull: false
-  },
-  isActive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
-  }
-}, {
-  sequelize,
-  modelName: 'VIPMembership',
-  tableName: 'VIPMemberships'
-});
-
-// Associations
-GoldTransaction.belongsTo(sequelize.models.User, { foreignKey: 'userId' });
-VIPMembership.belongsTo(sequelize.models.User, { foreignKey: 'userId' }); 
+}); 

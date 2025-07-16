@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { extractErrorMessage } from "@/utils/errorHandler";
 
 export default function Events() {
   const queryClient = useQueryClient();
@@ -37,7 +38,7 @@ export default function Events() {
       queryClient.invalidateQueries(['event-participations']);
     },
     onError: (error) => {
-      const message = error.response?.data?.error || 'فشل في الانضمام للفعالية';
+      const message = extractErrorMessage(error);
       toast.error(message);
     }
   });
@@ -50,7 +51,7 @@ export default function Events() {
       queryClient.invalidateQueries(['event-participations']);
     },
     onError: (error) => {
-      const message = error.response?.data?.error || 'فشل في مغادرة الفعالية';
+      const message = extractErrorMessage(error);
       toast.error(message);
     }
   });
@@ -63,7 +64,7 @@ export default function Events() {
       queryClient.invalidateQueries(['event-participations']);
     },
     onError: (error) => {
-      const message = error.response?.data?.error || 'فشل في إكمال الفعالية';
+      const message = extractErrorMessage(error);
       toast.error(message);
     }
   });
@@ -77,7 +78,7 @@ export default function Events() {
       queryClient.invalidateQueries(['character']);
     },
     onError: (error) => {
-      const message = error.response?.data?.error || 'فشل في استلام المكافآت';
+      const message = extractErrorMessage(error);
       toast.error(message);
     }
   });

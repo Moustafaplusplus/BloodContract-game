@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
+import { Character } from '../models/Character.js';
 
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) throw new Error('JWT_SECRET environment variable is required');
 
-export function auth(req, res, next) {
+export async function auth(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ message: 'No authentication token provided' });
@@ -15,6 +16,18 @@ export function auth(req, res, next) {
       return res.status(403).json({ message: 'Invalid authentication token' });
     }
     req.user = { id: decoded.id, characterId: decoded.characterId };
+    // Update lastActive for the user's character
+    if (decoded.id) {
+      try {
+        await Character.update(
+          { lastActive: new Date() },
+          { where: { userId: decoded.id } }
+        );
+      } catch (e) {
+        // Don't block request if this fails
+        console.error('Failed to update lastActive:', e);
+      }
+    }
     next();
   } catch (err) {
     const msg = err.name === 'TokenExpiredError' 

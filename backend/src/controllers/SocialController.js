@@ -12,7 +12,7 @@ export class SocialController {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const friendship = await SocialService.sendFriendRequest(character.id, parseInt(targetId));
+      const friendship = await SocialService.sendFriendRequest(character.userId, parseInt(targetId));
       res.json(friendship);
     } catch (error) {
       console.error('Send friend request error:', error);
@@ -33,7 +33,7 @@ export class SocialController {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const friendship = await SocialService.acceptFriendRequest(parseInt(friendshipId), character.id);
+      const friendship = await SocialService.acceptFriendRequest(parseInt(friendshipId), character.userId);
       res.json(friendship);
     } catch (error) {
       console.error('Accept friend request error:', error);
@@ -54,7 +54,7 @@ export class SocialController {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const friendship = await SocialService.rejectFriendRequest(parseInt(friendshipId), character.id);
+      const friendship = await SocialService.rejectFriendRequest(parseInt(friendshipId), character.userId);
       res.json(friendship);
     } catch (error) {
       console.error('Reject friend request error:', error);
@@ -74,7 +74,7 @@ export class SocialController {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const result = await SocialService.blockUser(character.id, parseInt(targetId));
+      const result = await SocialService.blockUser(character.userId, parseInt(targetId));
       res.json(result);
     } catch (error) {
       console.error('Block user error:', error);
@@ -87,12 +87,14 @@ export class SocialController {
 
   static async getFriendships(req, res) {
     try {
+      console.log('DEBUG getFriendships req.user:', req.user);
       const character = await CharacterService.getCharacterByUserId(req.user.id);
+      console.log('DEBUG getFriendships character:', character);
       if (!character) {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const friendships = await SocialService.getFriendships(character.id);
+      const friendships = await SocialService.getFriendships(character.userId);
       res.json(friendships);
     } catch (error) {
       console.error('Get friendships error:', error);
@@ -102,12 +104,14 @@ export class SocialController {
 
   static async getFriends(req, res) {
     try {
+      console.log('DEBUG getFriends req.user:', req.user);
       const character = await CharacterService.getCharacterByUserId(req.user.id);
+      console.log('DEBUG getFriends character:', character);
       if (!character) {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const friends = await SocialService.getFriends(character.id);
+      const friends = await SocialService.getFriends(character.userId);
       res.json(friends);
     } catch (error) {
       console.error('Get friends error:', error);
@@ -129,7 +133,7 @@ export class SocialController {
         return res.status(400).json({ error: 'Message content is required' });
       }
 
-      const message = await SocialService.sendMessage(character.id, parseInt(receiverId), content);
+      const message = await SocialService.sendMessage(character.userId, parseInt(receiverId), content);
       res.json(message);
     } catch (error) {
       console.error('Send message error:', error);
@@ -144,14 +148,15 @@ export class SocialController {
   static async getMessages(req, res) {
     try {
       const { otherUserId } = req.params;
-      const { limit = 50 } = req.query;
+      const queryData = req.validatedQuery || req.query;
+      const { limit = 50 } = queryData;
       const character = await CharacterService.getCharacterByUserId(req.user.id);
       
       if (!character) {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const messages = await SocialService.getMessages(character.id, parseInt(otherUserId), parseInt(limit));
+      const messages = await SocialService.getMessages(character.userId, parseInt(otherUserId), parseInt(limit));
       res.json(messages);
     } catch (error) {
       console.error('Get messages error:', error);
@@ -168,7 +173,7 @@ export class SocialController {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const message = await SocialService.markMessageAsRead(parseInt(messageId), character.id);
+      const message = await SocialService.markMessageAsRead(parseInt(messageId), character.userId);
       res.json(message);
     } catch (error) {
       console.error('Mark message as read error:', error);
@@ -186,7 +191,7 @@ export class SocialController {
         return res.status(404).json({ error: 'Character not found' });
       }
 
-      const count = await SocialService.getUnreadMessageCount(character.id);
+      const count = await SocialService.getUnreadMessageCount(character.userId);
       res.json({ count });
     } catch (error) {
       console.error('Get unread message count error:', error);
@@ -197,7 +202,8 @@ export class SocialController {
   // Notification methods
   static async getUserNotifications(req, res) {
     try {
-      const { limit = 20 } = req.query;
+      const queryData = req.validatedQuery || req.query;
+      const { limit = 20 } = queryData;
       const notifications = await SocialService.getUserNotifications(req.user.id, parseInt(limit));
       res.json(notifications);
     } catch (error) {
@@ -243,7 +249,8 @@ export class SocialController {
   // Search methods
   static async searchUsers(req, res) {
     try {
-      const { query } = req.query;
+      const queryData = req.validatedQuery || req.query;
+      const { query } = queryData;
       const character = await CharacterService.getCharacterByUserId(req.user.id);
       
       if (!character) {
@@ -254,7 +261,7 @@ export class SocialController {
         return res.status(400).json({ error: 'Search query must be at least 2 characters' });
       }
 
-      const results = await SocialService.searchUsers(query.trim(), character.id);
+      const results = await SocialService.searchUsers(query.trim(), character.userId);
       res.json(results);
     } catch (error) {
       console.error('Search users error:', error);

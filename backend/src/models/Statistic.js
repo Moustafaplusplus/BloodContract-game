@@ -1,11 +1,15 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const statSchema = new mongoose.Schema({
-  userId:     { type: Number, required: true, unique: true, index: true },
-  crimes:     { type: Number, default: 0 },
-  fights:     { type: Number, default: 0 },
-  daysOnline: { type: Number, default: 0 },
-}, { timestamps: true });
-
-export const Statistic = mongoose.models.Statistic ||
-                         mongoose.model('Statistic', statSchema); 
+export const Statistic = sequelize.define('Statistic', {
+  userId:     { type: DataTypes.INTEGER, allowNull: false, unique: true },
+  crimes:     { type: DataTypes.INTEGER, defaultValue: 0 },
+  fights:     { type: DataTypes.INTEGER, defaultValue: 0 },
+  wins:       { type: DataTypes.INTEGER, defaultValue: 0 },
+  losses:     { type: DataTypes.INTEGER, defaultValue: 0 },
+  daysOnline: { type: DataTypes.INTEGER, defaultValue: 0 },
+}, {
+  timestamps: true,
+  tableName: 'Statistics',
+});
+// NOTE: You must run a migration or SQL to add 'wins' and 'losses' columns to the Statistics table in your database. 
