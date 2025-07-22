@@ -22,7 +22,7 @@ const rarityIcons = {
   legend: '⭐⭐⭐⭐⭐',
 };
 
-const weaponTypes = ['melee', 'rifle', 'sniper', 'pistol', 'weapon'];
+const weaponTypes = ['weapon'];
 
 function Stat({ icon: Icon, color, value, label }) {
   return (

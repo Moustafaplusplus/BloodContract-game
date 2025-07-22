@@ -5,7 +5,7 @@ import { io } from '../socket.js';
 import { Op } from 'sequelize';
 
 export function startHospitalRelease() {
-  console.log('🏥 Starting hospital release job...');
+  // Starting hospital release job
   
   const checkHospitalReleases = async () => {
     try {
@@ -19,7 +19,7 @@ export function startHospitalRelease() {
       });
 
       if (expiredHospitals.length > 0) {
-        console.log(`🏥 Releasing ${expiredHospitals.length} players from hospital`);
+        // Releasing players from hospital
         
         for (const hospital of expiredHospitals) {
           // Find the character for this user ID

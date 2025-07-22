@@ -7,30 +7,13 @@ export class CharacterController {
       if (!char) {
         return res.status(404).json({ error: 'Character not found' });
       }
-      return res.json(await char.toSafeJSON());
+      const safeChar = await char.toSafeJSON();
+      // Always include daily login info
+      safeChar.dailyLoginReward = char._dailyLoginReward || 0;
+      safeChar.gaveDailyLogin = !!char._gaveDailyLogin;
+      return res.json(safeChar);
     } catch (error) {
       console.error('Error getting character:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  static async trainAttribute(req, res) {
-    try {
-      const { attr } = req.body;
-      if (!['strength', 'defense'].includes(attr)) {
-        return res.status(400).json({ error: 'Invalid attribute' });
-      }
-
-      const char = await CharacterService.trainAttribute(req.user.id, attr);
-      return res.json(await char.toSafeJSON());
-    } catch (error) {
-      console.error('Error training attribute:', error);
-      if (error.message === 'Character not found') {
-        return res.status(404).json({ error: error.message });
-      }
-      if (error.message === 'Not enough energy') {
-        return res.status(400).json({ error: error.message });
-      }
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -55,6 +38,23 @@ export class CharacterController {
       return res.json(await char.toSafeJSON());
     } catch (error) {
       console.error('Error getting character by username:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  static async clearLevelUpRewards(req, res) {
+    try {
+      const char = await CharacterService.getCharacterByUserId(req.user.id);
+      if (!char) {
+        return res.status(404).json({ error: 'Character not found' });
+      }
+      
+      CharacterService.clearLevelUpRewards(char);
+      await char.save();
+      
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Error clearing level-up rewards:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }

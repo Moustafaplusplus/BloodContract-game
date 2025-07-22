@@ -53,6 +53,9 @@ router.get('/users', UserController.getAllUsers);
 // GET /api/users/active - Get active users in the last 30 minutes
 router.get('/users/active', UserController.getActiveUsers);
 
+// GET /api/users/:id - Get user by ID (for username preview)
+router.get('/users/:id', UserController.getUserById);
+
 // POST /api/avatar - Upload user avatar
 router.post('/avatar', auth, upload.single('avatar'), (err, req, res, next) => {
   if (err) {

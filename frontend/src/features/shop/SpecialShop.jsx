@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
+import { useSocket } from "@/hooks/useSocket";
 import { Star, ImageIcon } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL;
@@ -17,6 +18,7 @@ function BlackcoinIcon() {
 export default function SpecialShop() {
   const { token } = useAuth();
   const { stats, invalidateHud } = useHud();
+  const { socket } = useSocket();
   const [specialItems, setSpecialItems] = useState([]);
   const [blackcoinPackages, setBlackcoinPackages] = useState([]);
   const [vipPackages, setVipPackages] = useState([]);
@@ -61,6 +63,18 @@ export default function SpecialShop() {
     };
     fetchItems();
   }, [token]);
+
+  // Real-time HUD updates
+  useEffect(() => {
+    if (!socket) return;
+    const refetchHud = () => invalidateHud?.();
+    socket.on('hud:update', refetchHud);
+    const pollInterval = setInterval(refetchHud, 10000);
+    return () => {
+      socket.off('hud:update', refetchHud);
+      clearInterval(pollInterval);
+    };
+  }, [socket, invalidateHud]);
 
   const buyVIP = async (packageId) => {
     try {
@@ -204,10 +218,18 @@ export default function SpecialShop() {
               <div className="text-lg font-bold text-accent-red flex items-center gap-1">
                 <BlackcoinIcon /> {pkg.name}
               </div>
+              <div className="text-sm text-hitman-300 text-center">
+                ${pkg.usdPrice}
+              </div>
               <div className="flex items-center gap-1 text-accent-yellow font-bold text-xl">
                 <BlackcoinIcon />
                 <span>{pkg.blackcoinAmount + (pkg.bonus || 0)}</span>
               </div>
+              {pkg.bonus > 0 && (
+                <div className="text-xs text-green-400">
+                  +{pkg.bonus} مكافأة
+                </div>
+              )}
               <button
                 onClick={() => buyBlackcoin(pkg.id)}
                 className="mt-2 bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center gap-2 hover:scale-105"
@@ -229,7 +251,7 @@ export default function SpecialShop() {
             <div className="text-center text-hitman-400 col-span-full">لا توجد عناصر خاصة حالياً.</div>
           )}
           {specialItems.map(item => (
-            <div key={`special-${item.type || (item.damage ? 'weapon' : 'armor')}-${item.id}`} className="bg-black/60 border border-accent-red rounded-xl p-4 flex flex-col items-center gap-2">
+            <div key={`special-${item.damage ? 'weapon' : 'armor'}-${item.id}`} className="bg-black/60 border border-accent-red rounded-xl p-4 flex flex-col items-center gap-2">
               <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600 mb-2">
                 {item.imageUrl ? (
                   <img
@@ -247,6 +269,31 @@ export default function SpecialShop() {
                 </div>
               </div>
               <div className="font-semibold text-white text-sm truncate mb-1">{item.name}</div>
+              
+              {/* Item Stats */}
+              <div className="space-y-1 text-xs text-center">
+                {item.damage && (
+                  <div className="flex items-center justify-center text-red-400">
+                    <span>ضرر: {item.damage}</span>
+                  </div>
+                )}
+                {item.def && (
+                  <div className="flex items-center justify-center text-blue-400">
+                    <span>دفاع: {item.def}</span>
+                  </div>
+                )}
+                {item.energyBonus && item.energyBonus > 0 && (
+                  <div className="flex items-center justify-center text-yellow-400">
+                    <span>طاقة: +{item.energyBonus}</span>
+                  </div>
+                )}
+                {item.hpBonus && item.hpBonus > 0 && (
+                  <div className="flex items-center justify-center text-green-400">
+                    <span>صحة: +{item.hpBonus}</span>
+                  </div>
+                )}
+              </div>
+              
               <div className="flex items-center gap-1 text-accent-red font-bold text-base mb-2">
                 <BlackcoinIcon />
                 <span>{item.price}</span>

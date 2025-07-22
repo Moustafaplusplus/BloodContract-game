@@ -1,13 +1,24 @@
 import { sequelize } from './config/db.js';
 import { User } from './models/User.js';
 import { Character } from './models/Character.js';
-import { Weapon, Armor, VIPPackage } from './models/Shop.js';
-import { Crime } from './models/Crime.js';
-import { BlackcoinPackage } from './models/Blackcoin.js';
-import { HouseService } from './services/HouseService.js';
-import { House } from './models/House.js';
+import { Statistic } from './models/Statistic.js';
+import { Crime, CrimeLog } from './models/Crime.js';
+import { Jail, Hospital } from './models/Confinement.js';
+import { Fight } from './models/Fight.js';
+import { BankAccount, BankTxn } from './models/Bank.js';
+import { InventoryItem } from './models/Inventory.js';
+import { Weapon, Armor } from './models/Shop.js';
+import { House, UserHouse } from './models/House.js';
 import { Car } from './models/Car.js';
-import { Dog } from './models/Dog.js';
+import { Job, JobHistory } from './models/Job.js';
+import { BlackMarketListing } from './models/BlackMarketListing.js';
+import { BlackcoinTransaction, BlackcoinPackage } from './models/Blackcoin.js';
+import { Dog, UserDog } from './models/Dog.js';
+import { Message } from './models/Message.js';
+import { Friendship } from './models/Friendship.js';
+import { IpTracking } from './models/IpTracking.js';
+import { MinistryMission, UserMinistryMission } from './models/MinistryMission.js';
+import { Suggestion } from './models/Suggestion.js';
 
 console.log('🚀 Starting database reset and seeding process...');
 
@@ -26,10 +37,10 @@ async function seedBlackcoinPackages() {
   try {
     console.log('💰 Seeding blackcoin packages...');
     await BlackcoinPackage.bulkCreate([
-      { name: 'Small Blackcoin Pack', usdPrice: 2.99, blackcoinAmount: 30, bonus: 0, isActive: true },
-      { name: 'Medium Blackcoin Pack', usdPrice: 7.99, blackcoinAmount: 90, bonus: 10, isActive: true },
-      { name: 'Large Blackcoin Pack', usdPrice: 19.99, blackcoinAmount: 250, bonus: 40, isActive: true },
-      { name: 'Mega Blackcoin Pack', usdPrice: 49.99, blackcoinAmount: 700, bonus: 120, isActive: true }
+      { name: 'Small Blackcoin Pack', usdPrice: 2.99, blackcoinAmount: 30, bonus: 5, isActive: true },
+      { name: 'Medium Blackcoin Pack', usdPrice: 7.99, blackcoinAmount: 90, bonus: 15, isActive: true },
+      { name: 'Large Blackcoin Pack', usdPrice: 19.99, blackcoinAmount: 250, bonus: 50, isActive: true },
+      { name: 'Mega Blackcoin Pack', usdPrice: 49.99, blackcoinAmount: 700, bonus: 150, isActive: true }
     ]);
     console.log('✅ Blackcoin packages seeded successfully');
   } catch (error) {
@@ -42,107 +53,10 @@ async function seedShopItems() {
   try {
     console.log('🛒 Seeding shop items...');
     
-    // Weapons
-    await Weapon.bulkCreate([
-      // Common Weapons
-      { name: 'سكين مطبخ',        type: 'melee',  damage: 3,  energyBonus: 0,  price: 100,  rarity: 'common', imageUrl: '/images/weapons/kitchen-knife.png' },
-      { name: 'خنجر صدئ',         type: 'melee',  damage: 4,  energyBonus: 0,  price: 150,  rarity: 'common', imageUrl: '/images/weapons/rusty-dagger.png' },
-      { name: 'عصا خشبية',        type: 'melee',  damage: 5,  energyBonus: 0,  price: 200,  rarity: 'common', imageUrl: '/images/weapons/wooden-stick.png' },
-      { name: 'عصا حديدية',       type: 'melee',  damage: 6,  energyBonus: 1,  price: 300,  rarity: 'common', imageUrl: '/images/weapons/iron-pipe.png' },
-      { name: 'مسدس قديم',        type: 'pistol', damage: 7,  energyBonus: 0,  price: 500,  rarity: 'common', imageUrl: '/images/weapons/old-pistol.png' },
-      
-      // Uncommon Weapons
-      { name: 'مسدس 9mm',         type: 'pistol', damage: 9,  energyBonus: 0,  price: 800,  rarity: 'uncommon', imageUrl: '/images/weapons/9mm-pistol.png' },
-      { name: 'بندقية صيد',       type: 'rifle',  damage: 12, energyBonus: 0,  price: 1200, rarity: 'uncommon', imageUrl: '/images/weapons/hunting-rifle.png' },
-      { name: 'سيف قصير',         type: 'melee',  damage: 14, energyBonus: 1,  price: 1500, rarity: 'uncommon', imageUrl: '/images/weapons/short-sword.png' },
-      { name: 'مسدس مزدوج',       type: 'pistol', damage: 11, energyBonus: 0,  price: 1000, rarity: 'uncommon', imageUrl: '/images/weapons/dual-pistols.png' },
-      { name: 'قوس وسهم',         type: 'ranged', damage: 13, energyBonus: 0,  price: 1400, rarity: 'uncommon', imageUrl: '/images/weapons/bow-arrow.png' },
-      
-      // Rare Weapons
-      { name: 'كاتانا فولاذية',   type: 'melee',  damage: 16, energyBonus: 2,  price: 2200, rarity: 'rare', imageUrl: '/images/weapons/steel-katana.png' },
-      { name: 'قناص قصير',        type: 'sniper', damage: 20, energyBonus: 0,  price: 3000, rarity: 'rare', imageUrl: '/images/weapons/short-sniper.png' },
-      { name: 'رشاش خفيف',        type: 'rifle',  damage: 18, energyBonus: 0,  price: 2800, rarity: 'rare', imageUrl: '/images/weapons/light-machinegun.png' },
-      { name: 'فأس حربي',         type: 'melee',  damage: 22, energyBonus: 1,  price: 3500, rarity: 'rare', imageUrl: '/images/weapons/war-axe.png' },
-      { name: 'مسدس ليزر',        type: 'pistol', damage: 19, energyBonus: 0,  price: 3200, rarity: 'rare', imageUrl: '/images/weapons/laser-pistol.png' },
-      
-      // Epic Weapons
-      { name: 'مطرقة الحرب',      type: 'melee',  damage: 24, energyBonus: 3,  price: 3800, rarity: 'epic', imageUrl: '/images/weapons/war-hammer.png' },
-      { name: 'رشاش آلي',         type: 'rifle',  damage: 28, energyBonus: 0,  price: 4500, rarity: 'epic', imageUrl: '/images/weapons/auto-rifle.png' },
-      { name: 'قناصة متوسطة',     type: 'sniper', damage: 32, energyBonus: 0,  price: 5200, rarity: 'epic', imageUrl: '/images/weapons/medium-sniper.png' },
-      { name: 'سيف بلازما',       type: 'melee',  damage: 26, energyBonus: 4,  price: 4200, rarity: 'epic', imageUrl: '/images/weapons/plasma-sword.png' },
-      { name: 'قوس كهربائي',      type: 'ranged', damage: 30, energyBonus: 0,  price: 4800, rarity: 'epic', imageUrl: '/images/weapons/electric-bow.png' },
-      
-      // Legendary Weapons
-      { name: 'قناصة متقدمة',     type: 'sniper', damage: 34, energyBonus: 0,  price: 5500, rarity: 'legend', imageUrl: '/images/weapons/advanced-sniper.png' },
-      { name: 'سيف أسطوري',       type: 'melee',  damage: 40, energyBonus: 5,  price: 7000, rarity: 'legend', imageUrl: '/images/weapons/legendary-sword.png' },
-      { name: 'رشاش بلازما',      type: 'rifle',  damage: 38, energyBonus: 0,  price: 6500, rarity: 'legend', imageUrl: '/images/weapons/plasma-rifle.png' },
-      { name: 'قوس الجليد',       type: 'ranged', damage: 36, energyBonus: 0,  price: 6000, rarity: 'legend', imageUrl: '/images/weapons/ice-bow.png' },
-      { name: 'سيف النار',        type: 'melee',  damage: 42, energyBonus: 6,  price: 7500, rarity: 'legend', imageUrl: '/images/weapons/fire-sword.png' },
-      // Add some blackcoin-only weapons
-      { name: 'Shadow Dagger', type: 'melee', damage: 50, energyBonus: 5, price: 20, rarity: 'legend', imageUrl: '/images/weapons/shadow-dagger.png', currency: 'blackcoin' },
-      { name: 'Inferno Rifle', type: 'rifle', damage: 70, energyBonus: 10, price: 35, rarity: 'legend', imageUrl: '/images/weapons/inferno-rifle.png', currency: 'blackcoin' }
-    ]);
-
-    // Armors
-    await Armor.bulkCreate([
-      // Common Armors
-      { name: 'ملابس عادية',      def: 1,  hpBonus: 0,  price: 100,  rarity: 'common', imageUrl: '/images/armors/regular-clothes.png' },
-      { name: 'سترة قماش',        def: 2,  hpBonus: 0,  price: 200,  rarity: 'common', imageUrl: '/images/armors/cloth-vest.png' },
-      { name: 'سترة جلدية',       def: 4,  hpBonus: 10, price: 400,  rarity: 'common', imageUrl: '/images/armors/leather-vest.png' },
-      { name: 'سترة واقية',       def: 3,  hpBonus: 5,  price: 300,  rarity: 'common', imageUrl: '/images/armors/protective-vest.png' },
-      { name: 'سترة سميكة',       def: 5,  hpBonus: 8,  price: 500,  rarity: 'common', imageUrl: '/images/armors/thick-vest.png' },
-      
-      // Uncommon Armors
-      { name: 'درع كيفلر خفيف',   def: 7,  hpBonus: 15, price: 900,  rarity: 'uncommon', imageUrl: '/images/armors/light-kevlar.png' },
-      { name: 'درع كيفلر متوسط',  def: 9,  hpBonus: 20, price: 1300, rarity: 'uncommon', imageUrl: '/images/armors/medium-kevlar.png' },
-      { name: 'درع تكتيكي خفيف',  def: 8,  hpBonus: 18, price: 1100, rarity: 'uncommon', imageUrl: '/images/armors/light-tactical.png' },
-      { name: 'درع مركب خفيف',     def: 10, hpBonus: 22, price: 1500, rarity: 'uncommon', imageUrl: '/images/armors/light-composite.png' },
-      { name: 'درع فولاذي خفيف',  def: 11, hpBonus: 25, price: 1700, rarity: 'uncommon', imageUrl: '/images/armors/light-steel.png' },
-      
-      // Rare Armors
-      { name: 'درع كيفلر ثقيل',   def: 12, hpBonus: 25, price: 1800, rarity: 'rare', imageUrl: '/images/armors/heavy-kevlar.png' },
-      { name: 'درع تكتيكي',       def: 15, hpBonus: 35, price: 2400, rarity: 'rare', imageUrl: '/images/armors/tactical-armor.png' },
-      { name: 'درع مركب متوسط',    def: 14, hpBonus: 30, price: 2200, rarity: 'rare', imageUrl: '/images/armors/medium-composite.png' },
-      { name: 'درع فولاذي متوسط', def: 16, hpBonus: 40, price: 2800, rarity: 'rare', imageUrl: '/images/armors/medium-steel.png' },
-      { name: 'درع سيراميك',      def: 13, hpBonus: 28, price: 2000, rarity: 'rare', imageUrl: '/images/armors/ceramic-armor.png' },
-      
-      // Epic Armors
-      { name: 'درع التيتانيوم',   def: 19, hpBonus: 45, price: 3200, rarity: 'epic', imageUrl: '/images/armors/titanium-armor.png' },
-      { name: 'درع مركب متقدم',   def: 23, hpBonus: 55, price: 4000, rarity: 'epic', imageUrl: '/images/armors/advanced-composite.png' },
-      { name: 'درع تكتيكي ثقيل',  def: 21, hpBonus: 50, price: 3600, rarity: 'epic', imageUrl: '/images/armors/heavy-tactical.png' },
-      { name: 'درع فولاذي ثقيل',  def: 24, hpBonus: 60, price: 4200, rarity: 'epic', imageUrl: '/images/armors/heavy-steel.png' },
-      { name: 'درع بلازما',       def: 20, hpBonus: 48, price: 3400, rarity: 'epic', imageUrl: '/images/armors/plasma-armor.png' },
-      
-      // Legendary Armors
-      { name: 'درع نانوي خفيف',   def: 27, hpBonus: 65, price: 5200, rarity: 'legend', imageUrl: '/images/armors/light-nano.png' },
-      { name: 'درع نانوي معزز',   def: 32, hpBonus: 80, price: 6500, rarity: 'legend', imageUrl: '/images/armors/enhanced-nano.png' },
-      { name: 'درع بلازما متقدم', def: 30, hpBonus: 75, price: 5800, rarity: 'legend', imageUrl: '/images/armors/advanced-plasma.png' },
-      { name: 'درع كريستالي',     def: 35, hpBonus: 90, price: 7200, rarity: 'legend', imageUrl: '/images/armors/crystal-armor.png' },
-      { name: 'درع أسطوري',       def: 40, hpBonus: 100, price: 8500, rarity: 'legend', imageUrl: '/images/armors/legendary-armor.png' },
-      // Add some blackcoin-only armors
-      { name: 'Phantom Suit', def: 60, hpBonus: 150, price: 25, rarity: 'legend', imageUrl: '/images/armors/phantom-suit.png', currency: 'blackcoin' },
-      { name: 'Dragon Scale Armor', def: 80, hpBonus: 200, price: 50, rarity: 'legend', imageUrl: '/images/armors/dragon-scale.png', currency: 'blackcoin' }
-    ]);
-
-    console.log('✅ Shop items seeded successfully');
+    // Remove weapon and armor seeding - now managed through admin panel
+    console.log('✅ Shop items seeding skipped (managed through admin panel)');
   } catch (error) {
     console.error('❌ Error seeding shop items:', error);
-    throw error;
-  }
-}
-
-async function seedVIPPackages() {
-  try {
-    console.log('👑 Seeding VIP packages...');
-    await VIPPackage.bulkCreate([
-      { name: '3 أيام', durationDays: 3, price: 10, isActive: true },
-      { name: 'أسبوع', durationDays: 7, price: 20, isActive: true },
-      { name: 'شهر', durationDays: 30, price: 60, isActive: true },
-      { name: 'سنة', durationDays: 365, price: 500, isActive: true },
-    ]);
-    console.log('✅ VIP packages seeded successfully');
-  } catch (error) {
-    console.error('❌ Error seeding VIP packages:', error);
     throw error;
   }
 }
@@ -150,47 +64,9 @@ async function seedVIPPackages() {
 async function seedCrimes() {
   try {
     console.log('🦹‍♂️ Seeding crimes...');
-    const crimes = [];
-    for (let lvl = 1; lvl <= 100; lvl += 10) {
-      crimes.push({
-        name: `سرقة بسيطة (مستوى ${lvl})`,
-        slug: `simple-theft-lvl-${lvl}`,
-        isEnabled: true,
-        req_level: lvl,
-        req_intel: Math.max(1, Math.floor(lvl / 2)),
-        energyCost: 5 + Math.floor(lvl/10),
-        successRate: 0.8 - (lvl/200),
-        minReward: 10 * lvl,
-        maxReward: 20 * lvl,
-        cooldown: 60 + lvl,
-        failOutcome: 'jail',
-        jailMinutes: 2 + Math.floor(lvl/20),
-        hospitalMinutes: 0,
-        hpLoss: 0,
-        bailRate: 20 + lvl,
-        healRate: 0,
-      });
-      crimes.push({
-        name: `سطو عنيف (مستوى ${lvl})`,
-        slug: `violent-robbery-lvl-${lvl}`,
-        isEnabled: true,
-        req_level: lvl,
-        req_intel: Math.max(1, Math.floor(lvl / 2)),
-        energyCost: 10 + Math.floor(lvl/10),
-        successRate: 0.7 - (lvl/200),
-        minReward: 20 * lvl,
-        maxReward: 40 * lvl,
-        cooldown: 120 + lvl,
-        failOutcome: 'hospital',
-        jailMinutes: 0,
-        hospitalMinutes: 2 + Math.floor(lvl/20),
-        hpLoss: 10 + Math.floor(lvl/5),
-        bailRate: 0,
-        healRate: 20 + lvl,
-      });
-    }
-    await Crime.bulkCreate(crimes);
-    console.log('✅ Crimes seeded successfully');
+    await Crime.destroy({ where: {} });
+    // No crimes are seeded by default
+    console.log('✅ Crimes cleared, none seeded');
   } catch (error) {
     console.error('❌ Error seeding crimes:', error);
     throw error;
@@ -258,45 +134,85 @@ async function seedDogs() {
   }
 }
 
+
+
 async function seedUsersAndCharacters() {
   try {
     console.log('👤 Seeding users and characters...');
-    const levels = [1, 12, 23, 34, 45, 56, 67, 78, 89, 100];
+    
+    // Create admin user first
+    const adminUser = await User.create({
+      username: 'admin',
+      email: 'admin@hitman.com',
+      password: 'admin123',
+      age: 25,
+      gender: 'male',
+      isAdmin: true,
+    });
+
+    // Create admin character
+    await Character.create({
+      userId: adminUser.id,
+      name: adminUser.username,
+      level: 50,
+      money: 1000000,
+      blackcoins: 1000,
+      strength: 200,
+      defense: 150,
+      maxEnergy: 200,
+      energy: 200,
+      maxHp: 6000,
+      hp: 6000,
+    });
+
+    console.log('✅ Admin user created: admin@hitman.com / admin123');
+
+    // Generate 20 regular users with diverse usernames and levels
+    const userData = [
+      { username: 'shadow_hunter', level: 5 },
+      { username: 'silent_assassin', level: 8 },
+      { username: 'night_stalker', level: 12 },
+      { username: 'ghost_runner', level: 15 },
+      { username: 'stealth_master', level: 18 },
+      { username: 'dark_phantom', level: 22 },
+      { username: 'silent_death', level: 25 },
+      { username: 'shadow_blade', level: 28 },
+      { username: 'night_wolf', level: 32 },
+      { username: 'stealth_ninja', level: 35 },
+      { username: 'dark_assassin', level: 38 },
+      { username: 'silent_ghost', level: 42 },
+      { username: 'shadow_stalker', level: 45 },
+      { username: 'night_phantom', level: 48 },
+      { username: 'stealth_hunter', level: 52 },
+      { username: 'dark_ninja', level: 55 },
+      { username: 'silent_wolf', level: 58 },
+      { username: 'shadow_master', level: 62 },
+      { username: 'night_assassin', level: 65 },
+      { username: 'stealth_phantom', level: 68 }
+    ];
+
     const users = await User.bulkCreate(
-      levels.map((lvl, i) => ({
-        username: `test${i+1}`,
-        email: `test${i+1}@test.com`,
-        age: 20 + i,
+      userData.map((user, i) => ({
+        username: user.username,
+        email: `user${user.level}@user.com`,
+        password: 'pass123',
+        age: 20 + (i % 15),
         gender: i % 2 === 0 ? 'male' : 'female',
-        password: '123456',
-        bio: `Seeded user level ${lvl}`,
-        avatarUrl: '/avatars/default.png',
-      })),
+        isAdmin: false,
+      })), 
       { individualHooks: true }
     );
-    const characters = await Character.bulkCreate(
-      users.map((user, i) => {
-        const lvl = levels[i];
-        return {
-          userId: user.id, // userId is now the primary key
-          name: user.username,
-          level: lvl,
-          exp: lvl * 100,
-          money: lvl * 1000,
-          blackcoins: 0, // Set to 0 for all
-          vipExpiresAt: null, // Not VIP by default
-          strength: 10 + lvl,
-          defense: 5 + Math.floor(lvl/2),
-          maxEnergy: 100 + Math.floor(lvl/2),
-          energy: 100 + Math.floor(lvl/2),
-          maxHp: 1000 + (lvl * 100),
-          hp: 1000 + (lvl * 100),
-          quote: `I am level ${lvl}!`,
-        };
-      })
-    );
+
+    // Create 20 characters, synced with users
+    const characterData = users.map((user, i) => ({
+      userId: user.id,
+      name: user.username,
+      level: userData[i].level,
+      money: 1000 + (userData[i].level * 100),
+    }));
+    await Character.bulkCreate(characterData);
     console.log('✅ Users and characters seeded successfully');
-    return { users, characters };
+    return { users, characters: characterData };
   } catch (error) {
     console.error('❌ Error seeding users and characters:', error);
     throw error;
@@ -319,7 +235,6 @@ async function main() {
       seedShopItems(),
       seedCrimes(),
       seedBlackcoinPackages(),
-      seedVIPPackages(),
       seedHouses(),
       seedCars(),
       seedDogs(),
@@ -329,9 +244,12 @@ async function main() {
 
     console.log('\n🎉 All seeding completed successfully!');
     console.log('📊 Database summary:');
-    console.log('   - Shop items: Weapons, Armors');
+    console.log('   - Shop items: Managed through admin panel');
     console.log('   - Crimes: 11 different crime types');
-    console.log('   - Users: 5 test users with characters');
+    console.log('   - Jobs: Managed through admin panel');
+    console.log('   - Users: 21 users (1 admin + 20 regular) with characters');
+    console.log('   - Admin user: admin@hitman.com / admin123');
+    console.log('   - Suggestions system: Ready for use');
     console.log('\n🚀 Ready to start the application!');
     
     process.exit(0);

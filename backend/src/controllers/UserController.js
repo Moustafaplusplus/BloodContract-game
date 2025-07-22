@@ -37,10 +37,13 @@ export class UserController {
   static async login(req, res) {
     try {
       const { email, password } = req.body;
-      const result = await UserService.login({ email, password });
+      const result = await UserService.login({ email, password }, req);
       res.json(result);
     } catch (error) {
       console.error('🔥 خطأ في تسجيل الدخول:', error);
+      if (error.message.includes('Account blocked') || error.message.includes('IP address blocked')) {
+        return res.status(403).json({ message: error.message });
+      }
       if (error.message === 'بيانات الدخول غير صحيحة') {
         return res.status(401).json({ message: error.message });
       }
@@ -65,6 +68,16 @@ export class UserController {
     } catch (error) {
       console.error('خطأ في جلب المستخدمين النشطين:', error);
       res.status(500).json({ error: 'فشل جلب المستخدمين النشطين' });
+    }
+  }
+
+  static async getUserById(req, res) {
+    try {
+      const user = await UserService.getUserById(req.params.id);
+      if (!user) return res.status(404).json({ message: 'المستخدم غير موجود.' });
+      res.json({ id: user.id, username: user.username });
+    } catch (error) {
+      res.status(500).json({ message: 'فشل جلب المستخدم', error: error.message });
     }
   }
 

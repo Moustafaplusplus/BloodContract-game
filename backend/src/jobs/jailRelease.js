@@ -5,7 +5,7 @@ import { io } from '../socket.js';
 import { Op } from 'sequelize';
 
 export function startJailRelease() {
-  console.log('🔓 Starting jail release job...');
+  // Starting jail release job
   
   const checkJailReleases = async () => {
     try {
@@ -19,7 +19,7 @@ export function startJailRelease() {
       });
 
       if (expiredJails.length > 0) {
-        console.log(`🔓 Releasing ${expiredJails.length} players from jail`);
+        // Releasing players from jail
         
         for (const jail of expiredJails) {
           // Find the character for this user ID

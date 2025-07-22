@@ -8,8 +8,7 @@ const FriendshipController = {
       const userId = req.user.id;
       const { friendId } = req.body;
       if (userId === friendId) return res.status(400).json({ error: 'Cannot friend yourself' });
-      await Friendship.findOrCreate({ where: { userId, friendId } });
-      await Friendship.findOrCreate({ where: { userId: friendId, friendId: userId } });
+      await Friendship.findOrCreate({ where: { requesterId: userId, addresseeId: friendId }, defaults: { status: 'PENDING' } });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -19,8 +18,8 @@ const FriendshipController = {
     try {
       const userId = req.user.id;
       const { friendId } = req.body;
-      await Friendship.destroy({ where: { userId, friendId } });
-      await Friendship.destroy({ where: { userId: friendId, friendId: userId } });
+      await Friendship.destroy({ where: { requesterId: userId, addresseeId: friendId } });
+      await Friendship.destroy({ where: { requesterId: friendId, addresseeId: userId } });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -29,10 +28,25 @@ const FriendshipController = {
   async listFriends(req, res) {
     try {
       const userId = req.user.id;
-      const friends = await Friendship.findAll({ where: { userId } });
-      const friendIds = friends.map(f => f.friendId);
-      const users = await User.findAll({ where: { id: { [Op.in]: friendIds } }, attributes: ['id', 'username'] });
-      res.json(users);
+      const friendships = await Friendship.findAll({
+        where: {
+          status: 'ACCEPTED',
+          [Op.or]: [
+            { requesterId: userId },
+            { addresseeId: userId }
+          ]
+        },
+        include: [
+          { association: 'Requester', attributes: ['id', 'username'] },
+          { association: 'Addressee', attributes: ['id', 'username'] }
+        ]
+      });
+      // Return the friend (not the current user) for each friendship
+      const friends = friendships.map(f => {
+        let friend = f.Requester.id === userId ? f.Addressee : f.Requester;
+        return { id: friend.id, username: friend.username };
+      });
+      res.json(friends);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -41,8 +55,56 @@ const FriendshipController = {
     try {
       const userId = req.user.id;
       const { friendId } = req.query;
-      const exists = await Friendship.findOne({ where: { userId, friendId } });
+      const exists = await Friendship.findOne({ where: { status: 'ACCEPTED', [Op.or]: [
+        { requesterId: userId, addresseeId: friendId },
+        { requesterId: friendId, addresseeId: userId }
+      ] } });
       res.json({ isFriend: !!exists });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  // New: Get pending friend requests for the current user
+  async pending(req, res) {
+    try {
+      const userId = req.user.id;
+      const requests = await Friendship.findAll({
+        where: { status: 'PENDING', addresseeId: userId },
+        include: [
+          { association: 'Requester', attributes: ['id', 'username'] }
+        ]
+      });
+      res.json(requests);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  // New: Accept a friend request
+  async accept(req, res) {
+    try {
+      const userId = req.user.id;
+      const { friendshipId } = req.body;
+      const friendship = await Friendship.findByPk(friendshipId);
+      if (!friendship) return res.status(404).json({ error: 'Request not found' });
+      if (friendship.addresseeId !== userId) return res.status(403).json({ error: 'Not authorized' });
+      if (friendship.status !== 'PENDING') return res.status(400).json({ error: 'Not pending' });
+      await friendship.update({ status: 'ACCEPTED' });
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  // New: Reject a friend request
+  async reject(req, res) {
+    try {
+      const userId = req.user.id;
+      const { friendshipId } = req.body;
+      const friendship = await Friendship.findByPk(friendshipId);
+      if (!friendship) return res.status(404).json({ error: 'Request not found' });
+      if (friendship.addresseeId !== userId) return res.status(403).json({ error: 'Not authorized' });
+      if (friendship.status !== 'PENDING') return res.status(400).json({ error: 'Not pending' });
+      await friendship.update({ status: 'REJECTED' });
+      res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

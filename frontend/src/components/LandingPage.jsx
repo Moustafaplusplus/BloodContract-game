@@ -12,10 +12,18 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-black overflow-hidden relative">
       {/* Background Image */}
+      {/* Desktop background */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
+        className="hidden sm:block absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
         style={{
-          backgroundImage: `url('/ChatGPT Image Jul 13, 2025, 04_31_19 AM.png')`,
+          backgroundImage: `url('/Landing_desktop.png')`,
+        }}
+      />
+      {/* Mobile background */}
+      <div
+        className="block sm:hidden absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
+        style={{
+          backgroundImage: `url('/Landing_mobile.png')`,
         }}
       />
 
@@ -40,7 +48,7 @@ export default function LandingPage() {
             <div className="mb-8 animate-fade-in">
               <div className="relative inline-block">
                 <h1 className="text-6xl md:text-8xl font-bouya mb-6 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow leading-tight">
-                  عودة قاتل مأجور
+                  عقد الدم
                 </h1>
                 <div className="absolute -top-4 -right-4">
                   <Target className="w-8 h-8 md:w-12 md:h-12 text-accent-red animate-pulse" />
@@ -52,7 +60,7 @@ export default function LandingPage() {
 
               {/* Exciting tagline */}
               <p className="text-xl md:text-3xl text-white mb-4 font-medium animate-fade-in-delayed">
-                اصبح أخطر قاتل مأجور في العالم
+                اصبح أخطر قاتل محترف في العالم
               </p>
               <p className="text-lg md:text-xl text-gray-300 mb-8 animate-fade-in-delayed">
                 لعبة المتصفح الاستراتيجية الأكثر إثارة
@@ -132,7 +140,7 @@ export default function LandingPage() {
         {/* Footer */}
         <div className="text-center py-8 animate-fade-in-delayed">
           <p className="text-xs text-gray-500">
-            © 2024 هيتمان. جميع الحقوق محفوظة.
+            © 2024 عقد الدم. جميع الحقوق محفوظة.
           </p>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
+import { useSocket } from "@/hooks/useSocket";
 import { Banknote, ArrowDownToLine, ArrowUpToLine } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL;
@@ -14,6 +15,7 @@ export default function Bank() {
   const { token } = useAuth();
   const { stats, invalidateHud, loading } = useHud();
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   const [balance, setBalance] = useState(null);
   const [amount, setAmount] = useState("");
@@ -31,12 +33,33 @@ export default function Bank() {
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to fetch"))))
       .then(({ balance }) => setBalance(balance))
-      .catch((error) => {
-        console.error("Bank fetch error:", error);
+      .catch(() => {
         setBalance(0);
         toast.error("لا يمكن الاتصال بالخادم - يتم عرض بيانات وهمية");
       });
   }, [token, navigate]);
+
+  // Real-time updates for bank balance
+  useEffect(() => {
+    if (!socket) return;
+    const fetchBalance = () => {
+      fetch(`${API}/api/bank`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to fetch"))))
+        .then(({ balance }) => setBalance(balance))
+        .catch((error) => {
+          setBalance(0);
+        });
+    };
+    socket.on('bank:update', fetchBalance);
+    const pollInterval = setInterval(fetchBalance, 10000);
+    return () => {
+      socket.off('bank:update', fetchBalance);
+      clearInterval(pollInterval);
+    };
+  }, [socket, token]);
 
   // Validate amount
   const amt = Number(amount);

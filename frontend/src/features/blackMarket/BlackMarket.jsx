@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { Sword, Shield, Zap, Heart, ImageIcon } from "lucide-react";
 import { useHud } from "@/hooks/useHud";
+import { useSocket } from "@/hooks/useSocket";
 
 const rarityColors = {
   common: 'text-gray-400',
@@ -27,7 +28,7 @@ const TABS = [
 function Stat({ icon: Icon, color, value, label }) {
   return (
     <div className="flex items-center gap-1 text-sm font-bold">
-      <Icon className={`w-5 h-5 ${color}`} />
+      {Icon && <Icon className={`w-5 h-5 ${color}`} />}
       <span className={color}>{value}</span>
       <span className="text-hitman-300 font-normal text-xs">{label}</span>
     </div>
@@ -84,7 +85,8 @@ function InventoryCard({ item, selected, onClick }) {
 }
 
 export default function BlackMarket() {
-  const { stats } = useHud();
+  const { stats, invalidateHud } = useHud();
+  const { socket } = useSocket();
   const [tab, setTab] = useState("available");
   // Available listings
   const [listings, setListings] = useState([]);
@@ -137,6 +139,18 @@ export default function BlackMarket() {
       .finally(() => setLoadingInventory(false));
   }, [tab, posting, cancelingId]);
 
+  // Real-time HUD updates
+  useEffect(() => {
+    if (!socket) return;
+    const refetchHud = () => invalidateHud?.();
+    socket.on('hud:update', refetchHud);
+    const pollInterval = setInterval(refetchHud, 10000);
+    return () => {
+      socket.off('hud:update', refetchHud);
+      clearInterval(pollInterval);
+    };
+  }, [socket, invalidateHud]);
+
   // Post new ad
   const handlePostAd = async (e) => {
     e.preventDefault();
@@ -177,6 +191,20 @@ export default function BlackMarket() {
         { headers: { Authorization: `Bearer ${localStorage.getItem("jwt")}` } }
       );
       toast.success("تم إلغاء الإعلان واستعادة العنصر!");
+      setMyListings((prev) => prev.filter((item) => item.id !== listingId));
+      // Refetch my listings and inventory to ensure UI is in sync
+      setLoadingMyListings(true);
+      setLoadingInventory(true);
+      axios.get("/api/black-market/listings/my")
+        .then((res) => setMyListings(res.data))
+        .catch(() => setMyListings([]))
+        .finally(() => setLoadingMyListings(false));
+      axios.get("/api/inventory", { headers: { Authorization: `Bearer ${localStorage.getItem("jwt")}` } })
+        .then((res) => {
+          setInventory((res.data.items || []).filter((i) => !i.equipped && i.quantity > 0));
+        })
+        .catch(() => setInventory([]))
+        .finally(() => setLoadingInventory(false));
     } catch (err) {
       toast.error(err?.response?.data?.error || "فشل في إلغاء الإعلان");
     } finally {
@@ -221,7 +249,7 @@ export default function BlackMarket() {
           )}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {listings.map((item) => (
-              <div key={item.id} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white">
+              <div key={`listing-${item.id}`} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white">
                 <h3 className="font-bold text-lg text-red-500 mb-2">{item.name}</h3>
                 <p className="text-gray-300 mb-2">{item.description}</p>
                 <div className="flex justify-between text-sm mb-2">
@@ -249,8 +277,8 @@ export default function BlackMarket() {
               <div className="text-gray-400">لا توجد إعلانات نشطة.</div>
             )}
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {myListings.map((item) => (
-                <div key={item.id} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white relative">
+              {myListings.filter(item => item.status === 'active').map((item) => (
+                <div key={`mylisting-${item.id}`} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white relative">
                   <h3 className="font-bold text-lg text-red-500 mb-2">{item.name}</h3>
                   <div className="flex justify-between text-sm mb-2">
                     <span>السعر:</span>
@@ -285,7 +313,7 @@ export default function BlackMarket() {
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
                   {inventory.map((item, idx) => (
                     <InventoryCard
-                      key={item.id || idx}
+                      key={`inv-${item.type}-${item.itemId}-${idx}`}
                       item={item}
                       selected={selectedIndex === idx}
                       onClick={() => setSelectedIndex(idx)}

@@ -112,7 +112,7 @@ export class BlackMarketService {
 
       // Add item to inventory
       const inventoryItem = await InventoryItem.findOne({
-        where: { userId, itemId: itemId },
+        where: { userId, itemId: itemId, itemType: item.type },
         transaction: t
       });
 
@@ -124,7 +124,7 @@ export class BlackMarketService {
           userId,
           itemId: itemId,
           quantity,
-          type: item.type
+          itemType: item.type
         }, { transaction: t });
       }
 

@@ -1,7 +1,9 @@
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
+import { IpTracking } from '../models/IpTracking.js';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
+import { getRealIpAddress } from '../utils/ipUtils.js';
 
 export class UserService {
   static SECRET = process.env.JWT_SECRET;
@@ -37,12 +39,32 @@ export class UserService {
   }
 
   // Login user
-  static async login(credentials) {
+  static async login(credentials, req) {
     const { email, password } = credentials;
     
     const user = await User.findOne({ where: { email } });
     if (!user || !(await user.validPassword(password))) {
       throw new Error('بيانات الدخول غير صحيحة');
+    }
+
+    // Check if user is banned
+    if (user.isBanned) {
+      throw new Error(`Account blocked: ${user.banReason || 'No reason provided'}`);
+    }
+
+    // Check if IP is blocked
+    if (req) {
+      const ipAddress = getRealIpAddress(req);
+      const ipBlock = await IpTracking.findOne({
+        where: { 
+          ipAddress,
+          isBlocked: true 
+        }
+      });
+
+      if (ipBlock) {
+        throw new Error(`IP address blocked: ${ipBlock.blockReason || 'No reason provided'}`);
+      }
     }
 
     // Get or create character

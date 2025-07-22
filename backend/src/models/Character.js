@@ -56,7 +56,7 @@ Character.init({
 
 // Add a getter for maxHp based on level
 Character.prototype.getMaxHp = function() {
-  return 1000 + (this.level * 100);
+  return 1000 + ((this.level - 1) * 100);
 };
 
 // Instance method for safe JSON with equipment bonuses
@@ -123,6 +123,18 @@ Character.prototype.toSafeJSON = async function () {
 
   // User fields if loaded
   const user = this.User || {};
+  
+  // Include full user data for admin checks
+  const userData = this.User ? {
+    id: this.User.id,
+    username: this.User.username,
+    email: this.User.email,
+    isAdmin: this.User.isAdmin,
+    avatarUrl: this.User.avatarUrl,
+    age: this.User.age,
+    gender: this.User.gender,
+    bio: this.User.bio
+  } : {};
 
   // Calculate total fights
   const crimesCommitted = stats?.crimes || 0;
@@ -130,6 +142,8 @@ Character.prototype.toSafeJSON = async function () {
   const fightsLostCount = stats?.losses ?? fightsLost ?? 0;
   const fightsTotalCount = fightsWonCount + fightsLostCount;
   // Use the accurate fightsTotal from above
+
+  const fame = await this.getFame();
 
   return {
     userId:        this.userId,
@@ -158,6 +172,7 @@ Character.prototype.toSafeJSON = async function () {
     crimesCommitted: crimesCommitted,
     fightsWon: fightsWonCount,
     fightsTotal: fightsTotalCount,
+    fame,
     // Equipment info for frontend
     equippedWeapon1: weapon1,
     equippedWeapon2: weapon2,
@@ -165,10 +180,67 @@ Character.prototype.toSafeJSON = async function () {
     equippedHouse:   equippedHouse,
     activeDog:       activeDog,
     vipExpiresAt:    this.vipExpiresAt,
+    // User data for admin checks
+    User: userData,
+    // Level-up rewards (if any)
+    levelUpRewards: this._levelUpRewards || null,
+    levelsGained: this._levelsGained || 0,
   };
+
+  // Note: Level-up rewards are not automatically cleared here
+  // The frontend is responsible for clearing them after processing
 };
 
 // Instance method for EXP calculation
 Character.prototype.expNeeded = function() {
-  return Math.floor(100 * Math.pow(1.15, this.level - 1));
+  if (this.level <= 50) {
+    // Exponential scaling up to level 50: 100 * 1.1^(level-1)
+    return Math.floor(100 * Math.pow(1.1, this.level - 1));
+  } else {
+    // Linear scaling after level 50: base + (level - 50) * increment
+    const baseExp = Math.floor(100 * Math.pow(1.1, 49)); // exp needed for level 50
+    const increment = 5000; // 5000 exp per level after 50
+    return baseExp + (this.level - 50) * increment;
+  }
+}; 
+
+// VIP status method
+Character.prototype.isVip = function() {
+  return this.vipExpiresAt && new Date(this.vipExpiresAt) > new Date();
+};
+
+// Fame calculation method
+Character.prototype.getFame = async function () {
+  // Gather all bonuses as in toSafeJSON
+  const [weapon1, weapon2, armor, stats, equippedHouse, activeDog] = await Promise.all([
+    this.equippedWeapon1Id ? Weapon.findByPk(this.equippedWeapon1Id) : null,
+    this.equippedWeapon2Id ? Weapon.findByPk(this.equippedWeapon2Id) : null,
+    this.equippedArmorId  ? Armor.findByPk(this.equippedArmorId)   : null,
+    Statistic.findOne({ where: { userId: this.userId } }),
+    this.equippedHouseId ? (await import('./House.js')).House.findByPk(this.equippedHouseId) : null,
+    (() => {
+      try {
+        return (async () => {
+          const { UserDog, Dog } = await import('./Dog.js');
+          const userDog = await UserDog.findOne({ where: { userId: this.userId, isActive: true }, include: [Dog] });
+          return userDog && userDog.Dog ? userDog.Dog : null;
+        })();
+      } catch { return null; }
+    })(),
+  ]);
+
+  const bonusStr1 = weapon1?.damage      ?? 0;
+  const bonusStr2 = weapon2?.damage      ?? 0;
+  const dogPower = activeDog?.powerBonus ?? 0;
+  const totalStrength = (this.strength || 0) + bonusStr1 + bonusStr2 + dogPower;
+
+  const bonusHp  = (armor?.hpBonus ?? 0) + (equippedHouse?.hpBonus ?? 0);
+  const totalHp = this.getMaxHp() + bonusHp;
+
+  const bonusDef = (armor?.def ?? 0) + (equippedHouse?.defenseBonus ?? 0);
+  const totalDefense = (this.defense || 0) + bonusDef;
+
+  // Fame formula
+  const fame = (this.level * 100) + (totalStrength * 20) + (totalHp * 8) + (totalDefense * 20);
+  return Math.round(fame);
 }; 

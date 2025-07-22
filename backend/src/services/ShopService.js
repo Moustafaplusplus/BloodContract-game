@@ -6,12 +6,27 @@ import { User } from '../models/User.js';
 export class ShopService {
   // Get all weapons (optionally filtered)
   static async getAllWeapons(filter = {}) {
-    return await Weapon.findAll({ where: filter });
+    return await Weapon.findAll({ where: { ...filter, currency: 'money' } });
   }
 
   // Get all armors (optionally filtered)
   static async getAllArmors(filter = {}) {
-    return await Armor.findAll({ where: filter });
+    return await Armor.findAll({ where: { ...filter, currency: 'money' } });
+  }
+
+  // Get all weapons for admin (with full details)
+  static async getAllWeaponsForAdmin() {
+    const weapons = await Weapon.findAll();
+    return weapons.map(weapon => ({
+      id: weapon.id,
+      name: weapon.name,
+      damage: weapon.damage,
+      energyBonus: weapon.energyBonus,
+      price: weapon.price,
+      rarity: weapon.rarity,
+      imageUrl: weapon.imageUrl,
+      currency: weapon.currency,
+    }));
   }
 
   // Purchase an item (money only)
@@ -71,5 +86,101 @@ export class ShopService {
       throw new Error('الدرع غير موجود');
     }
     return await this.purchaseItem(userId, 'armor', armor.id, armor.price, quantity);
+  }
+
+  // Admin methods for weapon management
+  static async createWeapon(data) {
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'damage', 'energyBonus', 'price', 'rarity', 'imageUrl', 'currency'
+    ];
+    const weaponData = {};
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) weaponData[field] = data[field];
+    }
+    const weapon = await Weapon.create(weaponData);
+    return weapon;
+  }
+
+  static async updateWeapon(weaponId, data) {
+    const weapon = await Weapon.findByPk(weaponId);
+    if (!weapon) return null;
+
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'damage', 'energyBonus', 'price', 'rarity', 'imageUrl', 'currency'
+    ];
+    
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        weapon[field] = data[field];
+      }
+    }
+    
+    await weapon.save();
+    return weapon;
+  }
+
+  static async deleteWeapon(weaponId) {
+    const weapon = await Weapon.findByPk(weaponId);
+    if (!weapon) return false;
+    
+    await weapon.destroy();
+    return true;
+  }
+
+  // Admin methods for armor management
+  static async getAllArmorsForAdmin() {
+    const armors = await Armor.findAll();
+    return armors.map(armor => ({
+      id: armor.id,
+      name: armor.name,
+      def: armor.def,
+      hpBonus: armor.hpBonus,
+      price: armor.price,
+      rarity: armor.rarity,
+      imageUrl: armor.imageUrl,
+      currency: armor.currency,
+    }));
+  }
+
+  static async createArmor(data) {
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'def', 'hpBonus', 'price', 'rarity', 'imageUrl', 'currency'
+    ];
+    const armorData = {};
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) armorData[field] = data[field];
+    }
+    const armor = await Armor.create(armorData);
+    return armor;
+  }
+
+  static async updateArmor(armorId, data) {
+    const armor = await Armor.findByPk(armorId);
+    if (!armor) return null;
+
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'def', 'hpBonus', 'price', 'rarity', 'imageUrl', 'currency'
+    ];
+    
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        armor[field] = data[field];
+      }
+    }
+    
+    await armor.save();
+    return armor;
+  }
+
+  static async deleteArmor(armorId) {
+    const armor = await Armor.findByPk(armorId);
+    if (!armor) return false;
+    
+    await armor.destroy();
+    return true;
   }
 } 

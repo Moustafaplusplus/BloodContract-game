@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, User, Lock, Target, Shield } from "lucide-react";
 import Modal from "@/components/Modal";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { jwtDecode } from "jwt-decode";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -56,6 +57,14 @@ export default function Login() {
         password,
       });
       setToken(data.token);
+      // --- Store userId in localStorage ---
+      try {
+        const { id } = jwtDecode(data.token);
+        localStorage.setItem('userId', id);
+      } catch {
+        localStorage.removeItem('userId');
+      }
+      // --- End block ---
       setModal({
         isOpen: true,
         title: "تم تسجيل الدخول",
@@ -101,7 +110,7 @@ export default function Login() {
           <div className="text-center mb-12 animate-fade-in">
             <div className="relative inline-block">
               <h1 className="text-5xl font-bouya mb-4 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow leading-tight">
-                عودة قاتل مأجور
+                عقد الدم
               </h1>
               <div className="absolute -top-2 -right-2">
                 <Target className="w-6 h-6 text-accent-red animate-pulse" />
@@ -214,7 +223,7 @@ export default function Login() {
           {/* Footer */}
           <div className="text-center mt-8 animate-fade-in-delayed">
             <p className="text-xs text-gray-500">
-              © 2024 هيتمان. جميع الحقوق محفوظة.
+              © 2024 عقد الدم. جميع الحقوق محفوظة.
             </p>
           </div>
         </div>

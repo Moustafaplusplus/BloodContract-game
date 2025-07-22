@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Hitman game theme colors
+        // Blood Contract game theme colors
         hitman: {
           50: '#f8f9fa',
           100: '#e9ecef',

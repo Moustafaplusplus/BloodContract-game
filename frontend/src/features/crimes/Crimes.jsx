@@ -1,12 +1,14 @@
 // Crimes.jsx – واجهة الجرائم مع تبريد عالمي ورسائل عربية مفصّلة
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Modal from "@/components/Modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "react-toastify";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { useModalManager } from "@/hooks/useModalManager";
+import { getImageUrl, handleImageError } from "@/utils/imageUtils";
 
 
 import {
@@ -32,15 +34,17 @@ function formatCooldown(sec) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+
+
 export default function Crimes() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { token } = useAuth();
   const { socket } = useSocket();
+  const { showModal } = useModalManager();
   const [cooldownLeft, setCooldownLeft] = useState(0);
-  const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info" });
   const [jailStatus, setJailStatus] = useState({ inJail: false });
   const [hospitalStatus, setHospitalStatus] = useState({ inHospital: false });
-  const suppressBlockedModal = useRef(false);
   const justAttemptedCrime = useRef(false);
 
   // Fetch jail/hospital status
@@ -66,6 +70,15 @@ export default function Crimes() {
       socket.off("hospital:leave", update);
     };
   }, [socket, fetchStatuses]);
+
+  // Polling for crimes list every 30s
+  useEffect(() => {
+    const poll = setInterval(() => {
+      queryClient.invalidateQueries(["crimes"]);
+    }, 30000);
+    return () => clearInterval(poll);
+  }, [queryClient]);
+
 
   // Block actions if in jail/hospital
   const isBlocked = jailStatus.inJail || hospitalStatus.inHospital;
@@ -104,34 +117,20 @@ export default function Crimes() {
     onSuccess: (data) => {
       fetchStatuses();
       justAttemptedCrime.current = true;
-      if (data.success) {
-        setModal({
-          isOpen: true,
-          title: "نجح في الجريمة!",
-          message: `حصلت على ${data.payout} نقود و ${data.expGain} خبرة`,
-          type: "success"
-        });
-      } else {
-        let message = "";
-        let type = "warning";
-        if (data.redirect && data.redirect.includes("jail")) {
-          message = `لقد حاولت ولكن تم القبض عليك وتم وضعك في السجن، ولكنك حصلت على ${data.expGain} خبرة مع ذلك.`;
-          type = "warning"; // yellow/orange
-        } else if (data.redirect && data.redirect.includes("hospital")) {
-          message = `لقد حاولت ولكنك تمت إصابتك وتم وضعك في المشفى، ولكنك حصلت على ${data.expGain} خبرة مع ذلك.`;
-          type = "error"; // red
-        } else {
-          message = `لقد حاولت ولكن فشلت المهمة، ولكنك حصلت على ${data.expGain} خبرة مع ذلك.`;
-          type = "warning";
-        }
-        suppressBlockedModal.current = true;
-        setModal({
-          isOpen: true,
-          title: "فشلت الجريمة",
-          message,
-          type
-        });
+      
+      // Check for level-up rewards first
+      if (data.levelUpRewards && data.levelUpRewards.length > 0) {
+        // Show level-up modal with high priority
+        showModal('levelUp', 100);
+        // The HUD will handle showing the level-up modal
       }
+      
+      // Navigate to crime results page with the result data
+      navigate('/dashboard/crime-result', { 
+        state: { crimeResult: data },
+        replace: true 
+      });
+      
       if (data.cooldownLeft) setCooldownLeft(data.cooldownLeft);
       queryClient.invalidateQueries(["crimes"]);
     },
@@ -139,81 +138,21 @@ export default function Crimes() {
       fetchStatuses();
       const message = extractErrorMessage(err);
       if (err.response?.cooldownLeft) setCooldownLeft(err.response.cooldownLeft);
-      setModal({
-        isOpen: true,
-        title: "فشل تنفيذ الجريمة",
-        message: message || "فشل تنفيذ الجريمة",
-        type: "error"
-      });
+      toast.error(message || "فشل تنفيذ الجريمة");
     },
   });
 
   // Mock data for design purposes when backend is not available
   const mockCrimes = [
     {
-      id: 1,
-      name: "سر��ة سيارة",
-      description: "اسرق سيارة فاخرة من موقف السيارات",
-      chance: 85,
-      minReward: 500,
-      maxReward: 1500,
-      expGain: 25,
-      levelRequirement: 1,
-      image: null,
-    },
-    {
-      id: 2,
-      name: "سطو على بنك",
-      description: "عملية سطو محفوفة بالمخاطر على البنك المركزي",
-      chance: 45,
-      minReward: 5000,
-      maxReward: 15000,
-      expGain: 100,
-      levelRequirement: 5,
-      image: null,
-    },
-    {
-      id: 3,
-      name: "اغتيال مستهدف",
-      description: "تنفيذ مهمة اغتيال لشخصية مهمة",
-      chance: 65,
-      minReward: 2000,
-      maxReward: 8000,
-      expGain: 75,
-      levelRequirement: 3,
-      image: null,
-    },
-    {
-      id: 4,
-      name: "تهريب البضائع",
-      description: "نقل بضائع غير قانونية عبر الحدود",
-      chance: 70,
-      minReward: 1000,
-      maxReward: 4000,
-      expGain: 50,
-      levelRequirement: 2,
-      image: null,
-    },
-    {
-      id: 5,
-      name: "قرصنة إلكترونية",
-      description: "اختراق أنظمة الشركات واستخراج البيانات",
-      chance: 80,
-      minReward: 1500,
-      maxReward: 6000,
-      expGain: 60,
-      levelRequirement: 4,
-      image: null,
-    },
-    {
-      id: 6,
-      name: "تجارة الأسلحة",
-      description: "بيع الأسلحة في السوق السوداء",
-      chance: 60,
-      minReward: 3000,
-      maxReward: 10000,
-      expGain: 85,
-      levelRequirement: 6,
+      id: 0,
+      name: "لا توجد جرائم متاحة",
+      description: "لم يتم إضافة أي جرائم بعد. يرجى مراجعة الإدارة.",
+      chance: 0,
+      minReward: 0,
+      maxReward: 0,
+      expGain: 0,
+      levelRequirement: 0,
       image: null,
     },
   ];
@@ -266,13 +205,7 @@ export default function Crimes() {
     return "شديد الخطورة";
   };
 
-  const handleModalClose = () => {
-    setModal({ ...modal, isOpen: false });
-    suppressBlockedModal.current = false;
-    if (justAttemptedCrime.current) {
-      justAttemptedCrime.current = false;
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20 overflow-x-hidden">
@@ -377,11 +310,23 @@ export default function Crimes() {
               >
                 {/* Crime Image Placeholder */}
                 <div className="relative h-48 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
-                  {crime.image ? (
+                  {crime.imageUrl ? (
                     <img
-                      src={crime.image}
+                      src={getImageUrl(crime.imageUrl)}
                       alt={crime.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      onError={(e) => {
+                        console.error('Failed to load crime image:', {
+                          originalUrl: crime.imageUrl,
+                          processedUrl: getImageUrl(crime.imageUrl),
+                          crimeId: crime.id,
+                          crimeName: crime.name
+                        });
+                        handleImageError(e, crime.imageUrl);
+                      }}
+                      onLoad={() => {
+                        // Successfully loaded crime image
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center relative">
@@ -530,13 +475,6 @@ export default function Crimes() {
           </div>
         </div>
       </div>
-      <Modal
-        isOpen={modal.isOpen}
-        onClose={handleModalClose}
-        title={modal.title}
-        message={modal.message}
-        type={modal.type}
-      />
     </div>
   );
 }

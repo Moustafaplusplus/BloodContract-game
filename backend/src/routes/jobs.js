@@ -1,6 +1,7 @@
 import express from 'express';
 import { JobsController } from '../controllers/JobsController.js';
 import { auth } from '../middleware/auth.js';
+import { adminAuth } from '../middleware/admin.js';
 
 const router = express.Router();
 
@@ -27,5 +28,20 @@ router.get('/stats', JobsController.getJobStats);
 
 // POST /api/jobs/gym - Train at gym
 router.post('/gym', JobsController.trainAtGym);
+
+// Admin routes for job management
+router.use(adminAuth);
+
+// GET /api/jobs/admin - Get all jobs for admin
+router.get('/admin', JobsController.getAllJobs);
+
+// POST /api/jobs/admin - Create a new job (admin only)
+router.post('/admin', JobsController.createJob);
+
+// PUT /api/jobs/admin/:id - Update a job (admin only)
+router.put('/admin/:id', JobsController.updateJob);
+
+// DELETE /api/jobs/admin/:id - Delete a job (admin only)
+router.delete('/admin/:id', JobsController.deleteJob);
 
 export default router; 

@@ -8,11 +8,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
 import { Lock, Clock, DollarSign, AlertTriangle, CheckCircle, RefreshCw, Users } from "lucide-react";
 import axios from "axios";
+import { useSocket } from "@/hooks/useSocket";
 
 export default function Jail() {
   const { token } = useAuth();
-  const { stats, invalidateHud, loading } = useHud();
+  const { invalidateHud, loading } = useHud();
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   const [jailStatus, setJailStatus] = useState(null);
   const [remainingTime, setRemainingTime] = useState(0);
@@ -35,7 +37,7 @@ export default function Jail() {
     try {
       const response = await axios.get("/api/confinement/jail");
       const data = response.data;
-      console.log("Jail status fetched:", data);
+              // Jail status fetched successfully
       setJailStatus(data);
       if (data.inJail && data.releaseAt && data.startedAt) {
         const releaseAt = new Date(data.releaseAt).getTime();
@@ -80,21 +82,21 @@ export default function Jail() {
     }
   }, [jailStatus?.inJail, totalTime, remainingTime]);
 
-  // Fetch live jail count
+  // Real-time updates for jail status and count
   useEffect(() => {
-    let interval;
-    const fetchCount = async () => {
-      try {
-        const res = await axios.get("/api/confinement/jail/count");
-        setJailCount(res.data.count);
-      } catch (e) {
-        setJailCount(null);
-      }
+    if (!socket) return;
+    const fetchAll = () => {
+      fetchJailStatus();
+      // Fetch count
+      axios.get("/api/confinement/jail/count").then(res => setJailCount(res.data.count)).catch(() => setJailCount(null));
     };
-    fetchCount();
-    interval = setInterval(fetchCount, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    socket.on('jail:update', fetchAll);
+    const pollInterval = setInterval(fetchAll, 10000);
+    return () => {
+      socket.off('jail:update', fetchAll);
+      clearInterval(pollInterval);
+    };
+  }, [socket]);
 
   // Format time display (copied from Profile.jsx)
   function formatTime(seconds) {
@@ -121,7 +123,7 @@ export default function Jail() {
       const res = await axios.post("/api/confinement/jail/bail");
       const result = res.data;
       setJailStatus({ inJail: false });
-      setTimeLeft(0);
+      setRemainingTime(0);
       invalidateHud?.();
       toast.success(`تم الإفراج بنجاح! المال المتبقي: $${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful bailing
@@ -170,7 +172,7 @@ export default function Jail() {
   }
 
   // Debug log
-  console.log("Rendering jail page with status:", jailStatus);
+          // Rendering jail page
 
   // Banner and main layout
   return (

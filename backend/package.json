@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "nodemon src/app.js",
     "seed:crimes": "node --no-warnings scripts/seedCrimes.js",
-    "seed:all": "node src/seedAll.js"
+    "seed:all": "node src/seedAll.js",
+    "cleanup:images": "node cleanupCrimeImages.js"
   },
   "keywords": [],
   "author": "",

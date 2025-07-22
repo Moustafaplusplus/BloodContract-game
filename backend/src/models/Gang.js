@@ -1,5 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
+import { User } from './User.js';
+import { Character } from './Character.js';
 
 export class Gang extends Model {}
 
@@ -18,6 +20,11 @@ Gang.init({
     type: DataTypes.TEXT,
     allowNull: false
   },
+  board: {
+    type: DataTypes.TEXT,
+    defaultValue: ''
+  },
+
   leaderId: {
     type: DataTypes.INTEGER,
     allowNull: false
@@ -26,17 +33,9 @@ Gang.init({
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
-  level: {
-    type: DataTypes.INTEGER,
-    defaultValue: 1
-  },
-  exp: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
   maxMembers: {
     type: DataTypes.INTEGER,
-    defaultValue: 10
+    defaultValue: 30
   },
   createdAt: {
     type: DataTypes.DATE,
@@ -78,53 +77,61 @@ GangMember.init({
   tableName: 'GangMembers'
 });
 
-export class GangWar extends Model {}
+export class GangJoinRequest extends Model {}
 
-GangWar.init({
+GangJoinRequest.init({
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  gang1Id: {
+  gangId: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  gang2Id: {
+  userId: {
     type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  startTime: {
-    type: DataTypes.DATE,
-    allowNull: false
-  },
-  endTime: {
-    type: DataTypes.DATE,
     allowNull: false
   },
   status: {
-    type: DataTypes.ENUM('ACTIVE', 'FINISHED'),
-    defaultValue: 'ACTIVE'
+    type: DataTypes.ENUM('PENDING', 'ACCEPTED', 'REJECTED'),
+    defaultValue: 'PENDING'
   },
-  gang1Score: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
+  message: {
+    type: DataTypes.TEXT,
+    allowNull: true
   },
-  gang2Score: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
 }, {
   sequelize,
-  modelName: 'GangWar',
-  tableName: 'GangWars'
+  modelName: 'GangJoinRequest',
+  tableName: 'GangJoinRequests'
 });
+
+
 
 // Associations
 Gang.hasMany(GangMember, { foreignKey: 'gangId' });
 GangMember.belongsTo(Gang, { foreignKey: 'gangId' });
 
-Gang.hasMany(GangWar, { as: 'Gang1Wars', foreignKey: 'gang1Id' });
-Gang.hasMany(GangWar, { as: 'Gang2Wars', foreignKey: 'gang2Id' });
-GangWar.belongsTo(Gang, { as: 'Gang1', foreignKey: 'gang1Id' });
-GangWar.belongsTo(Gang, { as: 'Gang2', foreignKey: 'gang2Id' }); 
+GangMember.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(GangMember, { foreignKey: 'userId' });
+
+// Ensure User-Character association is available
+User.hasOne(Character, { foreignKey: 'userId' });
+Character.belongsTo(User, { foreignKey: 'userId' });
+
+// Gang Join Request associations
+Gang.hasMany(GangJoinRequest, { foreignKey: 'gangId' });
+GangJoinRequest.belongsTo(Gang, { foreignKey: 'gangId' });
+GangJoinRequest.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(GangJoinRequest, { foreignKey: 'userId' });
+
+ 

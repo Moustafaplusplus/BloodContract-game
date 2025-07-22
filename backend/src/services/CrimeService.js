@@ -8,11 +8,6 @@ import { User } from '../models/User.js';
 
 export class CrimeService {
   // Utility helpers
-  static calcChance(level = 1, baseRate = 0.5) {
-    const bonus = level * 0.01; // +1 % per level
-    return Math.min(0.95, Math.max(0.05, baseRate + bonus));
-  }
-
   static randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
@@ -23,14 +18,105 @@ export class CrimeService {
     return crimes.filter(c => c.req_level <= userLevel).map(c => ({
       id:         c.id,
       name:       c.name,
+      description: c.description,
       req_level:  c.req_level,
       energyCost: c.energyCost,
       minReward:  c.minReward,
       maxReward:  c.maxReward,
       cooldown:   c.cooldown,
-      chance:     Math.round(this.calcChance(userLevel, c.successRate) * 100),
-      expGain:    c.energyCost * 8, // Expected exp gain on success (significantly increased)
+      chance:     Math.round(c.successRate * 100),
+      expGain:    c.expReward,
+      imageUrl:   c.imageUrl,
     }));
+  }
+
+  // Get all crimes for admin
+  static async getAllCrimes() {
+    const crimes = await Crime.findAll();
+    return crimes.map(c => ({
+      id:         c.id,
+      name:       c.name,
+      description: c.description,
+      isEnabled:  c.isEnabled,
+      req_level:  c.req_level,
+      energyCost: c.energyCost,
+      successRate: c.successRate,
+      minReward:  c.minReward,
+      maxReward:  c.maxReward,
+      cooldown:   c.cooldown,
+      expReward:  c.expReward,
+      imageUrl:   c.imageUrl,
+      failOutcome: c.failOutcome,
+      jailMinutes: c.jailMinutes,
+      hospitalMinutes: c.hospitalMinutes,
+    }));
+  }
+
+  // Get a specific crime by ID
+  static async getCrimeById(crimeId) {
+    const crime = await Crime.findByPk(crimeId);
+    if (!crime) return null;
+    
+    return {
+      id:         crime.id,
+      name:       crime.name,
+      description: crime.description,
+      isEnabled:  crime.isEnabled,
+      req_level:  crime.req_level,
+      energyCost: crime.energyCost,
+      successRate: crime.successRate,
+      minReward:  crime.minReward,
+      maxReward:  crime.maxReward,
+      cooldown:   crime.cooldown,
+      expReward:  crime.expReward,
+      imageUrl:   crime.imageUrl,
+      failOutcome: crime.failOutcome,
+      jailMinutes: crime.jailMinutes,
+      hospitalMinutes: crime.hospitalMinutes,
+    };
+  }
+
+  // Generate narrative for crime execution
+  static generateCrimeNarrative(character, crime, success, payout, expGain, redirect) {
+    const levelDiff = character.level - crime.req_level;
+    const isHighLevelCrime = levelDiff < 0;
+    const isLowLevelCrime = levelDiff > 5;
+    
+    let narrative = "";
+    
+    if (success) {
+      if (isHighLevelCrime) {
+        narrative = `مهمة خطيرة وطموحة! لقد نجحت في تنفيذ "${crime.name}" رغم أن مستواك أقل من المطلوب بـ ${Math.abs(levelDiff)} مستوى. هذا يثبت مهارتك الاستثنائية!`;
+      } else if (isLowLevelCrime) {
+        narrative = `مهمة سهلة بالنسبة لمستواك! لقد أكملت "${crime.name}" ببراعة، مما يظهر خبرتك الكبيرة في هذا المجال.`;
+      } else {
+        narrative = `مهمة متوازنة! لقد نجحت في تنفيذ "${crime.name}" بكفاءة عالية، مما يثبت أنك في المستوى المناسب لهذا النوع من العمليات.`;
+      }
+      
+      if (payout > crime.maxReward * 0.8) {
+        narrative += " المكافأة كانت سخية جداً، مما يشير إلى أن العملية كانت أكثر تعقيداً من المتوقع.";
+      } else if (payout < crime.minReward * 1.2) {
+        narrative += " المكافأة كانت متواضعة، لكن النجاح نفسه هو الأهم في هذه المهمة.";
+      }
+    } else {
+      if (isHighLevelCrime) {
+        narrative = `محاولة جريئة لكنها فشلت! "${crime.name}" كان أصعب من قدراتك الحالية. ربما حان الوقت للتدريب أكثر قبل محاولة مهام بهذا المستوى.`;
+      } else if (isLowLevelCrime) {
+        narrative = `فشل غير متوقع! رغم أن "${crime.name}" يجب أن يكون سهلاً لمستواك، لكن الحظ لم يكن في صفك هذه المرة.`;
+      } else {
+        narrative = `مهمة صعبة! لقد فشلت في تنفيذ "${crime.name}"، لكن هذه تجربة مفيدة ستساعدك في المهام القادمة.`;
+      }
+      
+      if (redirect && redirect.includes("jail")) {
+        narrative += " تم القبض عليك ووضعك في السجن. ربما كان عليك التخطيط بشكل أفضل أو اختيار توقيت مختلف.";
+      } else if (redirect && redirect.includes("hospital")) {
+        narrative += " أصبت بجروح خطيرة وتم نقلك إلى المستشفى. المهمة كانت أكثر خطورة من المتوقع.";
+      } else {
+        narrative += " رغم الفشل، لم تتعرض لعواقب خطيرة. هذا درس مفيد في تقييم المخاطر.";
+      }
+    }
+    
+    return narrative;
   }
 
   // Execute a crime
@@ -69,10 +155,9 @@ export class CrimeService {
       }
 
       // Core outcome calculation
-      const success = Math.random() < this.calcChance(character.level, Number(crime.successRate));
+      const success = Math.random() < Number(crime.successRate);
       let payout = success ? this.randInt(crime.minReward, crime.maxReward) : 0;
-      // XP scales with energy cost (rounded) - significantly increased
-      let expGain = success ? crime.energyCost * 8 : Math.round(crime.energyCost * 3); // Much higher exp gain
+      let expGain = success ? crime.expReward : Math.round(crime.expReward * 0.3);
       // VIP bonus
       if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
         payout = Math.round(payout * 1.5);
@@ -82,43 +167,48 @@ export class CrimeService {
       // Apply rewards
       if (payout) character.money += payout;
       character.exp += expGain;
-      await CharacterService.maybeLevelUp(character);
+      const levelUpRewards = await CharacterService.maybeLevelUp(character);
 
       // Handle failure consequences with dynamic scaling based on level
       let redirect = null;
+      let confinementDetails = null;
       if (!success) {
         // Dynamic scaling: higher level = longer confinement and higher fees
-        const levelMultiplier = Math.max(0.5, Math.min(2.0, character.level / 10)); // 0.5x to 2.0x based on level
-        
-        if (crime.failOutcome === "jail" || crime.failOutcome === "both") {
+        const levelMultiplier = character.level / 10; // scales with level, no cap
+        // Decide outcome: 50% jail, 50% hospital, never both
+        let possibleOutcomes = [];
+        if (crime.failOutcome === "jail" || crime.failOutcome === "both") possibleOutcomes.push("jail");
+        if (crime.failOutcome === "hospital" || crime.failOutcome === "both") possibleOutcomes.push("hospital");
+        // If both are possible, pick one randomly
+        let chosenOutcome = possibleOutcomes.length === 2 ? (Math.random() < 0.5 ? "jail" : "hospital") : possibleOutcomes[0];
+        if (chosenOutcome === "jail") {
           const dynamicJailMinutes = Math.round(crime.jailMinutes * levelMultiplier);
-          const dynamicBailRate = Math.round(crime.bailRate * levelMultiplier);
-          
+          const baseBailRate = 200;
+          const dynamicBailRate = dynamicJailMinutes * baseBailRate;
           const jailRecord = await Jail.create({
             userId: userId,
             minutes: dynamicJailMinutes,
             bailRate: dynamicBailRate,
             releasedAt: new Date(nowMs + dynamicJailMinutes * 60_000),
           }, { transaction: tx });
-          
           if (io) {
             io.to(`user:${userId}`).emit('jail:enter', {
               releaseAt: jailRecord.releasedAt,
               reason: 'crime',
             });
           }
-          
-          // Set redirect to jail if this is the primary outcome
-          if (crime.failOutcome === "jail" || (crime.failOutcome === "both" && !redirect)) {
-            redirect = "/dashboard/jail";
-          }
-        }
-        
-        if (crime.failOutcome === "hospital" || crime.failOutcome === "both") {
+          redirect = "/dashboard/jail";
+          confinementDetails = {
+            type: "jail",
+            minutes: dynamicJailMinutes,
+            bailRate: dynamicBailRate,
+            releaseAt: jailRecord.releasedAt
+          };
+        } else if (chosenOutcome === "hospital") {
           const dynamicHospitalMinutes = Math.round(crime.hospitalMinutes * levelMultiplier);
-          const dynamicHealRate = Math.round(crime.healRate * levelMultiplier);
-          const dynamicHpLoss = Math.round(crime.hpLoss * levelMultiplier);
-          
+          const baseHealRate = 200;
+          const dynamicHealRate = dynamicHospitalMinutes * baseHealRate;
+          const dynamicHpLoss = Math.round((crime.hpLoss || 50) * levelMultiplier);
           const hospitalRecord = await Hospital.create({
             userId: userId,
             minutes: dynamicHospitalMinutes,
@@ -126,18 +216,20 @@ export class CrimeService {
             healRate: dynamicHealRate,
             releasedAt: new Date(nowMs + dynamicHospitalMinutes * 60_000),
           }, { transaction: tx });
-          
           if (io) {
             io.to(`user:${userId}`).emit('hospital:enter', {
               releaseAt: hospitalRecord.releasedAt,
               reason: 'crime',
             });
           }
-          
-          // Set redirect to hospital if this is the primary outcome or if no jail redirect
-          if (crime.failOutcome === "hospital" || (crime.failOutcome === "both" && !redirect)) {
-            redirect = "/dashboard/hospital";
-          }
+          redirect = "/dashboard/hospital";
+          confinementDetails = {
+            type: "hospital",
+            minutes: dynamicHospitalMinutes,
+            healRate: dynamicHealRate,
+            hpLoss: dynamicHpLoss,
+            releaseAt: hospitalRecord.releasedAt
+          };
         }
       }
 
@@ -159,12 +251,31 @@ export class CrimeService {
 
       await tx.commit();
       
+      // Generate narrative
+      const narrative = this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect);
+      
+      // Send immediate HUD update if level-up occurred
+      if (levelUpRewards.length > 0 && io) {
+        const hudData = await character.toSafeJSON();
+        io.to(String(userId)).emit('hud:update', hudData);
+      }
+      
       return {
-        success,
-        payout,
-        expGain,
-        energyLeft: character.energy,
-        cooldownLeft: crime.cooldown
+          success,
+          payout,
+          expGain,
+          energyLeft: character.energy,
+          cooldownLeft: crime.cooldown,
+          currentExp: character.exp,
+          currentLevel: character.level,
+          nextLevelExp: character.expNeeded(),
+          levelUpRewards: levelUpRewards.length > 0 ? levelUpRewards : null,
+          levelsGained: levelUpRewards.length,
+          crimeName: crime.name,
+          crimeDescription: crime.description,
+          narrative,
+          redirect,
+          confinementDetails
       };
     } catch (err) {
       await tx.rollback();
@@ -172,52 +283,54 @@ export class CrimeService {
     }
   }
 
+  static async createCrime(data) {
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'description', 'isEnabled', 'req_level', 'energyCost',
+      'successRate', 'minReward', 'maxReward', 'cooldown', 'failOutcome',
+      'jailMinutes', 'hospitalMinutes', 'expReward', 'imageUrl'
+    ];
+    const crimeData = {};
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) crimeData[field] = data[field];
+    }
+    const crime = await Crime.create(crimeData);
+    return crime;
+  }
+
+  static async updateCrime(crimeId, data) {
+    const crime = await Crime.findByPk(crimeId);
+    if (!crime) return null;
+
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'description', 'isEnabled', 'req_level', 'energyCost',
+      'successRate', 'minReward', 'maxReward', 'cooldown', 'failOutcome',
+      'jailMinutes', 'hospitalMinutes', 'expReward', 'imageUrl'
+    ];
+    
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        crime[field] = data[field];
+      }
+    }
+    
+    await crime.save();
+    return crime;
+  }
+
+  static async deleteCrime(crimeId) {
+    const crime = await Crime.findByPk(crimeId);
+    if (!crime) return false;
+    
+    await crime.destroy();
+    return true;
+  }
+
   // Seed crimes data
   static async seedCrimes() {
-    const baseCrimes = [
-      { name: "سرقة محفظة في الزحام",                lvl: 1,  energy: 5,  rate: 0.85, min: 15,  max: 40,  cd: 60,  failOutcome: "jail", jailMinutes: 2, hospitalMinutes: 0, hpLoss: 0, bailRate: 30, healRate: 0 },
-      { name: "رشّ كتابات على حائط عام",             lvl: 1,  energy: 5,  rate: 0.83, min: 20,  max: 45,  cd: 90,  failOutcome: "jail", jailMinutes: 3, hospitalMinutes: 0, hpLoss: 0, bailRate: 40, healRate: 0 },
-      { name: "سرقة دراجة هوائية",                  lvl: 2,  energy: 7,  rate: 0.8,  min: 25,  max: 60,  cd: 120, failOutcome: "both", jailMinutes: 3, hospitalMinutes: 2, hpLoss: 15, bailRate: 50, healRate: 35 },
-      { name: "سرقة سيارة",                         lvl: 3,  energy: 10, rate: 0.75, min: 50,  max: 120, cd: 180, failOutcome: "both", jailMinutes: 5, hospitalMinutes: 3, hpLoss: 25, bailRate: 60, healRate: 45 },
-      { name: "سرقة بنك صغير",                      lvl: 5,  energy: 15, rate: 0.65, min: 100, max: 250, cd: 300, failOutcome: "jail", jailMinutes: 8, hospitalMinutes: 0, hpLoss: 0, bailRate: 80, healRate: 0 },
-      { name: "سرقة متجر مجوهرات",                  lvl: 7,  energy: 20, rate: 0.6,  min: 150, max: 350, cd: 420, failOutcome: "both", jailMinutes: 10, hospitalMinutes: 5, hpLoss: 30, bailRate: 100, healRate: 60 },
-      { name: "سرقة بنك كبير",                      lvl: 10, energy: 30, rate: 0.55, min: 300, max: 600, cd: 600, failOutcome: "jail", jailMinutes: 15, hospitalMinutes: 0, hpLoss: 0, bailRate: 150, healRate: 0 },
-      { name: "سرقة قصر",                           lvl: 15, energy: 40, rate: 0.45, min: 500, max: 1000, cd: 900, failOutcome: "both", jailMinutes: 20, hospitalMinutes: 10, hpLoss: 50, bailRate: 200, healRate: 100 },
-      // Test crime with 0% success rate and 5s cooldown for jail testing
-      { name: "جريمة تجريبية (فشل دائم - سجن)", lvl: 1, energy: 1, rate: 0.0, min: 1, max: 1, cd: 5, failOutcome: "jail", jailMinutes: 1, hospitalMinutes: 0, hpLoss: 0, bailRate: 10, healRate: 0 },
-      // Test crime for hospital with 0% success rate
-      { name: "جريمة تجريبية للمستشفى", lvl: 1, energy: 1, rate: 0.0, min: 1, max: 1, cd: 5, failOutcome: "hospital", jailMinutes: 0, hospitalMinutes: 1, hpLoss: 20, bailRate: 0, healRate: 40 },
-      // Test crime for both outcomes
-      { name: "جريمة تجريبية (سجن + مستشفى)", lvl: 1, energy: 1, rate: 0.0, min: 1, max: 1, cd: 5, failOutcome: "both", jailMinutes: 1, hospitalMinutes: 1, hpLoss: 15, bailRate: 10, healRate: 30 },
-    ];
-
-    const toSlug = str => str.normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^\w\s-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-")
-      .toLowerCase();
-
-    const crimes = baseCrimes.map((c, i) => ({
-      name: c.name,
-      slug: `${toSlug(c.name)}-${i+1}`,
-      isEnabled: true,
-      req_level: c.lvl,
-      req_intel: Math.max(1, Math.floor(c.lvl / 2)),
-      energyCost: c.energy,
-      successRate: c.rate,
-      minReward: c.min,
-      maxReward: c.max,
-      cooldown: c.cd,
-      failOutcome: c.failOutcome,
-      jailMinutes: c.jailMinutes,
-      hospitalMinutes: c.hospitalMinutes,
-      hpLoss: c.hpLoss,
-      bailRate: c.bailRate,
-      healRate: c.healRate,
-    }));
-
-    await Crime.bulkCreate(crimes, { ignoreDuplicates: true });
-    console.log('✅ Crimes seeded');
+    // No crimes are seeded by default
+    await Crime.destroy({ where: {} });
+    console.log('✅ Crimes cleared, none seeded');
   }
 } 

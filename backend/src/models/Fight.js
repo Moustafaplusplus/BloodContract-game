@@ -6,6 +6,10 @@ export const Fight = sequelize.define("fight", {
   defender_id: { type: DataTypes.INTEGER, allowNull: false }, // references userId
   winner_id:   { type: DataTypes.INTEGER, allowNull: false }, // references userId
   damage_given:{ type: DataTypes.FLOAT,   allowNull: false },
+  attacker_damage: { type: DataTypes.FLOAT, allowNull: false, defaultValue: 0 },
+  defender_damage: { type: DataTypes.FLOAT, allowNull: false, defaultValue: 0 },
+  xp_gained: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  narrative: { type: DataTypes.TEXT, allowNull: true },
   log:         { type: DataTypes.JSONB,   allowNull: false },
 }, {
   tableName: "fights",

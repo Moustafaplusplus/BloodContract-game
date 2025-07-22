@@ -139,7 +139,7 @@ export class BankService {
       }
 
       await t.commit();
-      console.log('🏦  Interest applied');
+              // Interest applied successfully
     } catch (err) {
       await t.rollback();
       console.error('❌  Interest job failed', err);

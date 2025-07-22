@@ -6,7 +6,7 @@ export class JobsController {
     try {
       const character = await CharacterService.getCharacterByUserId(req.user.id);
       const level = character?.level ?? 1;
-      const jobs = JobsService.getAvailableJobs(level);
+      const jobs = await JobsService.getAvailableJobs(level);
       res.json(jobs);
     } catch (error) {
       console.error('Jobs error:', error);
@@ -21,11 +21,12 @@ export class JobsController {
         return res.json({ currentJob: null });
       }
 
-      const jobInfo = JobsService.JOBS[currentJob.jobType];
+      // Get job info from database using job ID
+      const jobInfo = await JobsService.getJobDefinitionById(parseInt(currentJob.jobType));
       res.json({
         currentJob: {
           ...currentJob.toJSON(),
-          jobInfo
+          jobInfo: jobInfo ? jobInfo.toJSON() : null
         }
       });
     } catch (error) {
@@ -36,13 +37,13 @@ export class JobsController {
 
   static async hireUser(req, res) {
     try {
-      const { jobType } = req.body;
-      if (!jobType) {
-        return res.status(400).json({ error: 'Job type required' });
+      const { jobId } = req.body;
+      if (!jobId) {
+        return res.status(400).json({ error: 'Job ID required' });
       }
 
-      const result = await JobsService.hireUser(req.user.id, jobType);
-      const jobInfo = JobsService.JOBS[jobType];
+      const result = await JobsService.hireUser(req.user.id, jobId);
+      const jobInfo = await JobsService.getJobDefinitionById(jobId);
       
       res.json({
         success: true,
@@ -115,6 +116,83 @@ export class JobsController {
         return res.status(400).json({ error: error.message });
       }
       res.status(500).json({ error: 'Failed to train at gym' });
+    }
+  }
+
+  // Admin methods for job management
+  static async getAllJobs(req, res) {
+    try {
+      const jobs = await JobsService.getAllJobsForAdmin();
+      res.json(jobs);
+    } catch (error) {
+      console.error('Admin get jobs error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+
+  static async createJob(req, res) {
+    try {
+      // Basic validation
+      const requiredFields = [
+        'name', 'description', 'tier', 'minLevel', 'salary', 'expPerDay'
+      ];
+      for (const field of requiredFields) {
+        if (req.body[field] === undefined) {
+          return res.status(400).json({ error: `Missing field: ${field}` });
+        }
+      }
+
+      const job = await JobsService.createJob(req.body);
+      res.status(201).json(job);
+    } catch (error) {
+      console.error('Create job error:', error);
+      res.status(500).json({ error: error.message || 'Server error' });
+    }
+  }
+
+  static async updateJob(req, res) {
+    try {
+      const jobId = parseInt(req.params.id, 10);
+      if (!jobId) {
+        return res.status(400).json({ error: 'Invalid job ID' });
+      }
+
+      // Basic validation
+      const requiredFields = [
+        'name', 'description', 'tier', 'minLevel', 'salary', 'expPerDay'
+      ];
+      for (const field of requiredFields) {
+        if (req.body[field] === undefined) {
+          return res.status(400).json({ error: `Missing field: ${field}` });
+        }
+      }
+
+      const job = await JobsService.updateJob(jobId, req.body);
+      if (!job) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error('Update job error:', error);
+      res.status(500).json({ error: error.message || 'Server error' });
+    }
+  }
+
+  static async deleteJob(req, res) {
+    try {
+      const jobId = parseInt(req.params.id, 10);
+      if (!jobId) {
+        return res.status(400).json({ error: 'Invalid job ID' });
+      }
+
+      const success = await JobsService.deleteJob(jobId);
+      if (!success) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+      res.json({ message: 'Job deleted successfully' });
+    } catch (error) {
+      console.error('Delete job error:', error);
+      res.status(500).json({ error: error.message || 'Server error' });
     }
   }
 } 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Modal from "@/components/Modal";
 import { extractErrorMessage, validateForm, validationRules } from "@/utils/errorHandler";
@@ -26,6 +27,7 @@ export default function Signup() {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info" });
 
@@ -134,7 +136,7 @@ export default function Signup() {
           <div className="text-center mb-12 animate-fade-in">
             <div className="relative inline-block">
               <h1 className="text-5xl font-bouya mb-4 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow leading-tight">
-                عودة قاتل مأجور
+                عقد الدم
               </h1>
               <div className="absolute -top-2 -right-2">
                 <Target className="w-6 h-6 text-accent-red animate-pulse" />
@@ -278,11 +280,30 @@ export default function Signup() {
                   </div>
                 </div>
 
+                {/* Terms and Privacy Policy checkboxes */}
+                <div className="form-group mt-6">
+                  <label className="flex items-center space-x-2 space-x-reverse">
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={e => setAgreed(e.target.checked)}
+                      required
+                      className="accent-accent-red w-5 h-5 rounded focus:ring-2 focus:ring-accent-red"
+                    />
+                    <span className="text-sm text-gray-200">
+                      أوافق على
+                      <RouterLink to="/terms" className="text-accent-red underline mx-1" target="_blank">الشروط والأحكام</RouterLink>
+                      و
+                      <RouterLink to="/privacy-policy" className="text-accent-red underline mx-1" target="_blank">سياسة الخصوصية</RouterLink>
+                    </span>
+                  </label>
+                </div>
+
                 {/* Submit button */}
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="submit-button group"
+                  disabled={loading || !agreed}
+                  className={`submit-button group ${(!agreed ? 'opacity-60 cursor-not-allowed' : '')}`}
                 >
                   {loading ? (
                     <div className="flex items-center justify-center">
@@ -324,7 +345,7 @@ export default function Signup() {
           {/* Footer */}
           <div className="text-center mt-8 animate-fade-in-delayed">
             <p className="text-xs text-gray-500">
-              © 2024 هيتمان. جميع الحقوق محفوظة.
+              © 2024 عقد الدم. جميع الحقوق محفوظة.
             </p>
           </div>
         </div>

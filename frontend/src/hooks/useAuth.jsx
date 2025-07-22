@@ -21,13 +21,13 @@ export function AuthProvider({ children }) {
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
   const [validating, setValidating] = useState(false); // Changed to false initially
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Load token from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("jwt");
     if (saved) {
       setTokenState(saved);
-      // Skip validation when backend is not available, just trust the stored token
       setIsAuthed(true);
       setTokenLoaded(true);
       setValidating(false);
@@ -44,19 +44,67 @@ export function AuthProvider({ children }) {
       if (token) config.headers.Authorization = `Bearer ${token}`;
       return config;
     });
-    return () => axios.interceptors.request.eject(id);
+
+    // Add response interceptor to handle blocked users
+    const responseId = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 403 && error.response?.data?.message?.includes('blocked')) {
+          // User is blocked, show message and logout
+          const reason = error.response.data.reason || 'No reason provided';
+          alert(`تم حظر حسابك: ${reason}`);
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(id);
+      axios.interceptors.response.eject(responseId);
+    };
   }, [token]);
 
-  const setToken = useCallback((jwt) => {
+  // Check admin status after token is set and axios interceptor is configured
+  useEffect(() => {
+    if (token && isAuthed) {
+      const checkAdminStatus = async () => {
+        try {
+          const response = await axios.get('/api/character');
+          if (response.data?.User?.isAdmin) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch {
+          setIsAdmin(false);
+        }
+      };
+      checkAdminStatus();
+    }
+  }, [token, isAuthed]);
+
+  const setToken = useCallback(async (jwt) => {
     localStorage.setItem("jwt", jwt);
     setTokenState(jwt);
     setIsAuthed(true);
+    
+    // Check if user is admin
+    try {
+      const response = await axios.get('/api/character');
+      if (response.data?.User?.isAdmin) {
+        setIsAdmin(true);
+      }
+    } catch {
+      // Silently handle admin check errors
+    }
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem("jwt");
     setTokenState(null);
     setIsAuthed(false);
+    setIsAdmin(false);
   }, []);
 
   const value = {
@@ -66,6 +114,8 @@ export function AuthProvider({ children }) {
     setToken,
     logout,
     validating,
+    isAdmin,
+    setIsAdmin,
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

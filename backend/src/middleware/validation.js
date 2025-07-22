@@ -39,14 +39,6 @@ export const validationSchemas = {
     })
   }),
 
-  // Character training
-  trainAttribute: Joi.object({
-    attr: Joi.string().valid('strength', 'defense').required().messages({
-      'any.only': 'السمة يجب أن تكون strength أو defense',
-      'any.required': 'السمة مطلوبة'
-    })
-  }),
-
   // Bank operations
   bankTransaction: Joi.object({
     amount: Joi.number().integer().positive().required().messages({

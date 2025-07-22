@@ -67,34 +67,18 @@ export default function Jobs() {
     staleTime: 1 * 60 * 1000,
   });
 
-  // Fetch job stats
-  const {
-    data: jobStats,
-    isLoading: statsLoading
-  } = useQuery({
-    queryKey: ['jobStats'],
-    queryFn: async () => {
-      const response = await fetch('/api/jobs/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch job stats');
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+
 
   // Hire mutation
   const hireMutation = useMutation({
-    mutationFn: async (jobType) => {
+    mutationFn: async (jobId) => {
       const response = await fetch('/api/jobs/hire', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('jwt')}`
         },
-        body: JSON.stringify({ jobType })
+        body: JSON.stringify({ jobId })
       });
       if (!response.ok) {
         const error = await response.json();
@@ -106,7 +90,6 @@ export default function Jobs() {
       setHiringJobId(null);
       invalidateHud?.();
       queryClient.invalidateQueries(['currentJob']);
-      queryClient.invalidateQueries(['jobStats']);
       toast.success(data.message || 'تم التوظيف بنجاح!');
     },
     onError: (error) => {
@@ -135,7 +118,6 @@ export default function Jobs() {
       setQuittingJob(false);
       invalidateHud?.();
       queryClient.invalidateQueries(['currentJob']);
-      queryClient.invalidateQueries(['jobStats']);
       queryClient.invalidateQueries(['jobHistory']);
       
       if (data.unpaidSalary > 0) {
@@ -150,13 +132,13 @@ export default function Jobs() {
     }
   });
 
-  const handleHire = (jobType) => {
+  const handleHire = (jobId) => {
     if (currentJobData?.currentJob) {
       toast.error('يجب الاستقالة من وظيفتك الحالية أولاً');
       return;
     }
-    setHiringJobId(jobType);
-    hireMutation.mutate(jobType);
+    setHiringJobId(jobId);
+    hireMutation.mutate(jobId);
   };
 
   const handleQuit = () => {
@@ -193,7 +175,6 @@ export default function Jobs() {
   }
 
   const currentJob = currentJobData?.currentJob;
-  const jobStatsSummary = jobStats?.stats;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
@@ -214,7 +195,7 @@ export default function Jobs() {
       </div>
 
       {/* Current Job Status */}
-      {currentJob && (
+      {currentJob && currentJob.jobInfo && (
         <div className="max-w-4xl mx-auto mb-8 animate-slide-up">
           <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between mb-4">

@@ -5,9 +5,9 @@ export class SearchController {
   static async searchUsers(req, res) {
     try {
       const queryData = req.validatedQuery || req.query;
-      const { query, limit = 10, sort, ...filters } = queryData;
-      const users = await ProfileService.searchUsers(query, parseInt(limit), sort, filters);
-      res.json(users);
+      const users = await ProfileService.searchUsers(queryData);
+      // Ensure only plain objects are returned (defensive)
+      res.json(users.map(u => (u && typeof u.toJSON === 'function') ? u.toJSON() : u));
     } catch (error) {
       console.error('Search users error:', error);
       res.status(500).json({ error: 'Failed to search users' });

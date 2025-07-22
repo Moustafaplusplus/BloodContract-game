@@ -1,7 +1,9 @@
 import { Character } from '../models/Character.js';
 import { Job, JobHistory } from '../models/Job.js';
+import { JobDefinition } from '../models/JobDefinition.js';
 import { CharacterService } from './CharacterService.js';
 import { sequelize } from '../config/db.js';
+import { Op } from 'sequelize';
 import { User } from '../models/User.js';
 
 export class JobsService {
@@ -99,18 +101,143 @@ export class JobsService {
   };
 
   // Get available jobs for user's level
-  static getAvailableJobs(userLevel = 1) {
-    return Object.entries(this.JOBS)
-      .filter(([key, job]) => job.minLevel <= userLevel)
-      .map(([key, job]) => ({
-        id: key,
-        name: job.name,
-        tier: job.tier,
-        minLevel: job.minLevel,
-        salary: job.salary,
-        expPerDay: job.expPerDay,
-        description: job.description
-      }));
+  static async getAvailableJobs(userLevel = 1) {
+    const jobs = await JobDefinition.findAll({
+      where: {
+        minLevel: { [Op.lte]: userLevel },
+        isEnabled: true
+      },
+      order: [['tier', 'ASC'], ['minLevel', 'ASC']]
+    });
+    
+    return jobs.map(job => ({
+      id: job.id,
+      name: job.name,
+      tier: job.tier,
+      minLevel: job.minLevel,
+      salary: job.salary,
+      expPerDay: job.expPerDay,
+      description: job.description
+    }));
+  }
+
+  // Get job definition by ID
+  static async getJobDefinitionById(jobId) {
+    const job = await JobDefinition.findByPk(jobId);
+    if (!job) {
+      throw new Error('Job not found');
+    }
+    return job;
+  }
+
+  // Seed default jobs if database is empty
+  static async seedDefaultJobs() {
+    const count = await JobDefinition.count();
+    if (count > 0) return; // Already seeded
+
+    const defaultJobs = [
+      // Tier 1 (Level 1-5)
+      {
+        name: 'عامل توصيل',
+        description: 'توصيل الطرود والرسائل',
+        tier: 1,
+        minLevel: 1,
+        salary: 50,
+        expPerDay: 10,
+        isEnabled: true
+      },
+      {
+        name: 'عامل نظافة',
+        description: 'تنظيف الشوارع والمباني',
+        tier: 1,
+        minLevel: 1,
+        salary: 40,
+        expPerDay: 15,
+        isEnabled: true
+      },
+      
+      // Tier 2 (Level 6-10)
+      {
+        name: 'حارس أمن',
+        description: 'حراسة المباني والمنشآت',
+        tier: 2,
+        minLevel: 6,
+        salary: 100,
+        expPerDay: 20,
+        isEnabled: true
+      },
+      {
+        name: 'عامل بناء',
+        description: 'أعمال البناء والتشييد',
+        tier: 2,
+        minLevel: 6,
+        salary: 80,
+        expPerDay: 25,
+        isEnabled: true
+      },
+      
+      // Tier 3 (Level 11-15)
+      {
+        name: 'مدير',
+        description: 'إدارة الفرق والمشاريع',
+        tier: 3,
+        minLevel: 11,
+        salary: 200,
+        expPerDay: 30,
+        isEnabled: true
+      },
+      {
+        name: 'مهندس',
+        description: 'التصميم والإشراف الهندسي',
+        tier: 3,
+        minLevel: 11,
+        salary: 150,
+        expPerDay: 40,
+        isEnabled: true
+      },
+      
+      // Tier 4 (Level 16-20)
+      {
+        name: 'تنفيذي',
+        description: 'إدارة الشركات والمؤسسات',
+        tier: 4,
+        minLevel: 16,
+        salary: 400,
+        expPerDay: 50,
+        isEnabled: true
+      },
+      {
+        name: 'مستشار',
+        description: 'الاستشارات المتخصصة',
+        tier: 4,
+        minLevel: 16,
+        salary: 300,
+        expPerDay: 60,
+        isEnabled: true
+      },
+      
+      // Tier 5 (Level 21+)
+      {
+        name: 'رئيس تنفيذي',
+        description: 'قيادة الشركات الكبرى',
+        tier: 5,
+        minLevel: 21,
+        salary: 800,
+        expPerDay: 80,
+        isEnabled: true
+      },
+      {
+        name: 'مستثمر',
+        description: 'الاستثمار وإدارة المحافظ',
+        tier: 5,
+        minLevel: 21,
+        salary: 600,
+        expPerDay: 100,
+        isEnabled: true
+      }
+    ];
+
+    await JobDefinition.bulkCreate(defaultJobs);
   }
 
   // Get user's current job
@@ -119,10 +246,10 @@ export class JobsService {
   }
 
   // Hire user for a job
-  static async hireUser(userId, jobType) {
-    const job = this.JOBS[jobType];
-    if (!job) {
-      throw new Error('Job not found');
+  static async hireUser(userId, jobId) {
+    const jobDefinition = await JobDefinition.findByPk(jobId);
+    if (!jobDefinition || !jobDefinition.isEnabled) {
+      throw new Error('Job not found or disabled');
     }
 
     const character = await Character.findOne({ where: { userId } });
@@ -130,8 +257,8 @@ export class JobsService {
       throw new Error('Character not found');
     }
 
-    if (character.level < job.minLevel) {
-      throw new Error(`Level ${job.minLevel} required for this job`);
+    if (character.level < jobDefinition.minLevel) {
+      throw new Error(`Level ${jobDefinition.minLevel} required for this job`);
     }
 
     const t = await sequelize.transaction();
@@ -150,7 +277,7 @@ export class JobsService {
       // Create new job record
       const newJob = await Job.create({
         userId,
-        jobType,
+        jobType: jobId.toString(), // Store job ID as string
         hiredAt: new Date(),
         lastPaidAt: new Date(),
         totalEarned: 0,
@@ -180,8 +307,8 @@ export class JobsService {
         throw new Error('You are not currently employed');
       }
 
-      const jobInfo = this.JOBS[currentJob.jobType];
-      if (!jobInfo) {
+      const jobDefinition = await JobDefinition.findByPk(currentJob.jobType);
+      if (!jobDefinition) {
         await t.rollback();
         throw new Error('Invalid job type');
       }
@@ -193,7 +320,7 @@ export class JobsService {
       
       let unpaidSalary = 0;
       if (daysSinceLastPaid > 0) {
-        unpaidSalary = daysSinceLastPaid * jobInfo.salary;
+        unpaidSalary = daysSinceLastPaid * jobDefinition.salary;
       }
 
       // Add to job history
@@ -229,7 +356,7 @@ export class JobsService {
       
       return {
         jobType: currentJob.jobType,
-        jobName: jobInfo.name,
+        jobName: jobDefinition.name,
         unpaidSalary,
         totalEarned: currentJob.totalEarned + unpaidSalary,
         totalExpEarned: currentJob.totalExpEarned,
@@ -264,15 +391,15 @@ export class JobsService {
       let totalExpGiven = 0;
 
       for (const jobRecord of activeJobs) {
-        const jobInfo = this.JOBS[jobRecord.jobType];
-        if (!jobInfo) continue;
+        const jobDefinition = await JobDefinition.findByPk(jobRecord.jobType);
+        if (!jobDefinition || !jobDefinition.isEnabled) continue;
 
         const lastPaid = new Date(jobRecord.lastPaidAt);
         const daysSinceLastPaid = Math.floor((now - lastPaid) / (1000 * 60 * 60 * 24));
 
         if (daysSinceLastPaid >= 1) {
-          const salary = jobInfo.salary * daysSinceLastPaid;
-          const exp = jobInfo.expPerDay * daysSinceLastPaid;
+          const salary = jobDefinition.salary * daysSinceLastPaid;
+          const exp = jobDefinition.expPerDay * daysSinceLastPaid;
 
           // Update job record
           jobRecord.totalEarned += salary;
@@ -287,11 +414,16 @@ export class JobsService {
             transaction: t,
             lock: t.LOCK.UPDATE
           });
+          
+          let finalSalary = salary;
+          let finalExp = exp;
+          
           // VIP bonus
           if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
             finalSalary = Math.round(salary * 1.5);
             finalExp = Math.round(exp * 1.5);
           }
+          
           if (character) {
             character.money += finalSalary;
             character.exp += finalExp;
@@ -305,7 +437,7 @@ export class JobsService {
       }
 
       await t.commit();
-      console.log(`💼 Job payouts: $${totalPaid} paid, ${totalExpGiven} exp given`);
+      // Job payouts completed
     } catch (err) {
       await t.rollback();
       console.error('❌ Job payout failed:', err);
@@ -323,10 +455,15 @@ export class JobsService {
     const totalExpEarned = history.reduce((sum, job) => sum + job.totalExpEarned, 0);
     const totalDaysWorked = history.reduce((sum, job) => sum + job.daysWorked, 0);
 
+    let jobInfo = null;
+    if (currentJob) {
+      jobInfo = await JobDefinition.findByPk(parseInt(currentJob.jobType));
+    }
+
     return {
       currentJob: currentJob ? {
         ...currentJob.toJSON(),
-        jobInfo: this.JOBS[currentJob.jobType]
+        jobInfo: jobInfo ? jobInfo.toJSON() : null
       } : null,
       history,
       stats: {
@@ -352,31 +489,126 @@ export class JobsService {
     if (character.energy < energy) {
       throw new Error('Not enough energy');
     }
-    // Grant proportional stats (example: 1 energy = +0.5 strength, +0.25 defense, +2 exp)
-    let strengthGain = Math.floor(energy * 0.5);
-    let defenseGain = Math.floor(energy * 0.25);
-    let expGain = energy * 2;
-    // VIP bonus
-    if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
-      strengthGain = Math.round(strengthGain * 1.5);
-      defenseGain = Math.round(defenseGain * 1.5);
-      expGain = Math.round(expGain * 1.5);
+
+    // Limit energy per training session to prevent abuse
+    const maxEnergyPerSession = 20;
+    if (energy > maxEnergyPerSession) {
+      throw new Error(`Maximum ${maxEnergyPerSession} energy per training session`);
     }
-    character.strength += strengthGain;
-    character.defense += defenseGain;
-    character.exp += expGain;
+
+    // New balanced reward system - only exp and money
+    const level = character.level || 1;
+    const isVip = character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date();
+    
+    // Money reward: Scalable like EXP
+    // Base: $5 per energy
+    // Level scaling: 1 + (level / 10) - so level 10 gets 2x, level 20 gets 3x
+    let moneyGain = energy * 5 * (1 + level / 10);
+    
+    // Experience: Much more conservative to prevent level jumping
+    // Base: 2 exp per energy (reduced from 3)
+    // Level scaling: 1 + (level / 10) - so level 10 gets 2x, level 20 gets 3x
+    let expGain = Math.floor(energy * 2 * (1 + level / 10));
+    
+    // Additional level scaling: Diminishing returns (logarithmic scaling)
+    // Formula: 1 + log10(level) * 0.1 (reduced from 0.2)
+    // This means: Level 1=1.0x, Level 10=1.1x, Level 100=1.2x
+    const levelScaling = 1 + Math.log10(Math.max(1, level)) * 0.1;
+    
+    // Apply level scaling to both money and exp
+    moneyGain = Math.floor(moneyGain * levelScaling);
+    expGain = Math.floor(expGain * levelScaling);
+    
+    // VIP bonus: 50% bonus for money and exp
+    if (isVip) {
+      moneyGain = Math.floor(moneyGain * 1.5);
+      expGain = Math.floor(expGain * 1.5);
+    }
+    
+    // Safety check: Limit exp gain to prevent level jumping
+    // Calculate how much exp is needed for next level using the exponential/linear system
+    const expNeededForNextLevel = CharacterService.calculateExpNeeded(level);
+    const maxExpGain = Math.min(expGain, Math.floor(expNeededForNextLevel * 0.3)); // Max 30% of next level's exp
+    
+    // Apply rewards
+    character.money += moneyGain;
+    character.exp += maxExpGain;
     character.energy -= energy;
+    
     // Set cooldown: 10 seconds per energy spent
     character.gymCooldown = now + energy * 10 * 1000;
+    
     await CharacterService.maybeLevelUp(character);
     await character.save();
+    
     return {
-      strengthGain,
-      defenseGain,
-      expGain,
+      moneyGain,
+      expGain: maxExpGain,
       energyLeft: character.energy,
       cooldown: energy * 10,
       gymCooldownUntil: character.gymCooldown,
+      scaling: levelScaling,
+      level: level,
+      isVip,
+      expNeededForNextLevel,
+      maxEnergyPerSession
     };
+  }
+
+  // Admin methods for job definition management
+  static async getAllJobsForAdmin() {
+    const jobs = await JobDefinition.findAll({
+      order: [['tier', 'ASC'], ['minLevel', 'ASC']]
+    });
+    return jobs.map(job => ({
+      id: job.id,
+      name: job.name,
+      description: job.description,
+      tier: job.tier,
+      minLevel: job.minLevel,
+      salary: job.salary,
+      expPerDay: job.expPerDay,
+      isEnabled: job.isEnabled
+    }));
+  }
+
+  static async createJob(data) {
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'description', 'tier', 'minLevel', 'salary', 'expPerDay', 'isEnabled'
+    ];
+    const jobData = {};
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) jobData[field] = data[field];
+    }
+    const job = await JobDefinition.create(jobData);
+    return job;
+  }
+
+  static async updateJob(jobId, data) {
+    const job = await JobDefinition.findByPk(jobId);
+    if (!job) return null;
+
+    // Only allow fields defined in the model
+    const allowedFields = [
+      'name', 'description', 'tier', 'minLevel', 'salary', 'expPerDay', 'isEnabled'
+    ];
+    
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        job[field] = data[field];
+      }
+    }
+    
+    await job.save();
+    return job;
+  }
+
+  static async deleteJob(jobId) {
+    const job = await JobDefinition.findByPk(jobId);
+    if (!job) return false;
+    
+    await job.destroy();
+    return true;
   }
 } 

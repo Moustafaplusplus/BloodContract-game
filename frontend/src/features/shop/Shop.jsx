@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
+import { useSocket } from "@/hooks/useSocket";
 import { 
   Sword, 
   Shield, 
@@ -16,6 +17,7 @@ import {
   ImageIcon,
   ShoppingCart
 } from 'lucide-react';
+import { handleImageError } from '@/utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -49,10 +51,7 @@ function ItemCard({ item, onBuy, type }) {
             src={item.imageUrl} 
             alt={item.name}
             className="w-full h-full object-cover rounded-lg"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
+            onError={(e) => handleImageError(e, item.imageUrl)}
           />
         ) : null}
         <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
@@ -125,6 +124,7 @@ function ItemCard({ item, onBuy, type }) {
 export default function Shop() {
   const { token } = useAuth();
   const { invalidateHud } = useHud();
+  const { socket } = useSocket();
   const [activeTab, setActiveTab] = useState('weapons');
   const [weapons, setWeapons] = useState([]);
   const [armors, setArmors] = useState([]);
@@ -150,6 +150,18 @@ export default function Shop() {
     };
     fetchItems();
   }, []);
+
+  // Real-time HUD updates
+  useEffect(() => {
+    if (!socket) return;
+    const refetchHud = () => invalidateHud?.();
+    socket.on('hud:update', refetchHud);
+    const pollInterval = setInterval(refetchHud, 10000);
+    return () => {
+      socket.off('hud:update', refetchHud);
+      clearInterval(pollInterval);
+    };
+  }, [socket, invalidateHud]);
 
   const buy = async (item, type) => {
     try {

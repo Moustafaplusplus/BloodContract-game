@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/hooks/useTheme";
 
 // Shape-based Icons (no emojis)
 const MenuIcon = () => (
@@ -92,7 +90,12 @@ const CarIcon = () => (
 
 const GroupIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M16 4c1.11 0 2 .89 2 2 0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2zM4 6c1.11 0 2 .89 2 2 0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2zm0 6c2.67 0 8 1.34 8 4v4H0v-4c0-2.66 5.33-4 8-4zm12 0c2.67 0 8 1.34 8 4v4h-6v-4c0-1.38-.56-2.7-1.44-3.71-.75.21-1.6.32-2.56.32-1.06 0-2.05-.15-2.91-.42C9.38 13.1 10 14.38 10 16v4h6v-4c0-2.66 5.33-4 8-4z" />
+    <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-6 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C17 14.17 12.33 13 10 13zm8-1v2h3v2h-3v2h-2v-2h-3v-2h3v-2h2z"/>
+  </svg>
+);
+const UserPlus = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-6 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C17 14.17 12.33 13 10 13zm8-1v2h3v2h-3v2h-2v-2h-3v-2h3v-2h2z"/>
   </svg>
 );
 
@@ -168,6 +171,12 @@ const HistoryIcon = () => (
   </svg>
 );
 
+const MissionIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5zM12 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg
     className="w-5 h-5"
@@ -197,7 +206,7 @@ export function MenuButton({ isOpen, setIsOpen }) {
 }
 
 export default function Navigation({ isOpen, setIsOpen }) {
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -210,8 +219,9 @@ export default function Navigation({ isOpen, setIsOpen }) {
     { to: "/dashboard", label: "الرئيسية", icon: HomeIcon },
     { to: "/dashboard/character", label: "الشخصية", icon: UserIcon },
     { to: "/dashboard/crimes", label: "الجرائم", icon: SkullIcon },
+    { to: "/dashboard/blood-contracts", label: "عقود الدم", icon: SkullIcon },
     { to: "/dashboard/gym", label: "النادي الرياضي", icon: DumbbellIcon },
-    { to: "/dashboard/active-users", label: "المستخدمون النشطون", icon: UserIcon },
+    { to: "/dashboard/active-users", label: "اللاعبون النشطون", icon: UserIcon },
     { to: "/dashboard/hospital", label: "المستشفى", icon: HospitalIcon },
     { to: "/dashboard/jail", label: "السجن", icon: JailIcon },
     { to: "/dashboard/bank", label: "البنك", icon: BankIcon },
@@ -225,9 +235,18 @@ export default function Navigation({ isOpen, setIsOpen }) {
     { to: "/dashboard/cars", label: "السيارات", icon: CarIcon },
     { to: "/dashboard/dogs", label: "الكلاب", icon: TrophyIcon },
     { to: "/dashboard/gangs", label: "العصابات", icon: GroupIcon },
-    { to: "/dashboard/social", label: "الرسائل والأصدقاء", icon: ChatIcon },
+    { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus },
+    { to: "/dashboard/messages", label: "الرسائل", icon: ChatIcon },
+    { to: "/dashboard/global-chat", label: "الدردشة العامة", icon: ChatIcon },
     { to: "/dashboard/events", label: "الفعاليات", icon: CalendarIcon },
     { to: "/dashboard/achievements", label: "الإنجازات", icon: TrophyIcon },
+    { to: "/dashboard/ministry-mission", label: "مهام الوزارة", icon: MissionIcon },
+    { to: "/dashboard/suggestions", label: "الاقتراحات", icon: SearchIcon },
+    {
+      label: "تصنيف اللاعبين",
+      to: "/dashboard/ranking",
+      icon: TrophyIcon,
+    },
   ];
 
   return (
@@ -242,17 +261,16 @@ export default function Navigation({ isOpen, setIsOpen }) {
 
       {/* Navigation sidebar */}
       <aside
-        className={`fixed top-0 right-0 h-full w-80 bg-black text-white shadow-xl transform transition-transform duration-300 ease-in-out z-40 lg:translate-x-0 border-l border-red-900 ${
+        className={`fixed top-[56px] right-0 w-80 bg-black text-white shadow-xl transform transition-transform duration-300 ease-in-out z-40 lg:translate-x-0 border-l border-red-900 ${
           isOpen ? "translate-x-0" : "translate-x-full"
-        } overflow-x-hidden`}
-        style={{ marginTop: '56px', height: 'calc(100% - 56px)' }}
+        } overflow-x-hidden`} // Use top-[56px] to always be below HUD
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-[calc(100vh-56px)]">
           {/* Header */}
           <div className="p-6 border-b border-red-900 bg-gradient-to-br from-red-950 via-black to-red-900 shadow-xl">
             <div className="text-center">
               <h1 className="text-2xl font-bouya text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-red-400 leading-tight mb-2 animate-pulse">
-                عودة قاتل مأجور
+                عقد الدم
               </h1>
               <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent mx-auto mb-2"></div>
               <p className="text-xs text-red-300 font-medium tracking-wide">
@@ -283,6 +301,24 @@ export default function Navigation({ isOpen, setIsOpen }) {
               ))}
             </div>
           </nav>
+
+          {/* Admin Section */}
+          {isAdmin && (
+            <div className="mt-4">
+              <h3 className="text-xs text-red-500 uppercase tracking-wider mb-1">Admin</h3>
+              <NavLink
+                to="/admin/panel"
+                onClick={() => setIsOpen(false)}
+                className={({ isActive }) =>
+                  `block px-4 py-2 rounded hover:bg-red-800 text-white ${
+                    isActive ? "bg-red-800" : ""
+                  }`
+                }
+              >
+                لوحة الإدارة
+              </NavLink>
+            </div>
+          )}
 
           {/* Footer with logout */}
           <div className="p-4 border-t border-red-900 bg-gradient-to-r from-black to-red-950">

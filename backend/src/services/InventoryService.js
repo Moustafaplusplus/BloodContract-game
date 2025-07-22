@@ -6,7 +6,7 @@ import { io } from '../socket.js';
 export class InventoryService {
   // Helper functions
   static canonicalType(type) {
-    if (["weapon", "melee", "rifle", "sniper"].includes(type)) return "weapon";
+    if (type === "weapon") return "weapon";
     if (type === "armor") return "armor";
     return null;
   }

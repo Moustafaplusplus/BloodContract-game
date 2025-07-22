@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import { Character } from '../models/Character.js';
 import { sequelize } from '../config/db.js';
 
-const HEALTH_REGEN_RATE = 2;
+const HEALTH_REGEN_RATE = 5;
 
 export function startHealthRegen() {
   cron.schedule('*/2 * * * *', async () => {

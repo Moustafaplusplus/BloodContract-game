@@ -8,11 +8,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
 import { Heart, Clock, DollarSign, AlertTriangle, CheckCircle, Activity, RefreshCw, Users } from "lucide-react";
 import axios from "axios";
+import { useSocket } from "@/hooks/useSocket";
 
 export default function Hospital() {
   const { token } = useAuth();
-  const { stats, invalidateHud, loading } = useHud();
+  const { invalidateHud, loading } = useHud();
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   const [hospitalStatus, setHospitalStatus] = useState(null);
   const [remainingTime, setRemainingTime] = useState(0);
@@ -35,7 +37,7 @@ export default function Hospital() {
     try {
       const response = await axios.get("/api/confinement/hospital");
       const data = response.data;
-      console.log("Hospital status fetched:", data);
+              // Hospital status fetched successfully
       setHospitalStatus(data);
       if (data.inHospital && data.releaseAt && data.startedAt) {
         const releaseAt = new Date(data.releaseAt).getTime();
@@ -80,21 +82,21 @@ export default function Hospital() {
     }
   }, [hospitalStatus?.inHospital, totalTime, remainingTime]);
 
-  // Fetch live hospital count
+  // Real-time updates for hospital status and count
   useEffect(() => {
-    let interval;
-    const fetchCount = async () => {
-      try {
-        const res = await axios.get("/api/confinement/hospital/count");
-        setHospitalCount(res.data.count);
-      } catch (e) {
-        setHospitalCount(null);
-      }
+    if (!socket) return;
+    const fetchAll = () => {
+      fetchHospitalStatus();
+      // Fetch count
+      axios.get("/api/confinement/hospital/count").then(res => setHospitalCount(res.data.count)).catch(() => setHospitalCount(null));
     };
-    fetchCount();
-    interval = setInterval(fetchCount, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    socket.on('hospital:update', fetchAll);
+    const pollInterval = setInterval(fetchAll, 10000);
+    return () => {
+      socket.off('hospital:update', fetchAll);
+      clearInterval(pollInterval);
+    };
+  }, [socket]);
 
   // Format time display (copied from Profile.jsx)
   function formatTime(seconds) {
@@ -122,7 +124,7 @@ export default function Hospital() {
       const res = await axios.post("/api/confinement/hospital/heal");
       const result = res.data;
       setHospitalStatus({ inHospital: false });
-      setTimeLeft(0);
+      setRemainingTime(0);
       invalidateHud?.();
       toast.success(`تم الشفاء بنجاح! المال المتبقي: $${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful healing
@@ -171,7 +173,7 @@ export default function Hospital() {
   }
 
   // Debug log
-  console.log("Rendering hospital page with status:", hospitalStatus);
+      // Rendering hospital page
 
   // Banner and main layout
   return (

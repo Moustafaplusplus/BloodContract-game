@@ -30,10 +30,12 @@ import { toast } from "react-hot-toast";
 import { Dialog } from '@headlessui/react';
 import './vipSparkle.css';
 import VipName from './VipName.jsx';
+import Modal from "@/components/Modal";
+import { useSocket } from "@/hooks/useSocket";
 
 function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   if (!fightResult) return null;
-  const { winner, rounds, totalDamage, log, xpGain, attackerFinalHp, defenderFinalHp, attackerId, defenderId } = fightResult;
+  const { winner, rounds, log, xpGain, attackerFinalHp, defenderFinalHp, attackerId, defenderId } = fightResult;
   const userId = hudStats?.userId;
   const isAttacker = userId === attackerId;
   const isDefender = userId === defenderId;
@@ -116,13 +118,13 @@ export default function Profile() {
   const { token } = useAuth();
   const { stats: hudStats, invalidateHud } = useHud();
   const [attacking, setAttacking] = useState(false);
-  const [fightResult, setFightResult] = useState(null);
-  const [showModal, setShowModal] = useState(false);
   const [remainingTime, setRemainingTime] = useState(0);
   const [totalTime, setTotalTime] = useState(null);
   const navigate = useNavigate();
   const [isFriend, setIsFriend] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null); // 'sent', 'received', or null
   const [friendLoading, setFriendLoading] = useState(false);
+  const { socket } = useSocket();
 
   const {
     data: character,
@@ -132,7 +134,7 @@ export default function Profile() {
     queryKey: ["character", username],
     queryFn: () =>
       axios
-        .get(username ? `/api/character/${username}` : "/api/character")
+        .get(username ? `/api/profile/username/${username}` : "/api/profile")
         .then((res) => res.data),
     staleTime: 1 * 60 * 1000,
     retry: false,
@@ -141,7 +143,7 @@ export default function Profile() {
   // Mock data for design purposes when backend is not available
   const mockCharacter = {
     username: "Agent_47",
-    email: "agent@hitman.com",
+            email: "agent@bloodcontract.com",
     level: 15,
     exp: 2750,
     nextLevelExp: 3000,
@@ -159,13 +161,21 @@ export default function Profile() {
     fightsWon: 73,
     gangId: "Shadow Syndicate",
     equippedHouseId: "Luxury Penthouse",
-    rank: "Legendary Assassin",
+    // ...removed rank...
     buffs: ["Stealth Master", "Combat Expert", "Money Magnet"],
     strength: 120,
     defense: 85,
   };
 
-  const displayCharacter = character || mockCharacter;
+  // Fame compatibility: support both top-level and nested fame
+  let fame = character?.fame;
+  if (!fame && character?.character?.fame) fame = character.character.fame;
+  // When constructing displayCharacter, inject fame
+  const displayCharacter = {
+    ...(character || mockCharacter),
+    fame: fame ?? 0,
+  };
+
   const isOwnProfile = !username;
   const userId = character?.userId;
   
@@ -214,28 +224,92 @@ export default function Profile() {
     }
   }, [hospitalStatus?.inHospital, hospitalStatus?.releaseAt, hospitalStatus?.startedAt, hospitalStatus?.remainingSeconds]);
 
+  // Real-time updates for friendship and profile
   useEffect(() => {
-    if (!isOwnProfile && character?.id) {
-      axios.get('/api/social/friends')
-        .then(res => {
-          const isFriend = res.data.some(f => f.id === character.id);
-          setIsFriend(isFriend);
-        })
-        .catch(() => setIsFriend(false));
+    let pollInterval;
+    if (!isOwnProfile && character?.userId) {
+      // Socket listeners
+      const handleFriendshipUpdate = () => {
+        // Refetch friendship status and pending requests
+        axios.get(`/api/friendship/is-friend?friendId=${character.userId}`)
+          .then(res => setIsFriend(res.data.isFriend))
+          .catch(() => setIsFriend(false));
+        axios.get('/api/friendship/pending')
+          .then(res => {
+            const pending = res.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+            if (pending) setPendingStatus('sent');
+            else {
+              const received = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+              if (received) setPendingStatus('received');
+              else setPendingStatus(null);
+            }
+          })
+          .catch(() => setPendingStatus(null));
+      };
+      socket?.on('friendship:update', handleFriendshipUpdate);
+      // Polling fallback
+      pollInterval = setInterval(handleFriendshipUpdate, 10000);
+      return () => {
+        socket?.off('friendship:update', handleFriendshipUpdate);
+        clearInterval(pollInterval);
+      };
     }
-  }, [character?.id, isOwnProfile]);
+  }, [character?.userId, isOwnProfile, hudStats?.userId, socket]);
+
+  // Refetch profile data on hud:update (for own profile) or profile:update (for others)
+  useEffect(() => {
+    if (!socket) return;
+    const refetchProfile = () => {
+      // Use react-query's refetch if available
+      // (react-query's useQuery returns a refetch function if destructured)
+      // But here, we can just invalidate the query
+      window?.__REACT_QUERY_CLIENT__?.invalidateQueries?.(["character", username]);
+    };
+    if (isOwnProfile) {
+      socket.on('hud:update', refetchProfile);
+    } else {
+      socket.on('profile:update', refetchProfile);
+    }
+    return () => {
+      if (isOwnProfile) {
+        socket.off('hud:update', refetchProfile);
+      } else {
+        socket.off('profile:update', refetchProfile);
+      }
+    };
+  }, [socket, isOwnProfile, username]);
+
+  useEffect(() => {
+    if (character?.gaveDailyLogin && character?.dailyLoginReward) {
+      // setWelcomeExp(character.dailyLoginReward); // Removed
+      // setShowWelcomeModal(true); // Removed
+    }
+  }, [character]);
 
   const handleAddFriend = async () => {
     setFriendLoading(true);
-    await axios.post('/api/social/friends/request', { targetId: character.userId });
-    setIsFriend(true);
+    await axios.post('/api/friendship/add', { friendId: character.userId });
+    setPendingStatus('sent');
     setFriendLoading(false);
   };
 
   const handleUnfriend = async () => {
     setFriendLoading(true);
-    await axios.post('/api/social/friends/block', { targetId: character.userId });
+    await axios.post('/api/friendship/remove', { friendId: character.userId });
     setIsFriend(false);
+    setFriendLoading(false);
+  };
+
+  const handleAcceptFriend = async () => {
+    setFriendLoading(true);
+    // Find the pending request from this user
+    const res = await axios.get('/api/friendship/pending');
+    const request = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+    if (request) {
+      await axios.post('/api/friendship/accept', { friendshipId: request.id });
+      setIsFriend(true);
+      setPendingStatus(null);
+    }
     setFriendLoading(false);
   };
 
@@ -273,18 +347,9 @@ export default function Profile() {
   const healthPercent = displayCharacter.maxHp
     ? (displayCharacter.hp / displayCharacter.maxHp) * 100
     : 0;
-  const energyPercent = displayCharacter.maxEnergy
-    ? (displayCharacter.energy / displayCharacter.maxEnergy) * 100
-    : 0;
-  const expPercent = displayCharacter.nextLevelExp
-    ? (displayCharacter.exp / displayCharacter.nextLevelExp) * 100
-    : 0;
 
   const achievements = [
-    { icon: Target, name: "قناص محترف", description: "100 هدف تم إنجازه" },
-    { icon: Shield, name: "لا يُقهر", description: "50 معركة بدون هزيمة" },
-    { icon: Crown, name: "ملك الجريمة", description: "وصل للمستوى 15" },
-    { icon: DollarSign, name: "مليونير", description: "جمع مليون دولار" },
+    // ...removed achievements...
   ];
 
   // Unified stat extraction from backend fields
@@ -292,7 +357,15 @@ export default function Profile() {
   const fightsWon = displayCharacter.fightsWon ?? 0;
   const fightsTotal = displayCharacter.fightsTotal ?? (fightsWon + fightsLost);
 
-  const stats = [
+  // Add fame to the stats array for display
+  const fameStat = {
+    icon: Trophy,
+    label: "الشهرة",
+    value: displayCharacter.fame ?? 0,
+    color: "text-accent-yellow",
+  };
+  // Insert fame as the first stat
+  const stats = [fameStat,
     {
       icon: Target,
       label: "الجرائم المرتكبة",
@@ -332,255 +405,318 @@ export default function Profile() {
       return;
     }
     setAttacking(true);
-    try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/fight/${character.userId}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      if (!res.ok) {
-        let errorMsg = "فشل في الهجوم";
-        try {
-          const data = await res.json();
-          errorMsg = data.error || errorMsg;
-        } catch {
-          let text = await res.text();
+    
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const API = import.meta.env.VITE_API_URL;
+        const url = `${API}/api/fight/${character.userId}`;
+        
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (!res.ok) {
+          let errorMsg = "فشل في الهجوم";
           try {
-            const data = JSON.parse(text);
+            const data = await res.json();
             errorMsg = data.error || errorMsg;
           } catch {
-            errorMsg = text;
+            let text = await res.text();
+            try {
+              const data = JSON.parse(text);
+              errorMsg = data.error || errorMsg;
+            } catch {
+              errorMsg = text;
+            }
           }
+          throw new Error(errorMsg);
         }
-        throw new Error(errorMsg);
+        
+        const result = await res.json();
+        invalidateHud?.();
+        navigate('/dashboard/fight-result', { state: { fightResult: result } });
+        
+        // Success - break out of retry loop
+        break;
+      } catch (error) {
+        // If it's a business logic error (not a connection error), don't retry
+        if (error.message?.includes("لا يمكنك") || 
+            error.message?.includes("الشخصية غير موجودة") ||
+            error.message?.includes("لا يمكنك مهاجمة نفسك")) {
+          break;
+        }
+        
+        // If it's the last attempt, show the error
+        if (attempt === maxRetries) {
+          if (error.message?.includes("لا يمكنك الهجوم وأنت في المستشفى")) {
+            toast.error("لا يمكنك الهجوم وأنت في المستشفى. يجب عليك الانتظار حتى خروجك.");
+          } else if (error.message?.includes("لا يمكنك مهاجمة لاعب في المستشفى")) {
+            toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً.");
+          } else if (error.message?.includes("Failed to fetch") || error.message?.includes("ERR_CONNECTION_REFUSED")) {
+            toast.error("فشل في الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
+          } else {
+            toast.error(error.message || "فشل في الهجوم");
+          }
+          break;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 3000);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-
-      const result = await res.json();
-      invalidateHud?.();
-      // Redirect to FightResults page with result
-      navigate('/dashboard/fight-result', { state: { fightResult: result } });
-    } catch (error) {
-      console.error("Attack error:", error);
-      if (error.message?.includes("لا يمكنك الهجوم وأنت في المستشفى")) {
-        toast.error("لا يمكنك الهجوم وأنت في المستشفى. يجب عليك الانتظار حتى خروجك.");
-      } else if (error.message?.includes("لا يمكنك مهاجمة لاعب في المستشفى")) {
-        toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً.");
-      } else {
-        toast.error(error.message || "فشل في الهجوم");
-      }
-    } finally {
-      setAttacking(false);
     }
+    
+    setAttacking(false);
   };
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
   // After fetching character/user data and before rendering the name:
   const isVIP = character?.vipExpiresAt && new Date(character.vipExpiresAt) > new Date();
-  const vipExpiry = character?.vipExpiresAt;
+
+  // Add this function for sending a message
+  const handleSendMessage = () => {
+    if (userId && displayCharacter?.username) {
+      navigate('/dashboard/messages', {
+        state: { userId, username: displayCharacter.username }
+      });
+    } else {
+      navigate('/dashboard/messages');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Hospital status message */}
-      {hospitalStatus?.inHospital && (
-        <div className="bg-black border-2 border-red-600 text-white rounded-lg p-4 mb-4 text-center shadow-md">
-          <span className="font-bold text-red-400">
-            {isOwnProfile ? "أنت في المستشفى" : `${displayCharacter?.username || "هذا اللاعب"} في المستشفى`}
-          </span>
-          <span className="mx-2">|</span>
-          <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span></span>
-          <div className="w-full bg-hitman-700 rounded-full h-3 mt-2">
-            <div className="bg-accent-red h-3 rounded-full transition-all duration-500" style={{ width: `${Math.round(progress * 100)}%` }}></div>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left column: Profile card, action buttons, last seen */}
-          <div className="flex flex-col gap-6">
-            {/* Profile Card */}
-            <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-8 text-center animate-slide-up">
-              {/* Avatar */}
-              <div className="relative mb-6">
-                {displayCharacter?.avatarUrl ? (
-                  <img
-                    src={displayCharacter.avatarUrl?.startsWith('http') ? displayCharacter.avatarUrl : backendUrl + displayCharacter.avatarUrl}
-                    alt="avatar"
-                    className="w-32 h-32 rounded-full object-cover border-4 border-accent-red bg-hitman-800 mx-auto shadow-lg"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextElementSibling.style.display = "flex";
-                    }}
-                  />
-                ) : null}
-                <div
-                  className={`w-32 h-32 rounded-full bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center text-5xl text-accent-red border-4 border-accent-red mx-auto shadow-lg ${displayCharacter?.avatarUrl ? "hidden" : "flex"}`}
-                >
-                  {
-                    (displayCharacter?.username ||
-                      "?")[0]
-                  }
-                </div>
-                <div className="absolute -bottom-2 -right-2 bg-accent-red rounded-full p-2">
-                  <Crown className="w-6 h-6 text-white" />
-                </div>
-              </div>
-
-              {/* Basic Info */}
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <VipName isVIP={isVIP}>{displayCharacter.name || displayCharacter.username}</VipName>
-                {character?.userId && (
-                  <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded ml-2">ID: {character.userId}</span>
-                )}
-              </h2>
-              <p className="text-accent-red font-medium mb-1">
-                لاعب جديد
-              </p>
-              {/* Email hidden for privacy */}
-
-              {/* Quote */}
-              {displayCharacter?.quote && (
-                <div className="bg-hitman-800/50 rounded-lg p-4 mb-6">
-                  <span className="text-hitman-200 italic">{displayCharacter.quote}</span>
-                </div>
-              )}
-
-              {/* Strength & Defense */}
-              <div className="flex justify-center gap-4 mb-4">
-                <div className="flex items-center gap-1 text-accent-yellow font-bold">
-                  <Shield className="w-5 h-5" />
-                  <span>الدفاع:</span>
-                  <span>{displayCharacter.defense || 0}</span>
-                </div>
-                <div className="flex items-center gap-1 text-accent-orange font-bold">
-                  <Zap className="w-5 h-5" />
-                  <span>القوة:</span>
-                  <span>{displayCharacter.strength || 0}</span>
-                </div>
-              </div>
-            </div>
-            {/* Action Buttons */}
-            <div className="flex flex-row justify-center gap-3">
-              <button
-                className="min-w-[120px] h-12 bg-accent-blue/20 text-accent-blue rounded-lg font-bold text-base"
-                onClick={() => !isOwnProfile && character?.userId && navigate(`/dashboard/social?tab=messages&userId=${character.userId}&username=${character.username}`)}
-                disabled={isOwnProfile || !character?.userId}
-              >
-                إرسال رسالة
-              </button>
-              <button
-                className="min-w-[120px] h-12 bg-accent-red/20 text-accent-red rounded-lg font-bold text-base transition-all duration-200 hover:bg-accent-red/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={attackPlayer}
-                disabled={attacking || !hudStats || hudStats.energy < 10 || isCurrentUser}
-                title={isCurrentUser ? "لا يمكنك مهاجمة نفسك" : !hudStats || hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم" : undefined}
-              >
-                {attacking ? "..." : isCurrentUser ? "نفسك" : "هجوم"}
-              </button>
-              {isFriend ? (
-                <button
-                  className="min-w-[120px] h-12 bg-accent-green/20 text-accent-green rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-green hover:bg-accent-green/30 hover:text-white transition-all duration-200"
-                  onClick={handleUnfriend}
-                  disabled={isOwnProfile || friendLoading || !character?.userId}
-                >
-                  <UserCheck className="w-5 h-5" /> صديقك
-                  <X className="w-4 h-4 ml-2 text-accent-red" />
-                </button>
-              ) : (
-                <button
-                  className="min-w-[120px] h-12 bg-accent-yellow/20 text-accent-yellow rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-yellow hover:bg-accent-yellow/30 hover:text-white transition-all duration-200"
-                  onClick={handleAddFriend}
-                  disabled={isOwnProfile || friendLoading || !character?.userId}
-                >
-                  <UserPlus className="w-5 h-5" /> إضافة صديق
-                </button>
-              )}
-            </div>
-            {/* Last Active Card */}
-            <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
-              <div className="flex items-center justify-between w-full mb-2">
-                <span className="text-lg font-bold text-white">
-                  {displayCharacter.lastActive
-                    ? new Date(displayCharacter.lastActive).toLocaleDateString("ar")
-                    : "---"}
-                </span>
-                <Clock className="w-6 h-6 text-accent-purple" />
-              </div>
-              <h3 className="text-hitman-300 text-lg">آخر نشاط</h3>
-              <p className="text-sm text-hitman-400">
-                {(() => {
-                  if (!displayCharacter.lastActive) return "---";
-                  const last = new Date(displayCharacter.lastActive).getTime();
-                  const now = Date.now();
-                  const diff = now - last;
-                  if (diff < 5 * 60 * 1000) return "متصل حالياً";
-                  // Compute human readable
-                  const mins = Math.floor(diff / 60000);
-                  const hours = Math.floor(diff / 3600000);
-                  const days = Math.floor(diff / 86400000);
-                  if (mins < 60) return `آخر ظهور قبل ${mins} دقيقة`;
-                  if (hours < 24) return `آخر ظهور قبل ${hours} ساعة`;
-                  return `آخر ظهور قبل ${days} يوم`;
-                })()}
-              </p>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
+        {/* Hospital status message */}
+        {hospitalStatus?.inHospital && (
+          <div className="bg-black border-2 border-red-600 text-white rounded-lg p-4 mb-4 text-center shadow-md">
+            <span className="font-bold text-red-400">
+              {isOwnProfile ? "أنت في المستشفى" : `${displayCharacter?.username || "هذا اللاعب"} في المستشفى`}
+            </span>
+            <span className="mx-2">|</span>
+            <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span></span>
+            <div className="w-full bg-hitman-700 rounded-full h-3 mt-2">
+              <div className="bg-accent-red h-3 rounded-full transition-all duration-500" style={{ width: `${Math.round(progress * 100)}%` }}></div>
             </div>
           </div>
-          {/* Right column: HP bar, stats, achievements */}
-          <div className="flex flex-col gap-6">
-            {/* HP Bar */}
-            <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
-              <span className="text-hitman-200 mb-1">الصحة</span>
-              <div className="w-full bg-hitman-700 rounded-full h-4 overflow-hidden">
-                <div
-                  className="bg-accent-green h-4 rounded-full transition-all duration-500"
-                  style={{ width: `${healthPercent}%` }}
-                ></div>
-              </div>
-              <span className="text-xs mt-1">
-                {displayCharacter.hp} / {displayCharacter.maxHp}
-              </span>
-            </div>
-            {/* Stats */}
-            <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
-              <h3 className="text-xl font-bold mb-6 flex items-center">
-                <Activity className="w-6 h-6 mr-3 text-accent-blue" />
-                الإحصائيات
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {stats.map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <div className="bg-hitman-800/50 rounded-lg p-4 mb-2">
-                      <stat.icon className={`w-8 h-8 mx-auto ${stat.color}`} />
-                    </div>
-                    <div className={`text-2xl font-bold ${stat.color}`}>{stat.value.toLocaleString()}</div>
-                    <div className="text-sm text-hitman-400">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Achievements */}
-            <div className="bg-hitman-800/40 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-accent-red mb-4 flex items-center gap-2">
-                <Award className="w-5 h-5" /> الإنجازات
-              </h3>
-              <div className="flex flex-wrap gap-4">
-                {achievements.map((ach, idx) => (
+        )}
+
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left column: Profile card, action buttons, last seen */}
+            <div className="flex flex-col gap-6">
+              {/* Profile Card */}
+              <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-8 text-center animate-slide-up">
+                {/* Avatar */}
+                <div className="relative mb-6">
+                  {displayCharacter?.avatarUrl ? (
+                    <img
+                      src={displayCharacter.avatarUrl?.startsWith('http') ? displayCharacter.avatarUrl : backendUrl + displayCharacter.avatarUrl}
+                      alt="avatar"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-accent-red bg-hitman-800 mx-auto shadow-lg"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                        e.target.nextElementSibling.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
                   <div
-                    key={idx}
-                    className="flex items-center gap-2 bg-hitman-900/60 border border-accent-red/30 rounded-lg px-4 py-2"
+                    className={`w-32 h-32 rounded-full bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center text-5xl text-accent-red border-4 border-accent-red mx-auto shadow-lg ${displayCharacter?.avatarUrl ? "hidden" : "flex"}`}
                   >
-                    <ach.icon className="w-5 h-5 text-accent-red" />
-                    <span className="font-bold text-white">{ach.name}</span>
-                    <span className="text-xs text-hitman-300">{ach.description}</span>
+                    {
+                      (displayCharacter?.username ||
+                        "?")[0]
+                    }
                   </div>
-                ))}
+                  <div className="absolute -bottom-2 -right-2 bg-accent-red rounded-full p-2">
+                    <Crown className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+
+                {/* Basic Info */}
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <VipName isVIP={isVIP}>{displayCharacter.name || displayCharacter.username}</VipName>
+                  {character?.userId && (
+                    <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded ml-2">ID: {character.userId}</span>
+                  )}
+                </h2>
+                <p className="text-accent-red font-medium mb-1">
+                  لاعب جديد
+                </p>
+                {/* Email hidden for privacy */}
+
+                {/* Quote */}
+                {displayCharacter?.quote && (
+                  <div className="bg-hitman-800/50 rounded-lg p-4 mb-6">
+                    <span className="text-hitman-200 italic">{displayCharacter.quote}</span>
+                  </div>
+                )}
+
+                {/* Strength & Defense */}
+                <div className="flex justify-center gap-4 mb-4">
+                  <div className="flex items-center gap-1 text-accent-yellow font-bold">
+                    <Shield className="w-5 h-5" />
+                    <span>الدفاع:</span>
+                    <span>{displayCharacter.defense || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-accent-orange font-bold">
+                    <Zap className="w-5 h-5" />
+                    <span>القوة:</span>
+                    <span>{displayCharacter.strength || 0}</span>
+                  </div>
+                </div>
+              </div>
+              {/* Action Buttons (hide if viewing own profile) */}
+              {!isCurrentUser && (
+                <div className="flex flex-row justify-center gap-3">
+                  <button onClick={handleSendMessage} className="min-w-[120px] h-12 bg-accent-blue/20 text-accent-blue rounded-lg font-bold text-base" disabled={!character?.userId}>
+                    إرسال رسالة
+                  </button>
+                  <button
+                    className="min-w-[120px] h-12 bg-accent-red/20 text-accent-red rounded-lg font-bold text-base transition-all duration-200 hover:bg-accent-red/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={attackPlayer}
+                    disabled={attacking || !hudStats || hudStats.energy < 10}
+                    title={!hudStats || hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم" : undefined}
+                  >
+                    {attacking ? "..." : "هجوم"}
+                  </button>
+                  {/* Friendship Button Logic */}
+                  {isFriend ? (
+                    <button
+                      className="min-w-[120px] h-12 bg-accent-green/20 text-accent-green rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-green hover:bg-accent-green/30 hover:text-white transition-all duration-200"
+                      onClick={handleUnfriend}
+                      disabled={friendLoading}
+                    >
+                      <UserCheck className="w-5 h-5" /> صديقك
+                      <X className="w-4 h-4 ml-2 text-accent-red" />
+                    </button>
+                  ) : pendingStatus === 'sent' ? (
+                    <button
+                      className="min-w-[120px] h-12 bg-accent-yellow/20 text-accent-yellow rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-yellow cursor-not-allowed"
+                      disabled
+                    >
+                      <UserPlus className="w-5 h-5" /> بانتظار القبول
+                    </button>
+                  ) : pendingStatus === 'received' ? (
+                    <button
+                      className="min-w-[120px] h-12 bg-accent-blue/20 text-accent-blue rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-blue hover:bg-accent-blue/30 hover:text-white transition-all duration-200"
+                      onClick={handleAcceptFriend}
+                      disabled={friendLoading}
+                    >
+                      <UserPlus className="w-5 h-5" /> قبول الطلب
+                    </button>
+                  ) : (
+                    <button
+                      className="min-w-[120px] h-12 bg-accent-yellow/20 text-accent-yellow rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-yellow hover:bg-accent-yellow/30 hover:text-white transition-all duration-200"
+                      onClick={handleAddFriend}
+                      disabled={friendLoading}
+                    >
+                      <UserPlus className="w-5 h-5" /> إضافة صديق
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Last Active Card */}
+              <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
+                <div className="flex items-center justify-between w-full mb-2">
+                  <span className="text-lg font-bold text-white">
+                    {displayCharacter.lastActive
+                      ? new Date(displayCharacter.lastActive).toLocaleDateString("ar")
+                      : "---"}
+                  </span>
+                  <Clock className="w-6 h-6 text-accent-purple" />
+                </div>
+                <h3 className="text-hitman-300 text-lg">آخر نشاط</h3>
+                <p className="text-sm text-hitman-400">
+                  {(() => {
+                    if (!displayCharacter.lastActive) return "---";
+                    const last = new Date(displayCharacter.lastActive).getTime();
+                    const now = Date.now();
+                    const diff = now - last;
+                    if (diff < 5 * 60 * 1000) return "متصل حالياً";
+                    // Compute human readable
+                    const mins = Math.floor(diff / 60000);
+                    const hours = Math.floor(diff / 3600000);
+                    const days = Math.floor(diff / 86400000);
+                    if (mins < 60) return `آخر ظهور قبل ${mins} دقيقة`;
+                    if (hours < 24) return `آخر ظهور قبل ${hours} ساعة`;
+                    return `آخر ظهور قبل ${days} يوم`;
+                  })()}
+                </p>
+              </div>
+            </div>
+            {/* Right column: HP bar, stats, achievements */}
+            <div className="flex flex-col gap-6">
+              {/* HP Bar */}
+              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
+                <span className="text-hitman-200 mb-1">الصحة</span>
+                <div className="w-full bg-hitman-700 rounded-full h-4 overflow-hidden">
+                  <div
+                    className="bg-accent-green h-4 rounded-full transition-all duration-500"
+                    style={{ width: `${healthPercent}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs mt-1">
+                  {displayCharacter.hp} / {displayCharacter.maxHp}
+                </span>
+              </div>
+              {/* Stats */}
+              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-6 flex items-center">
+                  <Activity className="w-6 h-6 mr-3 text-accent-blue" />
+                  الإحصائيات
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  {stats.map((stat, index) => (
+                    <div key={index} className="text-center">
+                      <div className="bg-hitman-800/50 rounded-lg p-4 mb-2">
+                        <stat.icon className={`w-8 h-8 mx-auto ${stat.color}`} />
+                      </div>
+                      <div className={`text-2xl font-bold ${stat.color}`}>{stat.value.toLocaleString()}</div>
+                      <div className="text-sm text-hitman-400">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Achievements */}
+              <div className="bg-hitman-800/40 rounded-xl p-6">
+                <h3 className="text-lg font-bold text-accent-red mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5" /> الإنجازات
+                </h3>
+                <div className="flex flex-wrap gap-4">
+                  {achievements.map((ach, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 bg-hitman-900/60 border border-accent-red/30 rounded-lg px-4 py-2"
+                    >
+                      <ach.icon className="w-5 h-5 text-accent-red" />
+                      <span className="font-bold text-white">{ach.name}</span>
+                      <span className="text-xs text-hitman-300">{ach.description}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+      {attacking && (
+        <Modal isOpen={attacking}>
+          <div className="flex flex-col items-center justify-center p-8">
+            <Sword className="w-16 h-16 text-accent-red animate-bounce mb-4" />
+            <div className="text-2xl font-bold text-white mb-2">جاري تنفيذ القتال...</div>
+            <div className="text-hitman-300">يرجى الانتظار حتى انتهاء المعركة</div>
+            <div className="mt-6">
+              <div className="loading-spinner"></div>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 

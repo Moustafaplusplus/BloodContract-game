@@ -78,7 +78,7 @@ export class AchievementService {
         }
       });
     }
-    console.log(`✅ Seeded ${this.ACHIEVEMENT_RULES.length} achievements`);
+            // Achievements seeded successfully
   }
 
   // Get all achievements
@@ -143,7 +143,7 @@ export class AchievementService {
           xpReward: rule.xp
         });
 
-        console.log(`🏆 Awarded ${rule.key} to character ${characterId}`);
+        // Achievement awarded
       }
     }
 
@@ -191,7 +191,7 @@ export class AchievementService {
   // Start achievement checker cron job
   static startAchievementChecker() {
     cron.schedule('0 * * * *', async () => {
-      console.log('[ACH] Scanning achievements...');
+      // Scanning achievements
       try {
         const characters = await Character.findAll();
         for (const character of characters) {
@@ -205,7 +205,7 @@ export class AchievementService {
 
   // Socket notification helper
   static socketNotify(characterId, achievementKey) {
-    console.log(`[SOCKET] Notify character ${characterId} unlocked ${achievementKey}`);
+              // Notify character of achievement unlock
     // e.g. io.to(characterId).emit("achievementUnlocked", { key: achievementKey });
   }
 } 

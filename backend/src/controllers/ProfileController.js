@@ -8,7 +8,7 @@ export class ProfileController {
       res.json(profile);
     } catch (error) {
       console.error('Get own profile error:', error);
-      if (error.message === 'User not found') {
+      if (error.message === 'User not found' || error.message === 'Character not found') {
         return res.status(404).json({ error: error.message });
       }
       res.status(500).json({ error: 'Failed to get profile' });
@@ -38,7 +38,7 @@ export class ProfileController {
       res.json(profile);
     } catch (error) {
       console.error('Get user profile by username error:', error);
-      if (error.message === 'User not found') {
+      if (error.message === 'User not found' || error.message === 'Character not found') {
         return res.status(404).json({ error: error.message });
       }
       res.status(500).json({ error: 'Failed to get user profile' });

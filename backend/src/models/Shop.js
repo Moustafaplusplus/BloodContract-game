@@ -4,7 +4,6 @@ import { sequelize } from '../config/db.js';
 export class Weapon extends Model {}
 Weapon.init({
   name:         DataTypes.STRING,
-  type:         DataTypes.STRING,   // melee | rifle | sniper …
   damage:       DataTypes.INTEGER,
   energyBonus:  DataTypes.INTEGER,  // extra max-energy
   price:        DataTypes.INTEGER,
