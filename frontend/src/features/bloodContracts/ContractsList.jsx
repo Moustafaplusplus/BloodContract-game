@@ -1,9 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+
+function getRemainingTime(expiry) {
+  const now = new Date();
+  const end = new Date(expiry);
+  const diff = end - now;
+  if (diff <= 0) return 'انتهى';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return `${hours.toString().padStart(2, '0')}:${minutes
+    .toString()
+    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
 
 const ContractsList = ({ onAttack }) => {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -31,11 +46,17 @@ const ContractsList = ({ onAttack }) => {
     fetchContracts();
   }, []);
 
+  // Timer to update countdown every second
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (loading) {
-    return <div style={{ color: '#fff', textAlign: 'center', margin: '2rem' }}>جاري التحميل...</div>;
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل العقود..." />;
   }
   if (error) {
-    return <div style={{ color: '#f55', textAlign: 'center', margin: '2rem' }}>{error}</div>;
+    return <LoadingOrErrorPlaceholder error errorText={error} />;
   }
   if (contracts.length === 0) {
     return <div style={{ color: '#fff', textAlign: 'center', margin: '2rem' }}>لا توجد عقود متاحة حالياً.</div>;
@@ -62,6 +83,7 @@ const ContractsList = ({ onAttack }) => {
             <th style={{ color: '#fff', borderBottom: '1px solid #a00', padding: '0.5rem' }}>الشهرة</th>
             <th style={{ color: '#fff', borderBottom: '1px solid #a00', padding: '0.5rem' }}>المستوى</th>
             <th style={{ color: '#fff', borderBottom: '1px solid #a00', padding: '0.5rem' }}>السعر</th>
+            <th style={{ color: '#fff', borderBottom: '1px solid #a00', padding: '0.5rem' }}>الوقت المتبقي</th>
             <th style={{ color: '#fff', borderBottom: '1px solid #a00', padding: '0.5rem' }}>الحالة</th>
             <th style={{ color: '#fff', borderBottom: '1px solid #a00', padding: '0.5rem' }}></th>
           </tr>
@@ -73,6 +95,7 @@ const ContractsList = ({ onAttack }) => {
               <td style={{ padding: '0.5rem', color: '#fff' }}>{contract.target?.fame}</td>
               <td style={{ padding: '0.5rem', color: '#fff' }}>{contract.target?.level}</td>
               <td style={{ padding: '0.5rem', color: '#fff' }}>${contract.price}</td>
+              <td style={{ padding: '0.5rem', color: '#fff' }}>{getRemainingTime(contract.expiresAt)}</td>
               <td style={{ padding: '0.5rem', color: '#fff' }}>
                 {contract.isPoster ? 'صاحب العقد' : contract.isTarget ? 'هدف العقد' : 'متاح'}
               </td>

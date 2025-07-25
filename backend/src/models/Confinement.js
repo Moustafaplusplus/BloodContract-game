@@ -13,9 +13,9 @@ export const Jail = sequelize.define("Jail", {
 export const Hospital = sequelize.define("Hospital", {
   userId:     { type: DataTypes.INTEGER, allowNull: false },
   minutes:    { type: DataTypes.INTEGER, allowNull: false },
-  hpLoss:     { type: DataTypes.INTEGER, allowNull: false, field: "hpLost" },
+  hpLoss:     { type: DataTypes.INTEGER, allowNull: false },
   healRate:   { type: DataTypes.INTEGER, allowNull: false, defaultValue: 3 },
   startedAt:  { type: DataTypes.DATE,    allowNull: false, defaultValue: DataTypes.NOW },
-  releasedAt: { type: DataTypes.DATE,    allowNull: false, field: "releaseAt" },
+  releasedAt: { type: DataTypes.DATE,    allowNull: false },
   crimeId:    { type: DataTypes.INTEGER, allowNull: true },
 }, { tableName: "Hospitals", timestamps: false }); 

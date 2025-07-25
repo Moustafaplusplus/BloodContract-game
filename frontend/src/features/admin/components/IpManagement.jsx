@@ -26,27 +26,47 @@ export default function IpManagement() {
   // Fetch blocked IPs
   const { data: blockedIps, isLoading: blockedIpsLoading } = useQuery({
     queryKey: ['admin-blocked-ips'],
-    queryFn: () => axios.get('/api/admin/system/ips/blocked').then(res => res.data),
+    queryFn: () => {
+      const token = localStorage.getItem('jwt');
+      return axios.get('/api/admin/ips/blocked', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(res => res.data);
+    },
     staleTime: 30 * 1000,
   });
 
   // Fetch IP statistics
   const { data: ipStats, isLoading: ipStatsLoading } = useQuery({
     queryKey: ['admin-ip-stats'],
-    queryFn: () => axios.get('/api/admin/system/ips/stats').then(res => res.data),
+    queryFn: () => {
+      const token = localStorage.getItem('jwt');
+      return axios.get('/api/admin/ips/stats', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(res => res.data);
+    },
     staleTime: 30 * 1000,
   });
 
   // Fetch flagged IPs (IPs used by more than one user)
   const { data: flaggedIps, isLoading: flaggedIpsLoading } = useQuery({
     queryKey: ['admin-flagged-ips'],
-    queryFn: () => axios.get('/api/admin/system/ips/flagged').then(res => res.data),
+    queryFn: () => {
+      const token = localStorage.getItem('jwt');
+      return axios.get('/api/admin/ips/flagged', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(res => res.data);
+    },
     staleTime: 30 * 1000,
   });
 
   // Block IP mutation
   const blockIpMutation = useMutation({
-    mutationFn: ({ ipAddress, reason }) => axios.post('/api/admin/system/ips/block', { ipAddress, reason }),
+    mutationFn: ({ ipAddress, reason }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.post('/api/admin/ips/block', { ipAddress, reason }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-blocked-ips']);
       queryClient.invalidateQueries(['admin-ip-stats']);
@@ -61,7 +81,12 @@ export default function IpManagement() {
 
   // Unblock IP mutation
   const unblockIpMutation = useMutation({
-    mutationFn: ({ ipAddress }) => axios.delete(`/api/admin/system/ips/${ipAddress}/unblock`),
+    mutationFn: ({ ipAddress }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.delete(`/api/admin/ips/${ipAddress}/unblock`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-blocked-ips']);
       queryClient.invalidateQueries(['admin-ip-stats']);

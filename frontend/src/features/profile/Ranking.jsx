@@ -127,7 +127,13 @@ export default function Ranking() {
                           href={player.username ? `/dashboard/profile/${player.username}` : '/dashboard/profile'}
                           className={nameClass + ' hover:underline'}
                         >
-                          {player.isVIP ? <VipName>{player.username || player.name}</VipName> : (player.username || player.name)}
+                          {player.isVIP ? (
+                            <VipName isVIP={true} className="compact">
+                              {player.username || player.name}
+                            </VipName>
+                          ) : (
+                            player.username || player.name
+                          )}
                         </a>
                       </td>
                       <td className="py-2 px-2">{player.level ?? '-'}</td>

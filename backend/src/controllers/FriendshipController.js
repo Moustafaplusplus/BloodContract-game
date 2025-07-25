@@ -109,6 +109,33 @@ const FriendshipController = {
       res.status(500).json({ error: err.message });
     }
   },
+  // Get friends of any user by userId
+  async listFriendsOfUser(req, res) {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
+      const friendships = await Friendship.findAll({
+        where: {
+          status: 'ACCEPTED',
+          [Op.or]: [
+            { requesterId: userId },
+            { addresseeId: userId }
+          ]
+        },
+        include: [
+          { association: 'Requester', attributes: ['id', 'username'] },
+          { association: 'Addressee', attributes: ['id', 'username'] }
+        ]
+      });
+      const friends = friendships.map(f => {
+        let friend = f.Requester.id === userId ? f.Addressee : f.Requester;
+        return { id: friend.id, username: friend.username };
+      });
+      res.json(friends);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
 };
 
 export default FriendshipController; 

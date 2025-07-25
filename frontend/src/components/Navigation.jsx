@@ -99,11 +99,7 @@ const UserPlus = () => (
   </svg>
 );
 
-const CalendarIcon = () => (
-  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
-  </svg>
-);
+
 
 const ChatIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -165,15 +161,17 @@ const ProfileIcon = () => (
   </svg>
 );
 
-const HistoryIcon = () => (
-  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
-  </svg>
-);
+
 
 const MissionIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
     <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5zM12 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+  </svg>
+);
+
+const TasksIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
   </svg>
 );
 
@@ -227,7 +225,6 @@ export default function Navigation({ isOpen, setIsOpen }) {
     { to: "/dashboard/bank", label: "البنك", icon: BankIcon },
     { to: "/dashboard/shop", label: "المتجر", icon: ShoppingIcon },
     { to: "/dashboard/special-shop", label: "سوق العملة السوداء", icon: ShoppingIcon, className: "glow-red-nav" },
-    { to: "/dashboard/bank/history", label: "سجل البنك", icon: HistoryIcon },
     { to: "/dashboard/black-market", label: "السوق السوداء", icon: MarketIcon },
     { to: "/dashboard/jobs", label: "الوظائف", icon: WorkIcon },
     { to: "/dashboard/inventory", label: "الحقيبة", icon: BackpackIcon },
@@ -238,8 +235,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
     { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus },
     { to: "/dashboard/messages", label: "الرسائل", icon: ChatIcon },
     { to: "/dashboard/global-chat", label: "الدردشة العامة", icon: ChatIcon },
-    { to: "/dashboard/events", label: "الفعاليات", icon: CalendarIcon },
-    { to: "/dashboard/achievements", label: "الإنجازات", icon: TrophyIcon },
+    { to: "/dashboard/tasks", label: "المهام", icon: TasksIcon },
     { to: "/dashboard/ministry-mission", label: "مهام الوزارة", icon: MissionIcon },
     { to: "/dashboard/suggestions", label: "الاقتراحات", icon: SearchIcon },
     {

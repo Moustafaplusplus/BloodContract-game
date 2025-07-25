@@ -1,10 +1,11 @@
 import { Dog, UserDog } from '../models/Dog.js';
 import { Character } from '../models/Character.js';
 import { sequelize } from '../config/db.js';
+import { TaskService } from './TaskService.js';
 
 export class DogService {
-  static async getAllDogs() {
-    return await Dog.findAll({ order: [['cost', 'ASC']] });
+  static async getAllDogs(filter = {}) {
+    return await Dog.findAll({ where: filter });
   }
 
   static async getUserDogs(userId) {
@@ -30,11 +31,21 @@ export class DogService {
         Dog.findByPk(dogId, { transaction: t })
       ]);
       if (!character || !dog) throw new Error('Character or dog not found');
-      if (character.money < dog.cost) throw new Error('Not enough money');
+      
       const alreadyOwned = await UserDog.findOne({ where: { userId, dogId }, transaction: t });
       if (alreadyOwned) throw new Error('You already own this dog');
+      
+      // Check currency and deduct appropriate amount
+      if (dog.currency === 'blackcoin') {
+        if (character.blackcoins < dog.cost) throw new Error('Not enough blackcoins');
+        character.blackcoins -= dog.cost;
+      } else {
+        if (character.money < dog.cost) throw new Error('Not enough money');
+        character.money -= dog.cost;
+      }
+      
       await UserDog.create({ userId, dogId, isActive: false }, { transaction: t });
-      character.money -= dog.cost;
+      
       // Optionally auto-activate if no dog active
       const activeDog = await UserDog.findOne({ where: { userId, isActive: true }, transaction: t });
       if (!activeDog) {
@@ -42,6 +53,8 @@ export class DogService {
       }
       await character.save({ transaction: t });
       await t.commit();
+      const dogs = await UserDog.findAll({ where: { userId } });
+      await TaskService.updateProgress(userId, 'dogs_owned', dogs.length);
       return dog;
     } catch (error) {
       await t.rollback();
@@ -94,6 +107,8 @@ export class DogService {
       await character.save({ transaction: t });
       await userDog.destroy({ transaction: t });
       await t.commit();
+      const dogsAfter = await UserDog.findAll({ where: { userId } });
+      await TaskService.updateProgress(userId, 'dogs_owned', dogsAfter.length);
       return { refund, remainingMoney: character.money };
     } catch (error) {
       await t.rollback();

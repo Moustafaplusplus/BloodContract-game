@@ -1,6 +1,7 @@
 import { Suggestion } from '../models/Suggestion.js';
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
+import { TaskService } from './TaskService.js';
 
 export class SuggestionService {
   // Create a new suggestion
@@ -18,6 +19,8 @@ export class SuggestionService {
       message,
       status: 'unread'
     });
+
+    await TaskService.updateProgress(userId, 'suggestions_submitted', 1);
 
     return suggestion;
   }

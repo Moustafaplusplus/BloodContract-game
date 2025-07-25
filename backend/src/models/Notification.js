@@ -15,7 +15,29 @@ Notification.init({
     allowNull: false
   },
   type: {
-    type: DataTypes.ENUM('FRIEND_REQUEST', 'MESSAGE', 'ACHIEVEMENT', 'SYSTEM'),
+    type: DataTypes.ENUM(
+      'ATTACKED',
+      'HOSPITALIZED', 
+      'JAILED',
+      'BANK_INTEREST',
+      'JOB_SALARY',
+      'BLACK_MARKET_SOLD',
+      'MESSAGE_RECEIVED',
+      'FRIEND_REQUEST_RECEIVED',
+      'FRIEND_REQUEST_ACCEPTED',
+      'CRIME_COOLDOWN_ENDED',
+      'GYM_COOLDOWN_ENDED',
+      'CONTRACT_EXECUTED',
+      'CONTRACT_FULFILLED',
+      'VIP_EXPIRED',
+      'VIP_ACTIVATED',
+      'OUT_OF_HOSPITAL',
+      'OUT_OF_JAIL',
+      'GANG_JOIN_REQUEST',
+      'GANG_MEMBER_LEFT',
+      'ASSASSINATED',
+      'SYSTEM'
+    ),
     allowNull: false
   },
   title: {

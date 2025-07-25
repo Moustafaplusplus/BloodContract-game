@@ -38,12 +38,34 @@ export class UserService {
     return { token };
   }
 
+  // Link existing account to Google
+  static async linkToGoogle(userId, googleId) {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('المستخدم غير موجود');
+    }
+    
+    user.googleId = googleId;
+    await user.save();
+    
+    return user;
+  }
+
   // Login user
   static async login(credentials, req) {
     const { email, password } = credentials;
     
     const user = await User.findOne({ where: { email } });
-    if (!user || !(await user.validPassword(password))) {
+    if (!user) {
+      throw new Error('بيانات الدخول غير صحيحة');
+    }
+    
+    // Check if user has a password (not Google-only user)
+    if (!user.password || user.password.length < 6) {
+      throw new Error('هذا الحساب مسجل عبر جوجل. يرجى استخدام تسجيل الدخول بحساب جوجل');
+    }
+    
+    if (!(await user.validPassword(password))) {
       throw new Error('بيانات الدخول غير صحيحة');
     }
 

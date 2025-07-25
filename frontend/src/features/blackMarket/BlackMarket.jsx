@@ -217,9 +217,11 @@ export default function BlackMarket() {
       <h1 className="text-2xl font-bold text-red-600 mb-4">🖤 السوق السوداء</h1>
       {/* Blackcoin Balance */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="inline-block w-5 h-5 rounded-full bg-gradient-to-br from-black via-zinc-900 to-zinc-800 border-2 border-accent-red flex items-center justify-center mr-1">
-          <span className="text-xs text-accent-red font-bold">B</span>
-        </span>
+        <img 
+          src="/images/blackcoins-icon.png" 
+          alt="Blackcoin"
+          className="w-5 h-5 object-contain mr-1"
+        />
         <span className="font-mono text-lg text-accent-red">{stats?.blackcoins?.toLocaleString() ?? 0}</span>
         <span className="text-hitman-300">بلاك كوين</span>
       </div>

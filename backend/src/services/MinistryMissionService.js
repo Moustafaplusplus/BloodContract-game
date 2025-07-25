@@ -1,5 +1,6 @@
 import { MinistryMission, UserMinistryMission, Character } from '../models/index.js';
 import { Op } from 'sequelize';
+import { TaskService } from './TaskService.js';
 
 export class MinistryMissionService {
   // Calculate progressive rewards based on mission level
@@ -222,6 +223,9 @@ export class MinistryMissionService {
           newMaxEnergy: character.maxEnergy
         };
       }
+
+      // Track ministry mission completion for tasks
+      await TaskService.updateProgress(userId, 'ministry_missions_completed', 1);
 
       await transaction.commit();
 

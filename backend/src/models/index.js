@@ -24,7 +24,9 @@ import { Suggestion } from './Suggestion.js';
 import { GlobalMessage } from './GlobalMessage.js';
 import BloodContractFactory from './BloodContract.js';
 import { sequelize } from '../config/db.js';
-// Removed import of Social.js and Notification.js
+import { ProfileRating } from './ProfileRating.js';
+import { Task, UserTaskProgress } from './Task.js';
+import { Notification } from './Notification.js';
 
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 Message.belongsTo(User, { as: 'receiver', foreignKey: 'receiverId' });
@@ -48,6 +50,9 @@ Suggestion.belongsTo(User, { foreignKey: 'userId' });
 if (BloodContract.associate) {
   BloodContract.associate({ User });
 }
+
+// Set up Notification associations
+Notification.belongsTo(User, { foreignKey: 'userId' });
 
 // Export all models
 export {
@@ -79,5 +84,9 @@ export {
   UserMinistryMission,
   Suggestion,
   GlobalMessage,
-  BloodContract
+  BloodContract,
+  ProfileRating,
+  Task,
+  UserTaskProgress,
+  Notification
 }; 

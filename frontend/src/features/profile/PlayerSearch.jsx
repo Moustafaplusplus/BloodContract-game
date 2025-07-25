@@ -5,6 +5,7 @@ import { extractErrorMessage } from "@/utils/errorHandler";
 import './vipSparkle.css';
 import VipName from './VipName.jsx';
 import { Star, Award, Calendar, Target, User } from 'lucide-react';
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 
 function StatBadge({ icon: Icon, label, value, color }) {
   return (
@@ -23,7 +24,7 @@ export default function PlayerSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
   const getAvatarUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
@@ -46,6 +47,13 @@ export default function PlayerSearch() {
       })
       .finally(() => setLoading(false));
   }, [query, sort]);
+
+  if (loading) {
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل اللاعبين..." />;
+  }
+  if (error) {
+    return <LoadingOrErrorPlaceholder error errorText={error} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
@@ -72,14 +80,7 @@ export default function PlayerSearch() {
             <option value="lastActive">آخر نشاط</option>
           </select>
         </div>
-        {error && (
-          <div className="text-center py-4 text-red-400 text-lg animate-fade-in">
-            {error}
-          </div>
-        )}
-        {loading ? (
-          <div className="text-center py-12 text-accent-red animate-pulse text-lg">جاري التحميل...</div>
-        ) : players.length === 0 && !error ? (
+        {players.length === 0 && !error ? (
           <div className="text-center py-12 text-hitman-400 text-lg">لا يوجد نتائج مطابقة</div>
         ) : (
           <div className="flex flex-col gap-6">
@@ -122,7 +123,9 @@ export default function PlayerSearch() {
                   {/* Info */}
                   <div className="flex-1 min-w-0 w-full sm:w-auto text-center sm:text-right flex flex-col gap-2">
                     <div className="flex items-center gap-2 justify-center sm:justify-start">
-                      <VipName isVIP={isVIP}>{player.username}</VipName>
+                      <VipName isVIP={isVIP} className="compact">
+                        {player.username}
+                      </VipName>
                       {player.name && (
                         <span className="text-xs text-hitman-400 font-bold">({player.name})</span>
                       )}

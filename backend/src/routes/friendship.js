@@ -12,5 +12,7 @@ router.get('/is-friend', auth, FriendshipController.isFriend);
 router.get('/pending', auth, FriendshipController.pending);
 router.post('/accept', auth, FriendshipController.accept);
 router.post('/reject', auth, FriendshipController.reject);
+// Add this route to get friends of any user by userId
+router.get('/list/:userId', auth, FriendshipController.listFriendsOfUser);
 
 export default router; 

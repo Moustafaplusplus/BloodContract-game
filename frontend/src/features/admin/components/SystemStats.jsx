@@ -12,7 +12,12 @@ export default function SystemStats() {
   // Fetch system stats
   const { data: systemStats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-system-stats'],
-    queryFn: () => axios.get('/api/admin/system/stats').then(res => res.data),
+    queryFn: () => {
+      const token = localStorage.getItem('jwt');
+      return axios.get('/api/admin/stats', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(res => res.data);
+    },
     staleTime: 60 * 1000,
   });
 

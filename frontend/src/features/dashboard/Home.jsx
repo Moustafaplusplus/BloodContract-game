@@ -2,44 +2,100 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/hooks/useAuth";
+import { jwtDecode } from "jwt-decode";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Target,
   Zap,
-  Heart,
-  Star,
   DollarSign,
   Shield,
-  Car,
-  Home as HomeIcon,
+  Trophy,
   Users,
+  Activity,
   TrendingUp,
+  Star,
+  Heart,
+  Battery,
   Award,
+  Calendar,
   Clock,
   MapPin,
+  Crown,
+  Home as HomeIcon,
+  User,
+  Sword,
+  Skull,
+  Car,
   Briefcase,
-  Activity,
-  Calendar,
+  Building2,
+  Lock,
+  Dumbbell,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import Modal from "@/components/Modal";
 import Suggestions from '../suggestions/Suggestions';
-import { useSocket } from "@/hooks/useSocket";
-import { useQueryClient } from "@tanstack/react-query";
+
+// Helper function to format time
+const formatTime = (seconds) => {
+  if (seconds <= 0) return "جاهز";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
 export default function Home() {
-  // const { user } = useAuth();
+  const { token } = useAuth();
   const { socket } = useSocket();
   const queryClient = useQueryClient();
+
+  // Get userId from token for cache invalidation
+  const userId = token ? (() => {
+    try {
+      const { id } = jwtDecode(token);
+      return id;
+    } catch {
+      return null;
+    }
+  })() : null;
+
+  console.log('[Home] Current userId:', userId, 'token:', token ? 'Present' : 'Not found');
+
+  // Reset all state when user changes
+  const [key, setKey] = React.useState(0);
+  
+  React.useEffect(() => {
+    if (userId) {
+      console.log('[Home] User changed, resetting component for user:', userId);
+      setKey(prev => prev + 1);
+      // Clear all character-related queries
+      queryClient.removeQueries(["character"]);
+      queryClient.removeQueries(["hospitalStatus"]);
+      queryClient.removeQueries(["profile"]);
+    }
+  }, [userId, queryClient]);
 
   const {
     data: character,
     isLoading,
-    // error,
+    error,
   } = useQuery({
-    queryKey: ["character"],
+    queryKey: ["character", userId, key], // Include key to force refetch
     queryFn: () => axios.get("/api/character").then((res) => res.data),
-    staleTime: 1 * 60 * 1000,
+    staleTime: 0, // No stale time - always fetch fresh data
     retry: false,
+    enabled: !!userId, // Only run query when we have a userId
+  });
+
+  console.log('[Home] Character data received:', {
+    username: character?.username || 'No username',
+    level: character?.level || 'No level',
+    userId: character?.userId || 'No userId',
+    hospitalStatus: character?.hospitalStatus,
+    jailStatus: character?.jailStatus,
+    crimeCooldown: character?.crimeCooldown,
+    gymCooldown: character?.gymCooldown
   });
 
   const [showWelcomeModal, setShowWelcomeModal] = React.useState(false);
@@ -56,7 +112,8 @@ export default function Home() {
   React.useEffect(() => {
     if (!socket) return;
     const refetchCharacter = () => {
-      queryClient.invalidateQueries(["character"]);
+      console.log('[Home] Socket HUD update received, invalidating character query');
+      queryClient.invalidateQueries(["character", userId]);
     };
     socket.on('hud:update', refetchCharacter);
     const pollInterval = setInterval(refetchCharacter, 10000);
@@ -64,7 +121,7 @@ export default function Home() {
       socket.off('hud:update', refetchCharacter);
       clearInterval(pollInterval);
     };
-  }, [socket, queryClient]);
+  }, [socket, queryClient, userId]);
 
   // Mock data for design purposes when backend is not available
   const mockCharacter = {
@@ -80,6 +137,10 @@ export default function Home() {
     crimesCommitted: 23,
     fightsWon: 12,
     rank: "Thug",
+    hospitalStatus: { inHospital: false, remainingSeconds: 0 },
+    jailStatus: { inJail: false, remainingSeconds: 0 },
+    crimeCooldown: 0,
+    gymCooldown: 0,
   };
 
   // Fame compatibility: support both top-level and nested fame
@@ -102,6 +163,25 @@ export default function Home() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-96 bg-gradient-to-br from-hitman-900 to-black">
+        <div className="text-center">
+          <div className="bg-red-900/50 border border-red-700 rounded-lg p-6 mb-6">
+            <p className="text-red-400 text-lg mb-2">⚠️ تعذر الاتصال بالخادم أو تحميل بيانات HUD</p>
+            <p className="text-hitman-300 text-sm">يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-accent-red hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const healthPercent = displayCharacter.maxHp
     ? (displayCharacter.hp / displayCharacter.maxHp) * 100
     : 0;
@@ -112,18 +192,28 @@ export default function Home() {
     ? (displayCharacter.exp / displayCharacter.nextLevelExp) * 100
     : 0;
 
+  // Extract status data
+  const hospitalStatus = displayCharacter.hospitalStatus || { inHospital: false, remainingSeconds: 0 };
+  const jailStatus = displayCharacter.jailStatus || { inJail: false, remainingSeconds: 0 };
+  const crimeCooldown = displayCharacter.crimeCooldown || 0;
+  const gymCooldown = displayCharacter.gymCooldown || 0;
+
   const quickActions = [
     {
       icon: Target,
       label: "ارتكاب جريمة",
       href: "/crimes",
       color: "bg-accent-red hover:bg-red-700",
+      disabled: crimeCooldown > 0,
+      cooldown: crimeCooldown,
     },
     {
       icon: Zap,
       label: "صالة الألعاب",
       href: "/gym",
       color: "bg-accent-blue hover:bg-blue-700",
+      disabled: gymCooldown > 0,
+      cooldown: gymCooldown,
     },
     {
       icon: DollarSign,
@@ -133,7 +223,7 @@ export default function Home() {
     },
     {
       icon: Shield,
-      label: "��لمتجر",
+      label: "المتجر",
       href: "/shop",
       color: "bg-accent-purple hover:bg-purple-700",
     },
@@ -322,6 +412,73 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Status Indicators Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Hospital Status */}
+            <div className={`bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border rounded-xl p-6 ${
+              hospitalStatus.inHospital ? 'border-red-700' : 'border-hitman-700'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <Building2 className={`w-8 h-8 ${hospitalStatus.inHospital ? 'text-red-400' : 'text-hitman-400'}`} />
+                <span className={`text-2xl font-bold ${hospitalStatus.inHospital ? 'text-red-400' : 'text-green-400'}`}>
+                  {hospitalStatus.inHospital ? 'في' : 'خارج'}
+                </span>
+              </div>
+              <h3 className="text-hitman-300 mb-2">المستشفى</h3>
+              <p className={`text-sm font-mono ${hospitalStatus.inHospital ? 'text-red-400' : 'text-green-400'}`}>
+                {hospitalStatus.inHospital ? formatTime(hospitalStatus.remainingSeconds) : 'جاهز'}
+              </p>
+            </div>
+
+            {/* Jail Status */}
+            <div className={`bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border rounded-xl p-6 ${
+              jailStatus.inJail ? 'border-red-700' : 'border-hitman-700'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <Lock className={`w-8 h-8 ${jailStatus.inJail ? 'text-red-400' : 'text-hitman-400'}`} />
+                <span className={`text-2xl font-bold ${jailStatus.inJail ? 'text-red-400' : 'text-green-400'}`}>
+                  {jailStatus.inJail ? 'في' : 'خارج'}
+                </span>
+              </div>
+              <h3 className="text-hitman-300 mb-2">السجن</h3>
+              <p className={`text-sm font-mono ${jailStatus.inJail ? 'text-red-400' : 'text-green-400'}`}>
+                {jailStatus.inJail ? formatTime(jailStatus.remainingSeconds) : 'جاهز'}
+              </p>
+            </div>
+
+            {/* Crime Cooldown */}
+            <div className={`bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border rounded-xl p-6 ${
+              crimeCooldown > 0 ? 'border-red-700' : 'border-hitman-700'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <Target className={`w-8 h-8 ${crimeCooldown > 0 ? 'text-red-400' : 'text-hitman-400'}`} />
+                <span className={`text-2xl font-bold ${crimeCooldown > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {crimeCooldown > 0 ? 'CD' : 'جاهز'}
+                </span>
+              </div>
+              <h3 className="text-hitman-300 mb-2">الجرائم</h3>
+              <p className={`text-sm font-mono ${crimeCooldown > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {formatTime(crimeCooldown)}
+              </p>
+            </div>
+
+            {/* Gym Cooldown */}
+            <div className={`bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border rounded-xl p-6 ${
+              gymCooldown > 0 ? 'border-red-700' : 'border-hitman-700'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <Dumbbell className={`w-8 h-8 ${gymCooldown > 0 ? 'text-red-400' : 'text-hitman-400'}`} />
+                <span className={`text-2xl font-bold ${gymCooldown > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {gymCooldown > 0 ? 'CD' : 'جاهز'}
+                </span>
+              </div>
+              <h3 className="text-hitman-300 mb-2">النادي</h3>
+              <p className={`text-sm font-mono ${gymCooldown > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {formatTime(gymCooldown)}
+              </p>
+            </div>
+          </div>
+
           {/* Quick Actions */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-6 flex items-center">
@@ -333,10 +490,24 @@ export default function Home() {
                 <Link
                   key={index}
                   to={action.href}
-                  className={`${action.color} rounded-xl p-6 text-center transition-all duration-300 transform hover:scale-105 hover:shadow-lg group`}
+                  className={`${action.color} rounded-xl p-6 text-center transition-all duration-300 transform hover:scale-105 hover:shadow-lg group relative ${
+                    action.disabled ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  onClick={(e) => {
+                    if (action.disabled) {
+                      e.preventDefault();
+                    }
+                  }}
                 >
                   <action.icon className="w-8 h-8 mx-auto mb-3 group-hover:scale-110 transition-transform" />
                   <span className="text-sm font-medium">{action.label}</span>
+                  {action.disabled && action.cooldown > 0 && (
+                    <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                      <span className="text-xs font-mono text-white">
+                        {formatTime(action.cooldown)}
+                      </span>
+                    </div>
+                  )}
                 </Link>
               ))}
             </div>

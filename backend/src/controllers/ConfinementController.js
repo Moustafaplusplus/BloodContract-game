@@ -8,7 +8,10 @@ export class ConfinementController {
       res.json(status);
     } catch (error) {
       console.error('Jail status error:', error);
-      res.sendStatus(500);
+      res.status(500).json({ 
+        error: 'Failed to get jail status',
+        details: error.message 
+      });
     }
   }
 
@@ -31,11 +34,17 @@ export class ConfinementController {
   // Hospital endpoints
   static async getHospitalStatus(req, res) {
     try {
+      console.log('[HOSPITAL] Getting status for user:', req.user.id);
       const status = await ConfinementService.getHospitalStatus(req.user.id);
+      console.log('[HOSPITAL] Status result:', status);
       res.json(status);
     } catch (error) {
-      console.error('Hospital status error:', error);
-      res.sendStatus(500);
+      console.error('[HOSPITAL] Hospital status error:', error);
+      console.error('[HOSPITAL] Error stack:', error.stack);
+      res.status(500).json({ 
+        error: 'Failed to get hospital status',
+        details: error.message 
+      });
     }
   }
 
@@ -50,7 +59,11 @@ export class ConfinementController {
       res.json(status);
     } catch (error) {
       console.error('Hospital status for user error:', error);
-      res.sendStatus(500);
+      // Return a more specific error response instead of 500
+      res.status(500).json({ 
+        error: 'Failed to get hospital status',
+        details: error.message 
+      });
     }
   }
 

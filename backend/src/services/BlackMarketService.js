@@ -3,6 +3,9 @@ import { Character } from '../models/Character.js';
 import { InventoryItem } from '../models/Inventory.js';
 import { User } from '../models/User.js';
 import { sequelize } from '../config/db.js';
+import { TaskService } from './TaskService.js';
+import { emitNotification } from '../socket.js';
+import { NotificationService } from './NotificationService.js';
 
 export class BlackMarketService {
   // Seed default black market items
@@ -136,7 +139,22 @@ export class BlackMarketService {
         totalCost
       }, { transaction: t });
 
+      await TaskService.updateProgress(userId, 'blackmarket_items_bought', quantity);
       await t.commit();
+      
+      // Create notification for black market purchase
+      try {
+        const notification = await NotificationService.createBlackMarketSoldNotification(
+          userId,
+          item.name,
+          totalCost
+        );
+        emitNotification(userId, notification);
+      } catch (notificationError) {
+        console.error('[BlackMarketService] Notification error:', notificationError);
+        // Continue even if notifications fail
+      }
+      
       return { item, quantity, totalCost, remainingMoney: character.money, remainingBlackcoins: character.blackcoins };
     } catch (error) {
       await t.rollback();

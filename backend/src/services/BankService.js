@@ -1,6 +1,9 @@
 import { BankAccount, BankTxn } from '../models/Bank.js';
 import { Character } from '../models/Character.js';
 import { sequelize } from '../config/db.js';
+import { TaskService } from './TaskService.js';
+import { NotificationService } from './NotificationService.js';
+import { emitNotification } from '../socket.js';
 
 export class BankService {
   // Get or create account
@@ -64,6 +67,9 @@ export class BankService {
       ]);
       await t.commit();
 
+      await TaskService.updateProgress(userId, 'money_deposited', amount);
+      await TaskService.updateProgress(userId, 'bank_balance', acc.balance);
+
       return { balance: acc.balance, money: chr.money };
     } catch (err) {
       await t.rollback();
@@ -102,6 +108,9 @@ export class BankService {
       ]);
       await t.commit();
 
+      await TaskService.updateProgress(userId, 'money_withdrawn', amount);
+      await TaskService.updateProgress(userId, 'bank_balance', acc.balance);
+
       return { balance: acc.balance, money: chr.money };
     } catch (err) {
       await t.rollback();
@@ -135,6 +144,12 @@ export class BankService {
             { userId: acc.userId, amount: interest, type: 'interest' },
             { transaction: t }
           );
+
+          // Create notification for interest received
+          if (interest > 0) {
+            const notification = await NotificationService.createBankInterestNotification(acc.userId, interest);
+            emitNotification(acc.userId, notification);
+          }
         }
       }
 

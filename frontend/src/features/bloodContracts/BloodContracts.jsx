@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import CreateContract from './CreateContract';
 import ContractsList from './ContractsList';
 import AttackResultModal from './AttackResultModal';
+import GhostAssassinForm from './GhostAssassinForm';
 
 const BloodContracts = ({ currentUserId }) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,6 +61,7 @@ const BloodContracts = ({ currentUserId }) => {
 
   return (
     <div>
+      <GhostAssassinForm onSuccess={() => setRefreshKey(k => k + 1)} />
       <CreateContract currentUserId={currentUserId} onContractCreated={() => setRefreshKey(k => k + 1)} />
       <ContractsList onAttack={handleAttack} key={refreshKey} />
       <AttackResultModal

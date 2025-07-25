@@ -122,7 +122,7 @@ const MinistryMission = () => {
       case "money+xp":
         return "💰 مكافأة: مال + خبرة";
       case "blackcoins (best)":
-        return "🪙 مكافأة: عملات سوداء (الأفضل)";
+        return "عملات سوداء مكافأة: (الأفضل)";
       case "none":
         return "❌ لا توجد مكافأة";
       default:
@@ -314,7 +314,10 @@ const MinistryMission = () => {
                     )}
                     {missionRewards.blackcoins > 0 && (
                       <div className="flex items-center justify-between bg-zinc-700 rounded p-2">
-                        <span className="text-purple-400">🪙 العملات السوداء</span>
+                        <span className="text-purple-400 flex items-center gap-1">
+                          <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-4 h-4 object-contain" />
+                          العملات السوداء
+                        </span>
                         <span className="font-bold text-white">+{missionRewards.blackcoins}</span>
                       </div>
                     )}

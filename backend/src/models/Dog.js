@@ -28,6 +28,10 @@ Dog.init({
   imageUrl: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  currency: {
+    type: DataTypes.ENUM('money', 'blackcoin'),
+    defaultValue: 'money'
   }
 }, {
   sequelize,

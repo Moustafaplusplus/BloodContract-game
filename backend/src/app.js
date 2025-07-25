@@ -8,6 +8,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
+import passport from 'passport';
+import session from 'express-session';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,8 +54,7 @@ import { Friendship } from './models/Friendship.js';
 import { Message } from './models/Message.js';
 import { Notification } from './models/Notification.js';
 
-import { Event, EventParticipation } from './models/Event.js';
-import eventRouter from './routes/events.js';
+
 import profileRouter from './routes/profile.js';
 import searchRouter from './routes/search.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -71,12 +72,18 @@ import { IpTracking } from './models/IpTracking.js';
 import { MinistryMission, UserMinistryMission } from './models/MinistryMission.js';
 import { Suggestion } from './models/Suggestion.js';
 import { GlobalMessage } from './models/GlobalMessage.js';
+import { ProfileRating } from './models/ProfileRating.js';
 import adminCharacterRouter from './routes/adminCharacters.js';
 import adminSystemRouter from './routes/adminSystem.js';
 import ministryMissionsRouter from './routes/ministryMissions.js';
 import suggestionsRouter from './routes/suggestions.js';
 import globalChatRouter from './routes/globalChat.js';
 import bloodContractsRouter from './routes/bloodContracts.js';
+import { Task, UserTaskProgress } from './models/Task.js';
+import tasksRouter from './routes/tasks.js';
+import authRouter from './routes/auth.js';
+import notificationRouter from './routes/notifications.js';
+import { configurePassport } from './config/passport.js';
 
 /* ─────────── Sequelize model auto-init (skip if already inited) ─────────── */
 [
@@ -85,11 +92,12 @@ import bloodContractsRouter from './routes/bloodContracts.js';
   Weapon, Armor, InventoryItem,
   HouseModel, UserHouseModel,
   FightModel, BankAccount,
-  Event, EventParticipation, CarModel,
-  Friendship, Message, Notification,
+  CarModel,
+  Friendship, Message,
   JobModel, JobHistoryModel,
   Gang, GangMember,
-  IpTracking, MinistryMission, UserMinistryMission, Suggestion, GlobalMessage,
+  IpTracking, MinistryMission, UserMinistryMission, Suggestion, GlobalMessage, ProfileRating,
+  Task, UserTaskProgress,
 ].forEach((M) => {
   if (M.sequelize || typeof M.init !== 'function') return; // already initialised
   M.init.length === 1 ? M.init(sequelize) : M.init(sequelize, DataTypes);
@@ -113,6 +121,24 @@ app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Session configuration for OAuth
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Configure passport strategies
+configurePassport();
+
 // Health check endpoint
 app.get('/health', (_req, res) => {
   res.json({ 
@@ -124,26 +150,6 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
-
-// Test endpoint to verify static file serving
-app.get('/test-image', (_req, res) => {
-  const imagePath = path.join(__dirname, '..', 'public', 'crimes', 'test_1752882734132.jpg');
-  if (fs.existsSync(imagePath)) {
-    res.sendFile(imagePath);
-  } else {
-    res.status(404).json({ error: 'Image not found', path: imagePath });
-  }
-});
-
-// Test endpoint to verify weapon image serving
-app.get('/test-weapon-image', (_req, res) => {
-  const imagePath = path.join(__dirname, '..', 'public', 'weapons', 'whatsapp_image_2023-01-05_at_4.10.39_pm_1753009253684.jpeg');
-  if (fs.existsSync(imagePath)) {
-    res.sendFile(imagePath);
-  } else {
-    res.status(404).json({ error: 'Weapon image not found', path: imagePath });
-  }
-});
 
 
 /* ─────────── Feature-barrel routers ─────────── */
@@ -166,7 +172,7 @@ app.use('/api/special-shop',     specialShopRouter);
 app.use('/api/inventory',        inventoryRouter);
 
 app.use('/api/jobs',             jobsRouter);
-app.use('/api/events',           eventRouter);
+
 // app.use('/api/social',           socialRouter); // Social routes removed
 
 app.use('/api/profile',          profileRouter);
@@ -179,7 +185,7 @@ app.use('/api/gangs', gangRouter);
 
 // Register modular admin routers
 app.use('/api/admin/characters', adminCharacterRouter);
-app.use('/api/admin/system', adminSystemRouter);
+app.use('/api/admin', adminSystemRouter);
 
 // Register ministry missions router
 app.use('/api/ministry-missions', ministryMissionsRouter);
@@ -189,6 +195,10 @@ app.use('/api/suggestions', suggestionsRouter);
 
 // Register global chat router
 app.use('/api/global-chat', globalChatRouter);
+
+app.use('/api/tasks', tasksRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/notifications', notificationRouter);
 
 /* ─────────── Global error handler ─────────── */
 app.use(errorHandler);

@@ -1,15 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useSocket } from '@/hooks/useSocket';
-import { useLocation, Link } from 'react-router-dom';
-import { Picker } from 'emoji-mart';
-import 'emoji-mart/css/emoji-mart.css';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { User, Search } from 'lucide-react';
 import notificationSound from '/notification.mp3';
 import { Edit2, Trash2, Plus, Volume2, VolumeX, Star, Shield } from 'lucide-react';
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+import VipName from '../profile/VipName.jsx';
+import '../profile/vipSparkle.css';
+import { jwtDecode } from 'jwt-decode';
 
 // Utility to get avatar URL (extracted from PlayerSearch)
-const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 const getAvatarUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
@@ -18,26 +21,37 @@ const getAvatarUrl = (url) => {
 };
 
 export default function Messages() {
+  const { socket } = useSocket();
+  const { token } = useAuth();
+  const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loadingInbox, setLoadingInbox] = useState(false);
+  const [loadingInbox, setLoadingInbox] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [unread, setUnread] = useState({}); // { userId: true }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
-  const { socket } = useSocket();
-  const location = useLocation();
-  const [showEmoji, setShowEmoji] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [friends, setFriends] = useState([]);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [soundMuted, setSoundMuted] = useState(false);
   const audioRef = useRef(null);
-  const [userId] = useState(localStorage.getItem('userId'));
+  
+  // Get userId from JWT token instead of localStorage
+  const userId = token ? (() => {
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.id;
+    } catch {
+      return null;
+    }
+  })() : null;
+  
   const [userInfo, setUserInfo] = useState({});
   // Infinite scroll
   const INITIAL_VISIBLE = 30;
@@ -48,11 +62,38 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const inputRef = useRef(null);
+  // Emoji list (same as GlobalChat)
+  const emojiList = [
+    '😀','😃','😄','😁','😆','😅','😂','🤣','😜','😎','😍','🥳','😏','😇','😱','😡','😭','😢','😤','😈','👿','🤔','😴','🥺','😬','😲','😳','😅','😆','😋','😝','😤','😪','😵','🤯','🥶','🤤',
+    '⚔️','🛡️','🏹','🗡️','🪓','🔫','🧨','🛡️','🦾','🦿','🧙‍♂️','🧙‍♀️','🧛‍♂️','🧟‍♂️','🧟‍♀️','🧞‍♂️','🧞‍♀️','🧚‍♂️','🧚‍♀️','🐉','👾','👑','💀','☠️','🦴','🦹‍♂️','🦸‍♂️','🦸‍♀️',
+    '💰','💎','🪙','🧪','🧴','🍖','🍗','🍺','🍻','🥤','🍔','🍟','🍕','🍩','🍪','🍫','🍬','🍭','🎁','🎲','🃏','🀄','🎮','🕹️','🏆','🥇','🥈','🥉','🎯','🎵','🎶','🎤','🎸','🎻','🥁',
+    '✨','🔥','💥','⚡','🌟','🌈','❄️','💧','🌪️','🌊','🌋','🌀','🌙','☀️','🌞','🌚','🌛','🌜','🌠','🪄','🧿',
+    '👍','👎','👏','🙌','🙏','🤝','💪','🫡','🫶','🤙','🤘','🖖','✌️','🤞','🫲','🫱','👋','🤟','🫂','💔','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💯','🔔','🔊','🔇','🚩','🏳️','🏴','🏳️‍🌈','🏳️‍⚧️','🚀','🛸','🦄','🐺','🐱','🐶','🐲','🦅','🦉','🦇','🐾','🦷','🦸','🦹','🧙','🧚','🧛','🧟','🧞','🧜','🧝','🧙‍♂️','🧙‍♀️'
+  ];
+  // Insert emoji at cursor position
+  const insertEmoji = (emoji) => {
+    const input = inputRef.current;
+    if (!input) return;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const before = newMessage.slice(0, start);
+    const after = newMessage.slice(end);
+    const updated = before + emoji + after;
+    setNewMessage(updated);
+    setShowEmojiPicker(false);
+    setTimeout(() => {
+      input.focus();
+      input.selectionStart = input.selectionEnd = start + emoji.length;
+    }, 0);
+  };
 
   // Fetch inbox
   useEffect(() => {
+    if (!userId) return;
+    
     setLoadingInbox(true);
-    axios.get('/api/messages/inbox')
+    axios.get('/api/messages/inbox', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(res => {
         setConversations(res.data);
         // If coming from profile, auto-select user
@@ -64,14 +105,13 @@ export default function Messages() {
       })
       .catch(() => setConversations([]))
       .finally(() => setLoadingInbox(false));
-    // eslint-disable-next-line
-  }, []);
+  }, [userId, token, location.state]);
 
   // Fetch messages for selected user
   useEffect(() => {
-    if (selectedUser) {
+    if (selectedUser && userId) {
       setLoadingMessages(true);
-      axios.get(`/api/messages/${selectedUser.userId}`)
+      axios.get(`/api/messages/${selectedUser.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
         .then(res => setMessages(res.data))
         .catch(() => setMessages([]))
         .finally(() => setLoadingMessages(false));
@@ -79,15 +119,21 @@ export default function Messages() {
       setUnread(prev => ({ ...prev, [selectedUser.userId]: false }));
       setSidebarOpen(false); // auto-close sidebar on mobile
     }
-  }, [selectedUser]);
+  }, [selectedUser, userId, token]);
 
   // Fetch friends for 'Add Friend' button logic
   useEffect(() => {
-    axios.get('/api/friendship/list').then(res => setFriends(res.data.map(f => f.id)));
-  }, []);
+    if (!userId) return;
+    
+    axios.get('/api/friendship/list', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(res => setFriends(res.data.map(f => f.id)))
+      .catch(() => setFriends([]));
+  }, [userId, token]);
 
   // Fetch user info for badges
   useEffect(() => {
+    if (!userId) return;
+    
     axios.get('/api/character').then(res => {
       setUserInfo({
         username: res.data?.User?.username || res.data?.username || '',
@@ -95,8 +141,10 @@ export default function Messages() {
         isAdmin: res.data?.User?.isAdmin || res.data?.isAdmin || false,
         isVip: res.data?.User?.isVip || res.data?.isVip || false,
       });
+    }).catch(() => {
+      setUserInfo({ username: '', avatarUrl: '/avatars/default.png', isAdmin: false, isVip: false });
     });
-  }, []);
+  }, [userId, token]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -212,7 +260,8 @@ export default function Messages() {
   // Add friend handler
   const handleAddFriend = async (userId) => {
     try {
-      await axios.post('/api/friendship/add', { friendId: userId });
+      const token = localStorage.getItem('jwt');
+      await axios.post('/api/friendship/add', { friendId: userId }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       setFriends(prev => [...prev, userId]);
     } catch {
       // Optionally show error
@@ -244,7 +293,6 @@ export default function Messages() {
   };
 
   // Emoji reactions logic
-  const emojiList = ['👍','😂','🔥','❤️','😮','😢'];
   const [expandedReactions, setExpandedReactions] = useState({});
   const handleReaction = (msg, emoji) => {
     const reacted = (msg.reactions?.[emoji] || []).includes(Number(userId));
@@ -332,9 +380,9 @@ export default function Messages() {
         </button>
         <h2 className="text-lg font-bold text-accent-red px-4 py-3 border-b border-zinc-800">الرسائل</h2>
         {loadingInbox ? (
-          <div className="flex-1 flex items-center justify-center text-zinc-400">جاري التحميل…</div>
+          <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المحادثات..." />
         ) : conversations.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-zinc-500">لا توجد محادثات</div>
+          <LoadingOrErrorPlaceholder error errorText="لا توجد محادثات" />
         ) : (
           <ul className="flex-1 overflow-y-auto divide-y divide-zinc-800">
             {conversations.map(user => (
@@ -409,12 +457,12 @@ export default function Messages() {
             </div>
             <div className="flex-1 overflow-y-auto px-2 md:px-6 py-4 space-y-2 bg-zinc-950" ref={messagesContainerRef}>
               {loadingMore && (
-                <div className="flex items-center justify-center text-xs text-zinc-400 mb-2">جاري تحميل المزيد...</div>
+                <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المزيد..." />
               )}
               {loadingMessages ? (
-                <div className="text-zinc-400">جاري تحميل المحادثة…</div>
+                <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المحادثة..." />
               ) : messages.length === 0 ? (
-                <div className="text-zinc-500">لا توجد رسائل بعد</div>
+                <LoadingOrErrorPlaceholder error errorText="لا توجد رسائل بعد" />
               ) : (
                 messages.slice(-visibleCount).map(msg => {
                   const isSelf = msg.senderId == userId;
@@ -430,9 +478,10 @@ export default function Messages() {
                         <div className="flex flex-row items-center flex-wrap gap-2">
                           {!isSelf && (
                             <span className="font-semibold text-accent-red flex items-center gap-1">
-                              {selectedUser.username}
+                              <VipName isVIP={isVip} className="compact">
+                                {selectedUser.username}
+                              </VipName>
                               {isAdmin && <Shield className="w-4 h-4 text-accent-red" title="مشرف" />}
-                              {isVip && !isAdmin && <Star className="w-4 h-4 text-yellow-400" title="VIP" />}
                             </span>
                           )}
                           {editingMessageId === msg.id ? (
@@ -564,24 +613,36 @@ export default function Messages() {
               className="flex items-center gap-2 px-2 md:px-6 py-4 border-t border-zinc-800 bg-zinc-900 relative"
               onSubmit={e => { e.preventDefault(); handleSend(); }}
             >
+              {/* Emoji Picker Button */}
               <button
                 type="button"
-                className="text-2xl px-2 focus:outline-none"
-                onClick={() => setShowEmoji(v => !v)}
-                aria-label="إدراج إيموجي"
+                className="text-2xl px-2 focus:outline-none text-zinc-400 hover:text-accent-red transition-colors"
+                onClick={() => setShowEmojiPicker(v => !v)}
+                aria-label="إدراج رمز تعبيري"
+                tabIndex={-1}
+                disabled={sending}
               >
                 😊
               </button>
-              {showEmoji && (
-                <div style={{ position: 'absolute', bottom: '60px', right: '16px', zIndex: 30 }}>
-                  <Picker
-                    onSelect={emoji => setNewMessage(newMessage + emoji.native)}
-                    emoji="point_up"
-                    title="اختر إيموجي"
-                  />
+              {/* Emoji Picker Dropdown */}
+              {showEmojiPicker && (
+                <div className="absolute left-0 bottom-12 z-30 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg p-2 w-[90vw] max-w-xs sm:max-w-md max-h-56 overflow-y-auto">
+                  <div className="grid grid-cols-8 grid-rows-4 gap-1">
+                    {emojiList.map((emoji, idx) => (
+                      <button
+                        key={emoji + '-' + idx}
+                        type="button"
+                        className="text-xl sm:text-2xl hover:bg-zinc-700 rounded p-1 min-w-[2.2rem]"
+                        onClick={() => insertEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               <input
+                ref={inputRef}
                 className="input-field flex-1 text-base"
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}
@@ -601,7 +662,7 @@ export default function Messages() {
             {error && <div className="text-red-500 text-sm px-4 md:px-6 pb-2">{error}</div>}
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-zinc-500 text-lg">اختر محادثة لعرض الرسائل</div>
+          <LoadingOrErrorPlaceholder error errorText="اختر محادثة لعرض الرسائل" />
         )}
       </main>
     </div>

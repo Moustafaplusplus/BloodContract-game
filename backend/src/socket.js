@@ -40,16 +40,55 @@ export function initSocket(server) {
       console.log('[Socket] Authenticated userId:', userId);
       socket.data.userId = userId;
       socket.join(String(userId));
+      console.log('[Socket] User joined room:', String(userId));
       
       // User connected successfully
 
       /* helper to push one HUD snapshot */
       const pushHud = async () => {
         try {
-          const char = await Character.findOne({ where: { userId } });
+          const char = await Character.findOne({ 
+            where: { userId },
+            include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
+          });
           if (char) {
             const hudData = await char.toSafeJSON();
-            socket.emit('hud:update', hudData);
+            
+            // Get hospital and jail status
+            const { ConfinementService } = await import('./services/ConfinementService.js');
+            const hospitalStatus = await ConfinementService.getHospitalStatus(userId);
+            const jailStatus = await ConfinementService.getJailStatus(userId);
+            
+            // Calculate cooldowns
+            const now = Date.now();
+            const crimeCooldown = char.crimeCooldown && char.crimeCooldown > now 
+              ? Math.ceil((char.crimeCooldown - now) / 1000) 
+              : 0;
+            const gymCooldown = char.gymCooldown && char.gymCooldown > now 
+              ? Math.ceil((char.gymCooldown - now) / 1000) 
+              : 0;
+            
+            // Add status data to HUD
+            const enhancedHudData = {
+              ...hudData,
+              hospitalStatus,
+              jailStatus,
+              crimeCooldown,
+              gymCooldown
+            };
+            
+            console.log(`[Socket] Sending HUD data for user ${userId}:`, {
+              username: hudData.username || 'No username',
+              level: hudData.level || 'No level',
+              userId: hudData.userId || 'No userId',
+              hospitalIn: hospitalStatus.inHospital,
+              jailIn: jailStatus.inJail,
+              crimeCD: crimeCooldown,
+              gymCD: gymCooldown
+            });
+            socket.emit('hud:update', enhancedHudData);
+          } else {
+            console.log(`[Socket] No character found for user ${userId}`);
           }
         } catch (error) {
           console.error(`[Socket] Error pushing HUD for user ${userId}:`, error.message);
@@ -163,9 +202,15 @@ export function initSocket(server) {
       });
 
       // --- Global Chat System ---
+      // --- Online Global Chat Users Counter ---
+      const onlineGlobalChatUsers = new Set();
+
       socket.on('join_global_chat', async () => {
         console.log('[Socket] join_global_chat received from user:', userId);
         socket.join('global_chat');
+        onlineGlobalChatUsers.add(userId);
+        // Emit updated online count to all in global chat
+        io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
         console.log(`[Global Chat] User ${userId} joined global chat (socket ${socket.id})`);
         // Send a test message to confirm connection
         socket.emit('global_message', {
@@ -183,7 +228,14 @@ export function initSocket(server) {
 
       socket.on('leave_global_chat', async () => {
         socket.leave('global_chat');
+        onlineGlobalChatUsers.delete(userId);
+        io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
         console.log(`[Global Chat] User ${userId} left global chat (socket ${socket.id})`);
+      });
+
+      // Respond to get_online_count event
+      socket.on('get_online_count', () => {
+        socket.emit('online_count', { count: onlineGlobalChatUsers.size });
       });
 
       socket.on('send_global_message', async (data) => {
@@ -452,6 +504,11 @@ export function initSocket(server) {
 
       socket.on('disconnect', async (reason) => {
         clearInterval(tick);
+        // Remove from online global chat users if present
+        if (onlineGlobalChatUsers.has(userId)) {
+          onlineGlobalChatUsers.delete(userId);
+          io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
+        }
       });
       
       socket.on('error', (error) => {
@@ -471,5 +528,28 @@ export function initSocket(server) {
 
   return io;
 }
+
+// Function to emit notification to a specific user
+export const emitNotification = (userId, notification) => {
+  console.log('[Socket] Emitting notification to user:', userId, 'notification:', notification.id);
+  if (io) {
+    io.to(String(userId)).emit('notification', notification);
+    console.log('[Socket] Notification emitted successfully');
+  } else {
+    console.error('[Socket] IO not initialized, cannot emit notification');
+  }
+};
+
+// Function to create and emit notification
+export const createAndEmitNotification = async (userId, type, title, content, data = {}) => {
+  try {
+    // This function is deprecated - use NotificationService.createNotification() and emitNotification() separately
+    console.warn('createAndEmitNotification is deprecated. Use NotificationService.createNotification() and emitNotification() separately.');
+    return null;
+  } catch (error) {
+    console.error('Error creating and emitting notification:', error);
+    throw error;
+  }
+};
 
 export { io };

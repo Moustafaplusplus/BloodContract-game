@@ -1,6 +1,7 @@
 import { House, UserHouse } from '../models/House.js';
 import { Character } from '../models/Character.js';
 import { sequelize } from '../config/db.js';
+import { TaskService } from './TaskService.js';
 
 export class HouseService {
   // Seed default houses
@@ -10,8 +11,8 @@ export class HouseService {
   }
 
   // Get all available houses
-  static async getAllHouses() {
-    return await House.findAll();
+  static async getAllHouses(filter = {}) {
+    return await House.findAll({ where: filter });
   }
 
   // Get user's current house
@@ -53,17 +54,29 @@ export class HouseService {
         House.findByPk(houseId, { transaction: t })
       ]);
       if (!character || !house) throw new Error('Character or house not found');
-      if (character.money < house.cost) throw new Error('Not enough money');
+      
       // Check if already owned
       const alreadyOwned = await UserHouse.findOne({ where: { userId, houseId }, transaction: t });
       if (alreadyOwned) throw new Error('You already own this house');
+      
+      // Check currency and deduct appropriate amount
+      if (house.currency === 'blackcoin') {
+        if (character.blackcoins < house.cost) throw new Error('Not enough blackcoins');
+        character.blackcoins -= house.cost;
+      } else {
+        if (character.money < house.cost) throw new Error('Not enough money');
+        character.money -= house.cost;
+      }
+      
       // Create user house record
       await UserHouse.create({ userId, houseId }, { transaction: t });
-      character.money -= house.cost;
+      
       // Optionally auto-equip if no house equipped
       if (!character.equippedHouseId) character.equippedHouseId = houseId;
       await character.save({ transaction: t });
       await t.commit();
+      const houses = await UserHouse.findAll({ where: { userId } });
+      await TaskService.updateProgress(userId, 'houses_owned', houses.length);
       return house;
     } catch (error) {
       await t.rollback();
@@ -86,6 +99,8 @@ export class HouseService {
       await character.save({ transaction: t });
       await userHouse.destroy({ transaction: t });
       await t.commit();
+      const housesAfter = await UserHouse.findAll({ where: { userId } });
+      await TaskService.updateProgress(userId, 'houses_owned', housesAfter.length);
       return { refund, houseId };
     } catch (error) {
       await t.rollback();

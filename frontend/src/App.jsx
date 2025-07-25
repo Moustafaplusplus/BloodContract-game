@@ -12,6 +12,7 @@ import "./index.css";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ModalProvider } from "@/contexts/ModalContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import HUD from "@/components/HUD";
 import PlayerSearch from "./features/profile/PlayerSearch.jsx";
@@ -21,6 +22,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import GangDetailsWrapper from './features/gangs/GangDetailsWrapper';
 import AdminPanel from "@/features/admin/AdminPanel";
 import { SocketProvider } from "@/contexts/SocketContext";
+import { jwtDecode } from "jwt-decode";
+import { useQueryClient } from "@tanstack/react-query";
+import React from "react";
 
 // Lazy load all components
 const LandingPage = lazy(() => import("@/components/LandingPage"));
@@ -31,18 +35,15 @@ const Overview = lazy(() => import("@/features/character/character"));
 const Crimes = lazy(() => import("@/features/crimes/Crimes"));
 const Gym = lazy(() => import("@/features/gym/Gym"));
 const Bank = lazy(() => import("@/features/bank/Bank"));
-const InterestHistory = lazy(() => import("@/features/bank/InterestHistory"));
 const Inventory = lazy(() => import("@/features/inventory/Inventory"));
 const Shop = lazy(() => import("@/features/shop/Shop"));
 const Houses = lazy(() => import("@/features/houses/Houses"));
 const Cars = lazy(() => import("@/features/cars/Cars"));
 const Dogs = lazy(() => import("@/features/dogs/Dogs"));
 const Gangs = lazy(() => import("@/features/gangs/Gangs"));
-const Events = lazy(() => import("@/features/events/Events"));
 const Friendship = lazy(() => import("@/features/friendship/Friendship.jsx"));
 const Messages = lazy(() => import("@/features/messages/Messages.jsx"));
 const GlobalChat = lazy(() => import("@/features/chat/GlobalChat.jsx"));
-const Achievements = lazy(() => import("@/features/achievements/Achievements"));
 const Profile = lazy(() => import("@/features/profile/Profile"));
 const Jobs = lazy(() => import("@/features/jobs/Jobs"));
 const NotFound = lazy(() => import("@/features/NotFound"));
@@ -55,8 +56,18 @@ const SpecialShop = lazy(() => import("@/features/shop/SpecialShop"));
 const Suggestions = lazy(() => import("@/features/suggestions/Suggestions"));
 const MinistryMission = lazy(() => import("@/features/missions/MinistryMission"));
 const BloodContracts = lazy(() => import("@/features/bloodContracts"));
+const Tasks = lazy(() => import("@/features/tasks/Tasks"));
+const Notifications = lazy(() => import("@/features/notifications/Notifications"));
+const GoogleCallback = lazy(() => import("@/features/auth/GoogleCallback"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0, // No stale time by default
+      retry: false,
+    },
+  },
+});
 
 function PrivateRoute({ children }) {
   const { tokenLoaded, isAuthed } = useAuth();
@@ -73,6 +84,62 @@ function PrivateRoute({ children }) {
   return isAuthed ? children : <Navigate to="/" replace />;
 }
 
+function HUDWrapper() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Create a key that changes when the user changes (based on token)
+  const hudKey = token ? (() => {
+    try {
+      const { id } = jwtDecode(token);
+      return `hud-${id}`;
+    } catch {
+      return 'hud-no-user';
+    }
+  })() : 'hud-no-user';
+  
+  // Global cache invalidation when user changes
+  React.useEffect(() => {
+    if (token) {
+      try {
+        const { id } = jwtDecode(token);
+        console.log('[App] User changed, clearing all caches for user:', id);
+        // Clear all character-related queries to ensure fresh data
+        queryClient.removeQueries(["character"]);
+        queryClient.removeQueries(["hospitalStatus"]);
+        queryClient.removeQueries(["profile"]);
+        // Force refetch of all character data
+        queryClient.invalidateQueries(["character"]);
+        queryClient.invalidateQueries(["hospitalStatus"]);
+        queryClient.invalidateQueries(["profile"]);
+      } catch (error) {
+        console.error('[App] Error decoding token:', error);
+      }
+    } else {
+      console.log('[App] No token, clearing all caches');
+      queryClient.clear();
+    }
+  }, [token, queryClient]);
+  
+  return <HUD key={hudKey} />;
+}
+
+function HomeWrapper() {
+  const { token } = useAuth();
+  
+  // Create a key that changes when the user changes (based on token)
+  const homeKey = token ? (() => {
+    try {
+      const { id } = jwtDecode(token);
+      return `home-${id}`;
+    } catch {
+      return 'home-no-user';
+    }
+  })() : 'home-no-user';
+  
+  return <Home key={homeKey} />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -80,6 +147,7 @@ export default function App() {
         <AuthProvider>
           <ModalProvider>
             <SocketProvider>
+              <NotificationProvider>
               <Suspense
                 fallback={
                   <div className="h-screen flex items-center justify-center bg-black">
@@ -96,6 +164,7 @@ export default function App() {
                   {/* Login and Signup are also bare */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
+                  <Route path="/auth/callback" element={<GoogleCallback />} />
                   {/* Privacy Policy and Terms pages (bare) */}
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsAndConditions />} />
@@ -104,7 +173,7 @@ export default function App() {
                     path="*"
                     element={
                       <>
-                        <HUD />
+                        <HUDWrapper />
                         <DashboardLayout>
                           <Routes>
                             <Route path="/players" element={<PlayerSearch />} />
@@ -114,12 +183,13 @@ export default function App() {
                             <Route path="/dashboard/suggestions" element={<Suggestions />} />
                             <Route path="/dashboard/ministry-mission" element={<MinistryMission />} />
                             <Route path="/dashboard/blood-contracts" element={<BloodContracts />} />
+                            <Route path="/notifications" element={<Notifications />} />
                             <Route path="/gangs/:id" element={<GangDetailsWrapper />} />
                             <Route path="/admin/panel" element={<AdminPanel />} />
                             <Route path="/dashboard/*" element={
                               <PrivateRoute>
                                 <Routes>
-                                  <Route index element={<Home />} />
+                                  <Route index element={<HomeWrapper />} />
                                   <Route path="character" element={<Overview />} />
                                   <Route path="crimes" element={<Crimes />} />
                                   <Route path="crime-result" element={<CrimeResults />} />
@@ -129,7 +199,7 @@ export default function App() {
                                   <Route path="hospital" element={<Hospital />} />
                                   <Route path="jail" element={<Jail />} />
                                   <Route path="bank" element={<Bank />} />
-                                  <Route path="bank/history" element={<InterestHistory />} />
+                                  <Route path="bank/history" element={<Navigate to="/dashboard/bank" replace />} />
                                   <Route path="inventory" element={<Inventory />} />
                                   <Route path="shop" element={<Shop />} />
                                   <Route path="special-shop" element={<SpecialShop />} />
@@ -137,14 +207,13 @@ export default function App() {
                                   <Route path="cars" element={<Cars />} />
                                   <Route path="dogs" element={<Dogs />} />
                                   <Route path="gangs" element={<Gangs />} />
-                                  <Route path="events" element={<Events />} />
                                   <Route path="friends" element={<Friendship />} />
                                   <Route path="messages" element={<Messages />} />
                                   <Route path="global-chat" element={<GlobalChat />} />
-                                  <Route path="achievements" element={<Achievements />} />
                                   <Route path="profile" element={<Profile />} />
                                   <Route path="profile/:username" element={<Profile />} />
                                   <Route path="jobs" element={<Jobs />} />
+                                  <Route path="tasks" element={<Tasks />} />
                                   <Route path="ranking" element={<Ranking />} />
                                   <Route path="*" element={<NotFound />} />
                                 </Routes>
@@ -172,6 +241,7 @@ export default function App() {
                 toastClassName="Toastify__toast"
                 bodyClassName="Toastify__toast-body"
               />
+                          </NotificationProvider>
             </SocketProvider>
           </ModalProvider>
         </AuthProvider>

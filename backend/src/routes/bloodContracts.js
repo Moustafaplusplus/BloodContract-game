@@ -1,11 +1,77 @@
+
 import express from 'express';
+const router = express.Router();
 import { auth } from '../middleware/auth.js';
 import { User, BloodContract } from '../models/index.js';
 import { Op } from 'sequelize';
 import { Character } from '../models/Character.js';
 import { FightService } from '../services/FightService.js';
-
-const router = express.Router();
+import { sequelize } from '../config/db.js';
+import { Hospital } from '../models/Confinement.js';
+import { BlackcoinTransaction } from '../models/Blackcoin.js';
+import { Statistic } from '../models/Statistic.js';
+// Ghost Assassin: Instantly hospitalize a target for 5 black coins
+router.post('/ghost-assassin', auth, async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const userId = req.user.id;
+    const { targetId } = req.body;
+    if (!targetId) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Target ID is required.' });
+    }
+    if (Number(targetId) === Number(userId)) {
+      await t.rollback();
+      return res.status(400).json({ message: 'You cannot target yourself.' });
+    }
+    // Use Character for blackcoins
+    const character = await Character.findOne({ where: { userId }, transaction: t, lock: t.LOCK.UPDATE });
+    if (!character || character.blackcoins < 5) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Insufficient black coins.' });
+    }
+    const target = await User.findByPk(targetId);
+    if (!target) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Target user not found.' });
+    }
+    // Deduct black coins from character
+    character.blackcoins -= 5;
+    await character.save({ transaction: t });
+    await BlackcoinTransaction.create({
+      userId,
+      amount: -5,
+      type: 'SPEND',
+      description: 'Hired Ghost Assassin',
+    }, { transaction: t });
+    // Put target in hospital for 30 minutes
+    const now = new Date();
+    const minutes = 30;
+    const releasedAt = new Date(now.getTime() + minutes * 60000);
+    await Hospital.create({
+      userId: targetId,
+      minutes,
+      hpLoss: 1000,
+      startedAt: now,
+      releasedAt,
+      crimeId: null,
+    }, { transaction: t });
+    // Increment assassinations for the target
+    let stat = await Statistic.findOne({ where: { userId: targetId }, transaction: t, lock: t.LOCK.UPDATE });
+    if (!stat) {
+      stat = await Statistic.create({ userId: targetId }, { transaction: t });
+    }
+    stat.assassinations = (stat.assassinations || 0) + 1;
+    await stat.save({ transaction: t });
+    await t.commit();
+    // Dramatic narrative
+    const narrative = `In the dead of night, a shadowy figure known only as the Ghost Assassin silently crept through the city. With a single, swift strike, your target was found lifeless and rushed to the hospital. No one saw the killer—only the chilling aftermath remains.`;
+    res.json({ success: true, narrative, targetId });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ message: 'Failed to hire Ghost Assassin.', error: err.message });
+  }
+});
 
 // Create a new blood contract
 router.post('/', auth, async (req, res) => {
@@ -36,7 +102,7 @@ router.post('/', auth, async (req, res) => {
     posterCharacter.money -= priceInt;
     await posterCharacter.save();
     // Create contract
-    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours from now
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     const contract = await BloodContract.create({
       posterId,
       targetId,
@@ -60,14 +126,13 @@ router.get('/available', auth, async (req, res) => {
       { status: 'expired' },
       { where: { status: 'open', expiresAt: { [Op.lte]: now } } }
     );
-    // Show all contracts where user is poster, target, or can fulfill
+    // Show all contracts where user is poster, or can fulfill (not target)
     const contracts = await BloodContract.findAll({
       where: {
         status: 'open',
         expiresAt: { [Op.gt]: now },
         [Op.or]: [
           { posterId: userId },
-          { targetId: userId },
           { posterId: { [Op.ne]: userId }, targetId: { [Op.ne]: userId } },
         ],
       },
@@ -122,28 +187,34 @@ router.get('/available', auth, async (req, res) => {
 
 // Fulfill a contract (attack/assassination)
 router.post('/:id/accept', auth, async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const userId = req.user.id;
-    const contract = await BloodContract.findByPk(req.params.id);
+    const contract = await BloodContract.findByPk(req.params.id, { transaction: t, lock: t.LOCK.UPDATE });
     if (!contract) {
+      await t.rollback();
       return res.status(404).json({ message: 'Contract not found.' });
     }
     if (contract.status !== 'open') {
+      await t.rollback();
       return res.status(400).json({ message: 'Contract is not open.' });
     }
     if (new Date(contract.expiresAt) <= new Date()) {
       contract.status = 'expired';
-      await contract.save();
+      await contract.save({ transaction: t });
+      await t.commit();
       return res.status(400).json({ message: 'Contract has expired.' });
     }
     if (userId === contract.posterId || userId === contract.targetId) {
+      await t.rollback();
       return res.status(403).json({ message: 'You cannot fulfill your own contract or target yourself.' });
     }
     if (contract.assassinId) {
+      await t.rollback();
       return res.status(400).json({ message: 'Contract already fulfilled.' });
     }
     // Run real fight using FightService
-    const fightResult = await FightService.runFight(userId, contract.targetId);
+    const fightResult = await FightService.runContractFight(userId, contract.targetId);
     // Save fight log to contract
     contract.fightLog = JSON.stringify(fightResult.log);
     contract.fightResult = JSON.stringify(fightResult);
@@ -153,19 +224,30 @@ router.post('/:id/accept', auth, async (req, res) => {
       contract.assassinId = userId;
       contract.fulfilledAt = new Date();
       // Pay reward
-      const assassinCharacter = await Character.findOne({ where: { userId } });
+      const assassinCharacter = await Character.findOne({ where: { userId }, transaction: t, lock: t.LOCK.UPDATE });
       if (assassinCharacter) {
         assassinCharacter.money += contract.price;
-        await assassinCharacter.save();
+        await assassinCharacter.save({ transaction: t });
       }
-      await contract.save();
+      // Increment assassinations for the target
+      let stat2 = await Statistic.findOne({ where: { userId: contract.targetId }, transaction: t, lock: t.LOCK.UPDATE });
+      if (!stat2) {
+        stat2 = await Statistic.create({ userId: contract.targetId }, { transaction: t });
+      }
+      stat2.assassinations = (stat2.assassinations || 0) + 1;
+      await stat2.save({ transaction: t });
+      await contract.save({ transaction: t });
+      await t.commit();
       return res.json({ success: true, message: 'Contract fulfilled!', contractId: contract.id, fightResult });
     } else {
       // If failed, contract remains open
-      await contract.save();
+      await contract.save({ transaction: t });
+      await t.commit();
       return res.json({ success: false, message: 'Attack failed. Try again later.', fightResult });
     }
   } catch (err) {
+    console.error('Error fulfilling contract:', err);
+    await t.rollback();
     res.status(500).json({ message: 'Failed to fulfill contract.', error: err.message });
   }
 });

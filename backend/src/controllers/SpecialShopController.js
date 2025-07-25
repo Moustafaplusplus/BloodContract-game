@@ -1,5 +1,8 @@
 import { SpecialShopService } from '../services/SpecialShopService.js';
 import { VIPPackage } from '../models/Shop.js';
+import { CarService } from '../services/CarService.js';
+import { HouseService } from '../services/HouseService.js';
+import { DogService } from '../services/DogService.js';
 
 export class SpecialShopController {
   static async getBlackcoinPackages(req, res) {
@@ -84,6 +87,36 @@ export class SpecialShopController {
         return res.status(400).json({ message: error.message });
       }
       res.status(500).json({ message: 'فشل شراء العنصر الخاص' });
+    }
+  }
+
+  static async getSpecialCars(req, res) {
+    try {
+      const cars = await CarService.getAllCars({ currency: 'blackcoin' });
+      res.json(cars);
+    } catch (error) {
+      console.error('Special shop cars error:', error);
+      res.sendStatus(500);
+    }
+  }
+
+  static async getSpecialHouses(req, res) {
+    try {
+      const houses = await HouseService.getAllHouses({ currency: 'blackcoin' });
+      res.json(houses);
+    } catch (error) {
+      console.error('Special shop houses error:', error);
+      res.sendStatus(500);
+    }
+  }
+
+  static async getSpecialDogs(req, res) {
+    try {
+      const dogs = await DogService.getAllDogs({ currency: 'blackcoin' });
+      res.json(dogs);
+    } catch (error) {
+      console.error('Special shop dogs error:', error);
+      res.sendStatus(500);
     }
   }
 } 

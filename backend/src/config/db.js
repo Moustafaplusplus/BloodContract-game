@@ -12,10 +12,11 @@ const dbConfig = {
   logging: false,
   // Add connection pool configuration to prevent connection exhaustion
   pool: {
-    max: 20, // Maximum number of connection instances
-    min: 5,  // Minimum number of connection instances
-    acquire: 60000, // Maximum time (ms) that pool will try to get connection before throwing error
-    idle: 10000, // Maximum time (ms) that a connection can be idle before being released
+    max: 10, // Reduced from 20 to prevent connection exhaustion
+    min: 2,  // Reduced from 5
+    acquire: 30000, // Reduced from 60000
+    idle: 5000, // Reduced from 10000
+    evict: 15000, // Reduced from 30000
   },
   // Add retry configuration for better connection stability
   retry: {
@@ -24,11 +25,15 @@ const dbConfig = {
   },
   // Add dialect options for better connection handling
   dialectOptions: {
-    connectTimeout: 60000, // Connection timeout
-    acquireTimeout: 60000, // Acquire timeout
-    timeout: 60000, // Query timeout
+    connectTimeout: 30000, // Reduced from 60000
+    acquireTimeout: 30000, // Reduced from 60000
+    timeout: 30000, // Reduced from 60000
     // Add SSL configuration if needed
     // ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Add statement timeout to prevent long-running queries
+    statement_timeout: 15000, // Reduced from 30000
+    // Add idle session timeout
+    idle_in_transaction_session_timeout: 15000, // Reduced from 30000
   },
 };
 
@@ -36,16 +41,30 @@ const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.p
 
 // Add connection event handlers for better debugging
 sequelize.addHook('beforeConnect', async (config) => {
-  // Attempting database connection
+  console.log('[DB] Attempting database connection...');
 });
 
 sequelize.addHook('afterConnect', async (connection) => {
-  // Database connection established
+  console.log('[DB] Database connection established');
 });
 
 sequelize.addHook('beforeDisconnect', async (connection) => {
-  // Database connection closing
+  console.log('[DB] Database connection closing');
 });
+
+// Add error handling for connection issues
+sequelize.addHook('afterDisconnect', async (connection) => {
+  console.log('[DB] Database connection closed');
+});
+
+// Test the connection
+sequelize.authenticate()
+  .then(() => {
+    console.log('[DB] Database connection has been established successfully.');
+  })
+  .catch(err => {
+    console.error('[DB] Unable to connect to the database:', err);
+  });
 
 export { sequelize };
 export default sequelize;

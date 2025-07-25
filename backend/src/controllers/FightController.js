@@ -6,15 +6,24 @@ export class FightController {
       const attackerId = req.user.id;
       const defenderId = Number(req.params.defenderId);
       
+      console.log(`[FightController] Attack attempt: ${attackerId} -> ${defenderId}`);
+      
       if (!defenderId || defenderId <= 0) {
         return res.status(400).json({ error: "معرّف المدافع غير صالح" });
+      }
+      
+      if (attackerId === defenderId) {
+        return res.status(400).json({ error: "لا يمكنك مهاجمة نفسك" });
       }
       
       const result = await FightService.runFight(attackerId, defenderId);
       res.json(result);
     } catch (error) {
       console.error('Fight error:', error);
-      res.status(400).json({ error: error.message || "فشل القتال" });
+      res.status(400).json({ 
+        error: error.message || "فشل القتال",
+        details: error.stack 
+      });
     }
   }
 

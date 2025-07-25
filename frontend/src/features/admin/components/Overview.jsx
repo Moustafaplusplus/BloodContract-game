@@ -12,7 +12,37 @@ export default function Overview() {
   // Fetch system stats
   const { data: systemStats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-system-stats'],
-    queryFn: () => axios.get('/api/admin/system/stats').then(res => res.data),
+    queryFn: async () => {
+      const token = localStorage.getItem('jwt');
+      console.log('Debug Overview: Token exists:', !!token);
+      console.log('Debug Overview: Token value:', token ? token.substring(0, 20) + '...' : 'null');
+      
+      // First, let's check if the user is actually an admin
+      try {
+        const characterRes = await axios.get('/api/character', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        console.log('Debug Overview: Character response:', characterRes.data);
+        console.log('Debug Overview: Is admin?', characterRes.data?.User?.isAdmin);
+        
+        if (!characterRes.data?.User?.isAdmin) {
+          throw new Error('User is not an admin');
+        }
+      } catch (error) {
+        console.error('Debug Overview: Character check failed:', error.response?.status, error.response?.data);
+        throw new Error('Authentication or admin check failed');
+      }
+      
+      return axios.get('/api/admin/stats', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(res => {
+        console.log('Debug Overview: Success response:', res.data);
+        return res.data;
+      }).catch(error => {
+        console.error('Debug Overview: Error response:', error.response?.status, error.response?.data);
+        throw error;
+      });
+    },
     staleTime: 60 * 1000,
   });
 

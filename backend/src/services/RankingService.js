@@ -24,7 +24,10 @@ export class RankingService {
         const char = userObj.Character;
         const fame = typeof user.Character.getFame === 'function' ? await user.Character.getFame() : 0;
         return {
+          userId: user.id,
+          username: user.username,
           name: char.name,
+          level: char.level,
           criteria: fame,
         };
       }));
@@ -32,7 +35,14 @@ export class RankingService {
         .filter(Boolean)
         .sort((a, b) => b.criteria - a.criteria)
         .slice(0, Number(limit) || 50)
-        .map((item, idx) => ({ ranking: idx + 1, name: item.name, criteria: item.criteria }));
+        .map((item, idx) => ({ 
+          ranking: idx + 1, 
+          userId: item.userId,
+          username: item.username,
+          name: item.name,
+          level: item.level,
+          criteria: item.criteria 
+        }));
     }
     // Kills
     if (sort === 'killCount') {
@@ -45,7 +55,10 @@ export class RankingService {
         .filter(user => user.Character)
         .map((user, idx) => ({
           ranking: idx + 1,
+          userId: user.id,
+          username: user.username,
           name: user.Character.name,
+          level: user.Character.level,
           criteria: user.Character.killCount ?? 0,
         }));
     }
@@ -60,7 +73,10 @@ export class RankingService {
         .filter(user => user.Character)
         .map((user, idx) => ({
           ranking: idx + 1,
+          userId: user.id,
+          username: user.username,
           name: user.Character.name,
+          level: user.Character.level,
           criteria: user.Character.level ?? 0,
         }));
     }
@@ -75,7 +91,10 @@ export class RankingService {
         .filter(user => user.Character)
         .map((user, idx) => ({
           ranking: idx + 1,
+          userId: user.id,
+          username: user.username,
           name: user.Character.name,
+          level: user.Character.level,
           criteria: user.Character.money ?? 0,
         }));
     }
@@ -98,7 +117,10 @@ export class RankingService {
         const char = userObj.Character;
         const crimes = char.Statistic?.crimes ?? 0;
         return {
+          userId: user.id,
+          username: user.username,
           name: char.name,
+          level: char.level,
           criteria: crimes,
         };
       });
@@ -106,7 +128,14 @@ export class RankingService {
         .filter(Boolean)
         .sort((a, b) => b.criteria - a.criteria)
         .slice(0, Number(limit) || 50)
-        .map((item, idx) => ({ ranking: idx + 1, name: item.name, criteria: item.criteria }));
+        .map((item, idx) => ({ 
+          ranking: idx + 1, 
+          userId: item.userId,
+          username: item.username,
+          name: item.name,
+          level: item.level,
+          criteria: item.criteria 
+        }));
     }
     // Default fallback
     return [];

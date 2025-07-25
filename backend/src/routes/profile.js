@@ -26,4 +26,8 @@ router.get('/:id', ProfileController.getUserProfileById);
 // GET /api/profile/username/:username - Get user profile by username
 router.get('/username/:username', ProfileController.getUserProfileByUsername);
 
+// Ratings endpoints
+router.get('/:id/ratings', ProfileController.getProfileRatings);
+router.post('/:id/rate', ProfileController.rateProfile);
+
 export default router; 

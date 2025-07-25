@@ -1,5 +1,6 @@
 import { Character, User } from '../models/index.js';
 import { Statistic } from '../models/Statistic.js';
+import { TaskService } from './TaskService.js';
 
 export class CharacterService {
   // EXP and leveling logic
@@ -36,6 +37,7 @@ export class CharacterService {
     if (xp) {
       character.exp += xp;
       await this.maybeLevelUp(character);
+      await TaskService.updateProgress(character.userId, 'exp', character.exp);
     }
     await character.save({ transaction: tx });
     return xp;
@@ -60,10 +62,12 @@ export class CharacterService {
     let needed = char.expNeeded();
     const levelUpRewards = [];
     const startingLevel = char.level;
+    let leveledUp = false;
     
     while (char.exp >= needed) {
       char.exp   -= needed;
       char.level += 1;
+      leveledUp = true;
 
       // Calculate rewards for this level
       const levelReward = this.calculateLevelRewards(char.level);
@@ -78,6 +82,12 @@ export class CharacterService {
     if (levelUpRewards.length > 0) {
       char._levelUpRewards = levelUpRewards;
       char._levelsGained = char.level - startingLevel;
+    }
+    if (leveledUp) {
+      await TaskService.updateProgress(char.userId, 'level', char.level);
+      // Fame is recalculated after level up
+      const fame = await char.getFame();
+      await TaskService.updateProgress(char.userId, 'fame', fame);
     }
     
     return levelUpRewards;
@@ -109,20 +119,20 @@ export class CharacterService {
     return rewards;
   }
 
-  static async addStat(userId, field, delta = 1) {
-    let stat = await Statistic.findOne({ where: { userId } });
+  static async addStat(userId, field, delta = 1, transaction = null) {
+    let stat = await Statistic.findOne({ where: { userId }, transaction });
     if (!stat) {
-      stat = await Statistic.create({ userId });
+      stat = await Statistic.create({ userId }, { transaction });
     }
     stat[field] = (stat[field] || 0) + delta;
-    await stat.save();
+    await stat.save({ transaction });
   }
   // Helper to increment both wins and losses
-  static async addFightResult(winnerId, loserId) {
-    await this.addStat(winnerId, 'wins');
-    await this.addStat(loserId, 'losses');
-    await this.addStat(winnerId, 'fights');
-    await this.addStat(loserId, 'fights');
+  static async addFightResult(winnerId, loserId, transaction = null) {
+    await this.addStat(winnerId, 'wins', 1, transaction);
+    await this.addStat(loserId, 'losses', 1, transaction);
+    await this.addStat(winnerId, 'fights', 1, transaction);
+    await this.addStat(loserId, 'fights', 1, transaction);
   }
 
   // Character retrieval
@@ -147,7 +157,11 @@ export class CharacterService {
       dailyLoginReward = await this.giveReward({ character: char, action: this.ACTIONS.DAILY_LOGIN });
       gaveDailyLogin = true;
       await char.save();
+      await TaskService.updateProgress(char.userId, 'days_in_game', char.daysInGame);
     }
+    // Fame update (snapshot)
+    const fame = await char.getFame();
+    await TaskService.updateProgress(char.userId, 'fame', fame);
     // Attach reward info for frontend
     char._dailyLoginReward = dailyLoginReward;
     char._gaveDailyLogin = gaveDailyLogin;
@@ -165,8 +179,15 @@ export class CharacterService {
   }
 
   static async getCharacterStats(userId) {
-    return await Statistic.findOne({ where: { userId } });
+    const stat = await Statistic.findOne({ where: { userId } });
+    return stat ? stat.toJSON() : {};
   }
 
   // Add methods to update lastActive, increment daysInGame, manage buffs, and increment killCount
+  static async updateMoney(userId, newMoney) {
+    await TaskService.updateProgress(userId, 'money', newMoney);
+  }
+  static async updateBlackcoins(userId, newBlackcoins) {
+    await TaskService.updateProgress(userId, 'blackcoins', newBlackcoins);
+  }
 } 

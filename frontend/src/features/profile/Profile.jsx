@@ -23,6 +23,9 @@ import {
   X,
   UserPlus,
   UserCheck,
+  ThumbsUp,
+  ThumbsDown,
+  Skull,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
@@ -32,6 +35,7 @@ import './vipSparkle.css';
 import VipName from './VipName.jsx';
 import Modal from "@/components/Modal";
 import { useSocket } from "@/hooks/useSocket";
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 
 function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   if (!fightResult) return null;
@@ -125,6 +129,10 @@ export default function Profile() {
   const [pendingStatus, setPendingStatus] = useState(null); // 'sent', 'received', or null
   const [friendLoading, setFriendLoading] = useState(false);
   const { socket } = useSocket();
+  const [profileFriends, setProfileFriends] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [profileRatings, setProfileRatings] = useState({ likes: 0, dislikes: 0, userRating: null });
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   const {
     data: character,
@@ -132,10 +140,14 @@ export default function Profile() {
     error,
   } = useQuery({
     queryKey: ["character", username],
-    queryFn: () =>
-      axios
-        .get(username ? `/api/profile/username/${username}` : "/api/profile")
-        .then((res) => res.data),
+    queryFn: () => {
+      const token = localStorage.getItem('jwt');
+      return axios
+        .get(username ? `/api/profile/username/${username}` : "/api/profile", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        .then((res) => res.data);
+    },
     staleTime: 1 * 60 * 1000,
     retry: false,
   });
@@ -231,10 +243,11 @@ export default function Profile() {
       // Socket listeners
       const handleFriendshipUpdate = () => {
         // Refetch friendship status and pending requests
-        axios.get(`/api/friendship/is-friend?friendId=${character.userId}`)
+        const token = localStorage.getItem('jwt');
+        axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
           .then(res => setIsFriend(res.data.isFriend))
           .catch(() => setIsFriend(false));
-        axios.get('/api/friendship/pending')
+        axios.get('/api/friendship/pending', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
           .then(res => {
             const pending = res.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
             if (pending) setPendingStatus('sent');
@@ -286,6 +299,42 @@ export default function Profile() {
     }
   }, [character]);
 
+  useEffect(() => {
+    if (character?.userId) {
+      setFriendsLoading(true);
+      const token = localStorage.getItem('jwt');
+      axios.get(`/api/friendship/list/${character.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        .then(res => setProfileFriends(res.data))
+        .catch(() => setProfileFriends([]))
+        .finally(() => setFriendsLoading(false));
+    }
+  }, [character?.userId]);
+
+  // Fetch profile ratings
+  useEffect(() => {
+    if (character?.userId) {
+      const token = localStorage.getItem('jwt');
+      axios.get(`/api/profile/${character.userId}/ratings`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        .then(res => setProfileRatings(res.data))
+        .catch(() => setProfileRatings({ likes: 0, dislikes: 0, userRating: null }));
+    }
+  }, [character?.userId]);
+
+  // Handle like/dislike
+  const handleRate = async (rating) => {
+    if (!character?.userId) return;
+    setRatingLoading(true);
+    try {
+      const token = localStorage.getItem('jwt');
+      await axios.post(`/api/profile/${character.userId}/rate`, { rating }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      setProfileRatings(prev => ({ ...prev, userRating: rating, likes: rating === 'LIKE' ? prev.likes + (prev.userRating === 'DISLIKE' ? 1 : prev.userRating === 'LIKE' ? 0 : 1) : prev.likes - (prev.userRating === 'LIKE' ? 1 : 0), dislikes: rating === 'DISLIKE' ? prev.dislikes + (prev.userRating === 'LIKE' ? 1 : prev.userRating === 'DISLIKE' ? 0 : 1) : prev.dislikes - (prev.userRating === 'DISLIKE' ? 1 : 0) }));
+    } catch (e) {
+      toast.error('حدث خطأ أثناء التقييم');
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
   const handleAddFriend = async () => {
     setFriendLoading(true);
     await axios.post('/api/friendship/add', { friendId: character.userId });
@@ -317,31 +366,11 @@ export default function Profile() {
   const progress = totalTime && totalTime > 0 ? Math.max(0, Math.min(1, (totalTime - remainingTime) / totalTime)) : 0;
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="loading-spinner"></div>
-            <Target className="w-8 h-8 text-accent-red absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-white text-lg font-medium animate-pulse">
-            جاري تحميل الملف الشخصي...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل الملف الشخصي..." />;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-accent-red/30 rounded-xl p-8">
-          <Target className="w-16 h-16 text-accent-red mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">خطأ في التحميل</h2>
-          <p className="text-hitman-300">فشل في تحميل الملف الشخصي</p>
-        </div>
-      </div>
-    );
+    return <LoadingOrErrorPlaceholder error errorText="فشل في تحميل الملف الشخصي" />;
   }
 
   const healthPercent = displayCharacter.maxHp
@@ -357,15 +386,21 @@ export default function Profile() {
   const fightsWon = displayCharacter.fightsWon ?? 0;
   const fightsTotal = displayCharacter.fightsTotal ?? (fightsWon + fightsLost);
 
-  // Add fame to the stats array for display
+  // Add fame and assassinations to the stats array for display
   const fameStat = {
     icon: Trophy,
     label: "الشهرة",
     value: displayCharacter.fame ?? 0,
     color: "text-accent-yellow",
   };
-  // Insert fame as the first stat
-  const stats = [fameStat,
+  const assassinationsStat = {
+    icon: Skull,
+    label: "مرات الاغتيال",
+    value: displayCharacter.assassinations ?? 0,
+    color: "text-accent-red",
+  };
+  // Insert fame and assassinations as the first stats
+  const stats = [fameStat, assassinationsStat,
     {
       icon: Target,
       label: "الجرائم المرتكبة",
@@ -472,7 +507,7 @@ export default function Profile() {
     setAttacking(false);
   };
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
   // After fetching character/user data and before rendering the name:
   const isVIP = character?.vipExpiresAt && new Date(character.vipExpiresAt) > new Date();
@@ -539,11 +574,19 @@ export default function Profile() {
 
                 {/* Basic Info */}
                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <VipName isVIP={isVIP}>{displayCharacter.name || displayCharacter.username}</VipName>
+                  <VipName isVIP={isVIP} className="large">
+                    {displayCharacter.name || displayCharacter.username}
+                  </VipName>
                   {character?.userId && (
                     <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded ml-2">ID: {character.userId}</span>
                   )}
                 </h2>
+                {/* Money on hand */}
+                <div className="flex items-center justify-center gap-2 mt-2 mb-1">
+                  <DollarSign className="w-5 h-5 text-accent-green" />
+                  <span className="text-accent-green font-bold">النقود:</span>
+                  <span className="text-lg font-mono text-accent-green">{displayCharacter.money?.toLocaleString() ?? 0}$</span>
+                </div>
                 <p className="text-accent-red font-medium mb-1">
                   لاعب جديد
                 </p>
@@ -651,6 +694,25 @@ export default function Profile() {
             </div>
             {/* Right column: HP bar, stats, achievements */}
             <div className="flex flex-col gap-6">
+              {/* Friends List Section */}
+              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-accent-green">
+                  <Users className="w-6 h-6" /> أصدقاء اللاعب
+                </h3>
+                {friendsLoading ? (
+                  <div className="text-center text-accent-green">جاري التحميل...</div>
+                ) : profileFriends.length === 0 ? (
+                  <div className="text-center text-hitman-400">لا يوجد أصدقاء بعد.</div>
+                ) : (
+                  <ul className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {profileFriends.map(friend => (
+                      <li key={friend.id} className="bg-hitman-900/60 border border-accent-green/30 rounded-lg px-3 py-2 text-center text-white font-bold">
+                        {friend.username}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               {/* HP Bar */}
               <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
                 <span className="text-hitman-200 mb-1">الصحة</span>
@@ -699,6 +761,40 @@ export default function Profile() {
                     </div>
                   ))}
                 </div>
+              </div>
+              {/* Likes/Dislikes Section */}
+              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-accent-yellow rounded-xl p-6 mb-6 flex flex-col items-center">
+                <h3 className="text-lg font-bold mb-2 text-accent-yellow flex items-center gap-2">
+                  <ThumbsUp className="w-5 h-5" /> تقييمات اللاعبين
+                </h3>
+                <div className="flex gap-6 items-center mb-2">
+                  <div className="flex flex-col items-center">
+                    <span className="text-2xl font-bold text-accent-green">{profileRatings.likes}</span>
+                    <span className="text-hitman-300 text-sm flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> إعجاب</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-2xl font-bold text-accent-red">{profileRatings.dislikes}</span>
+                    <span className="text-hitman-300 text-sm flex items-center gap-1"><ThumbsDown className="w-4 h-4" /> عدم إعجاب</span>
+                  </div>
+                </div>
+                {!isCurrentUser && (
+                  <div className="flex gap-4 mt-2">
+                    <button
+                      className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 border transition-all duration-200 ${profileRatings.userRating === 'LIKE' ? 'bg-accent-green/30 border-accent-green text-accent-green' : 'bg-hitman-900/40 border-accent-green text-white hover:bg-accent-green/20'}`}
+                      onClick={() => handleRate('LIKE')}
+                      disabled={ratingLoading}
+                    >
+                      <ThumbsUp className="w-5 h-5" /> أعجبني
+                    </button>
+                    <button
+                      className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 border transition-all duration-200 ${profileRatings.userRating === 'DISLIKE' ? 'bg-accent-red/30 border-accent-red text-accent-red' : 'bg-hitman-900/40 border-accent-red text-white hover:bg-accent-red/20'}`}
+                      onClick={() => handleRate('DISLIKE')}
+                      disabled={ratingLoading}
+                    >
+                      <ThumbsDown className="w-5 h-5" /> لم يعجبني
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

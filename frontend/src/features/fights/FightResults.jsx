@@ -77,7 +77,7 @@ export default function FightResults() {
           </div>
           <div className="text-2xl font-bouya text-red-400">{attackerDamage?.toFixed(1) || '0'}</div>
           <div className="text-sm text-red-300">
-            {attackerDamage && totalDamage ? `${((attackerDamage / totalDamage) * 100).toFixed(1)}% من إجمالي الضرر` : ''}
+            {attackerDamage && totalDamage ? `${((attackerDamage / totalDamage) * 100).toFixed(1)}% من مجموع الضرر` : ''}
           </div>
         </div>
         <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 text-center">
@@ -87,12 +87,13 @@ export default function FightResults() {
           </div>
           <div className="text-2xl font-bouya text-blue-400">{defenderDamage?.toFixed(1) || '0'}</div>
           <div className="text-sm text-blue-300">
-            {defenderDamage && totalDamage ? `${((defenderDamage / totalDamage) * 100).toFixed(1)}% من إجمالي الضرر` : ''}
+            {defenderDamage && totalDamage ? `${((defenderDamage / totalDamage) * 100).toFixed(1)}% من مجموع الضرر` : ''}
           </div>
         </div>
       </div>
       <div className="mt-4 text-center">
-        <div className="text-lg font-bold text-accent-yellow">إجمالي الضرر: {totalDamage?.toFixed(1) || '0'}</div>
+        <div className="text-lg font-bold text-accent-yellow">مجموع الضرر: {totalDamage?.toFixed(1) || '0'}</div>
+        <div className="text-sm text-hitman-300">(مجموع ضرر كلا اللاعبين)</div>
       </div>
     </div>
   );
@@ -168,7 +169,9 @@ export default function FightResults() {
                 <div className="flex-1 text-center">
                   <div className="text-2xl font-bold text-accent-red mb-2">الفائز</div>
                   <div className="text-3xl font-bouya mb-1">
-                    <VipName isVIP={winner?.isVIP}>{winner?.name || "؟"}</VipName>
+                    <VipName isVIP={winner?.isVIP} className="compact">
+                      {winner?.name || "؟"}
+                    </VipName>
                   </div>
                   <div className="text-hitman-300 text-lg">@{winner?.username}</div>
                 </div>
@@ -177,8 +180,9 @@ export default function FightResults() {
                   <div className="text-3xl font-bouya">{rounds}</div>
                 </div>
                 <div className="flex-1 text-center">
-                  <div className="text-2xl font-bold text-accent-green mb-2">إجمالي الضرر</div>
+                  <div className="text-2xl font-bold text-accent-green mb-2">مجموع الضرر</div>
                   <div className="text-3xl font-bouya">{totalDamage?.toFixed(0) || '0'}</div>
+                  <div className="text-sm text-hitman-300">(ضرر كلا اللاعبين)</div>
                 </div>
               </div>
             </div>

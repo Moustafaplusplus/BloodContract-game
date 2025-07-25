@@ -4,6 +4,8 @@ import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/hooks/useAuth";
+import { jwtDecode } from "jwt-decode";
 import {
   User,
   Star,
@@ -17,25 +19,40 @@ import {
   Users,
   Home as HomeIcon,
   Edit3,
-  Award,
   Activity,
   Zap,
   Heart,
+  Skull,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import '../profile/vipSparkle.css';
 import VipName from '../profile/VipName.jsx';
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 
 export default function Character() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Get userId from token for cache invalidation
+  const userId = token ? (() => {
+    try {
+      const { id } = jwtDecode(token);
+      return id;
+    } catch {
+      return null;
+    }
+  })() : null;
+
   const {
     data: character,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["character"],
+    queryKey: ["character", userId], // Include userId in query key
     queryFn: () => axios.get("/api/character").then((res) => res.data),
-    staleTime: 1 * 60 * 1000,
+    staleTime: 0, // No stale time - always fetch fresh data
     retry: false,
+    enabled: !!userId, // Only run query when we have a userId
   });
 
   // Mock data for design purposes when backend is not available
@@ -75,20 +92,57 @@ export default function Character() {
   };
 
   // Hospital status with real-time countdown
-  const { data: hospitalStatus } = useQuery({
-    queryKey: ['hospitalStatus'],
+  const { data: hospitalStatus, error: hospitalError } = useQuery({
+    queryKey: ['hospitalStatus', userId], // Include userId in query key
     queryFn: async () => {
+      const token = localStorage.getItem('jwt');
+      console.log('[HOSPITAL_QUERY] Token:', token ? 'Present' : 'Missing');
+      
       const res = await fetch('/api/confinement/hospital', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt')}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) return {};
-      return res.json();
+      
+      console.log('[HOSPITAL_QUERY] Response status:', res.status);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.log('[HOSPITAL_QUERY] Error response:', errorText);
+        
+        if (res.status === 401) {
+          // Token expired or invalid, don't retry
+          throw new Error('Authentication failed');
+        }
+        return {};
+      }
+      
+      const data = await res.json();
+      console.log('[HOSPITAL_QUERY] Success response:', data);
+      return data;
     },
-    staleTime: 10000,
+    staleTime: 0, // No stale time
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors
+      if (error.message === 'Authentication failed') {
+        return false;
+      }
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
+    retryDelay: 1000,
+    enabled: !!userId, // Only run query when we have a userId
   });
 
   // Real-time countdown for hospital time
   const [remainingTime, setRemainingTime] = useState(hospitalStatus?.remainingSeconds || 0);
+
+  // Invalidate cache when user changes
+  useEffect(() => {
+    if (userId) {
+      console.log('[Character] User changed, invalidating cache for user:', userId);
+      queryClient.invalidateQueries(["character"]);
+      queryClient.invalidateQueries(["hospitalStatus"]);
+    }
+  }, [userId, queryClient]);
 
   useEffect(() => {
     if (hospitalStatus?.inHospital && hospitalStatus?.remainingSeconds) {
@@ -115,7 +169,6 @@ export default function Character() {
   const [avatarError, setAvatarError] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(null);
   const fileInputRef = useRef();
-  const queryClient = useQueryClient();
   const { socket } = useSocket();
 
   useEffect(() => {
@@ -144,7 +197,7 @@ export default function Character() {
       setAvatarUrl(res.data.avatarUrl);
       toast.success("تم تحديث الصورة الشخصية بنجاح!");
       // Refetch character data to update avatar
-      queryClient.invalidateQueries(["character"]);
+      queryClient.invalidateQueries(["character", userId]);
     } catch {
       setAvatarError("فشل رفع الصورة. تأكد من أن الصورة أقل من 2MB وبصيغة صحيحة.");
       toast.error("فشل رفع الصورة الشخصية");
@@ -157,20 +210,24 @@ export default function Character() {
   useEffect(() => {
     if (!socket) return;
     const refetchAll = () => {
-      queryClient.invalidateQueries(["character"]);
-      queryClient.invalidateQueries(["hospitalStatus"]);
+      queryClient.invalidateQueries(["character", userId]);
+      // Only invalidate hospital status if there's no error
+      if (!hospitalError) {
+        queryClient.invalidateQueries(["hospitalStatus", userId]);
+      }
     };
     socket.on('hud:update', refetchAll);
     socket.on('hospital:update', refetchAll);
-    const pollInterval = setInterval(refetchAll, 10000);
+    // Increase polling interval to reduce server load
+    const pollInterval = setInterval(refetchAll, 30000); // 30 seconds instead of 10
     return () => {
       socket.off('hud:update', refetchAll);
       socket.off('hospital:update', refetchAll);
       clearInterval(pollInterval);
     };
-  }, [socket, queryClient]);
+  }, [socket, queryClient, hospitalError, userId]);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
   const isVIP = displayCharacter.vipExpiresAt && new Date(displayCharacter.vipExpiresAt) > new Date();
   const healthPercent = displayCharacter.maxHp
     ? (displayCharacter.hp / displayCharacter.maxHp) * 100
@@ -181,25 +238,26 @@ export default function Character() {
   const expPercent = displayCharacter.nextLevelExp
     ? (displayCharacter.exp / displayCharacter.nextLevelExp) * 100
     : 0;
-  const achievements = [
-    { icon: Target, name: "قناص محترف", description: "100 هدف تم إنجازه" },
-    { icon: Shield, name: "لا يُقهر", description: "50 معركة بدون هزيمة" },
-    { icon: Crown, name: "ملك الجريمة", description: "وصل للمستوى 15" },
-    { icon: DollarSign, name: "مليونير", description: "جمع مليون دولار" },
-  ];
+
   // Unified stat extraction from backend fields
   const fightsLost = displayCharacter.fightsLost ?? 0;
   const fightsWon = displayCharacter.fightsWon ?? 0;
   const fightsTotal = displayCharacter.fightsTotal ?? (fightsWon + fightsLost);
-  // Add fame to the stats array for display
+  // Add fame and assassinations to the stats array for display
   const fameStat = {
     icon: Trophy,
     label: "الشهرة",
     value: displayCharacter.fame ?? 0,
     color: "text-accent-yellow",
   };
-  // Insert fame as the first stat
-  const stats = [fameStat,
+  const assassinationsStat = {
+    icon: Skull,
+    label: "مرات الاغتيال",
+    value: character?.assassinations ?? 0,
+    color: "text-accent-red",
+  };
+  // Insert fame and assassinations as the first stats
+  const stats = [fameStat, assassinationsStat,
     {
       icon: Target,
       label: "الجرائم المرتكبة",
@@ -233,37 +291,21 @@ export default function Character() {
   ];
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="loading-spinner"></div>
-            <Target className="w-8 h-8 text-accent-red absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-white text-lg font-medium animate-pulse">
-            جاري تحميل الملف الشخصي...
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل الملف الشخصي..." />;
   }
-
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-accent-red/30 rounded-xl p-8">
-          <Target className="w-16 h-16 text-accent-red mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">خطأ في التحميل</h2>
-          <p className="text-hitman-300">فشل في تحميل الملف الشخصي</p>
-        </div>
-      </div>
-    );
+    return <LoadingOrErrorPlaceholder error errorText="فشل في تحميل الملف الشخصي" />;
   }
 
   // --- MOBILE-FIRST LAYOUT STARTS HERE ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-2 sm:p-4 pt-20 overflow-x-hidden">
       {/* Hospital status message */}
+      {hospitalError && (
+        <div className="bg-black border-2 border-yellow-600 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
+          <p>⚠️ فشل في تحميل حالة المستشفى</p>
+        </div>
+      )}
       {hospitalStatus?.inHospital && (
         <div className="bg-black border-2 border-red-600 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
           <span className="font-bold text-red-400">أنت في المستشفى</span>
@@ -332,7 +374,9 @@ export default function Character() {
 
               {/* Basic Info */}
               <h2 className="text-lg sm:text-2xl font-bold flex items-center gap-2 justify-center">
-                <VipName isVIP={isVIP}>{displayCharacter.name || displayCharacter.username}</VipName>
+                <VipName isVIP={isVIP} className="large">
+                  {displayCharacter.name || displayCharacter.username}
+                </VipName>
               </h2>
               <p className="text-accent-red font-medium mb-1 text-sm sm:text-base">
                 المستوى {displayCharacter.level}
@@ -552,29 +596,7 @@ export default function Character() {
           </div>
         </div>
 
-        {/* Achievements - horizontal scroll on mobile, grid on desktop */}
-        <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 sm:p-6 mt-4">
-          <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center">
-            <Award className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-accent-yellow" />
-            الإنجازات المحققة
-          </h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:gap-4 sm:overflow-x-visible">
-            {achievements.map((achievement, index) => (
-              <div
-                key={index}
-                className="min-w-[180px] sm:min-w-0 bg-hitman-800/50 rounded-lg p-3 sm:p-4 text-center group hover:bg-hitman-700/50 transition-colors flex-shrink-0"
-              >
-                <achievement.icon className="w-6 h-6 sm:w-8 sm:h-8 text-accent-yellow mx-auto mb-1 sm:mb-2 group-hover:scale-110 transition-transform" />
-                <h4 className="font-medium text-white mb-1 text-sm sm:text-base">
-                  {achievement.name}
-                </h4>
-                <p className="text-xs text-hitman-400">
-                  {achievement.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+
 
         {/* Active Buffs */}
         {displayCharacter?.buffs && (

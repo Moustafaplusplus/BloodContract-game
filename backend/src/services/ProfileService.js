@@ -2,6 +2,7 @@ import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 import { Fight } from '../models/Fight.js';
+import { Statistic } from '../models/Statistic.js';
 
 // Centralized character attributes for reuse
 const CHARACTER_ATTRIBUTES = [
@@ -12,74 +13,110 @@ const CHARACTER_ATTRIBUTES = [
 // Helper to get fightsLost and fame
 async function enrichCharacter(character) {
   if (!character) return {};
-  const fightsLost = await Fight.count({
-    where: {
-      [Op.or]: [
-        { attacker_id: character.userId },
-        { defender_id: character.userId }
-      ],
-      winner_id: { [Op.ne]: character.userId }
-    }
-  });
-  const fame = await character.getFame();
-  return { fightsLost, fame };
+  try {
+    const fightsLost = await Fight.count({
+      where: {
+        [Op.or]: [
+          { attacker_id: character.userId },
+          { defender_id: character.userId }
+        ],
+        winner_id: { [Op.ne]: character.userId }
+      }
+    });
+    const fame = await character.getFame();
+    return { fightsLost, fame };
+  } catch (error) {
+    console.error('[ProfileService] Error enriching character:', error);
+    // Return default values if there's an error
+    return { fightsLost: 0, fame: 0 };
+  }
 }
 
 export class ProfileService {
   // Get user profile by ID
   // Get user profile by ID
   static async getUserProfile(userId) {
-    const user = await User.findByPk(userId, {
-      include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
-    });
-    if (!user || !user.Character) throw new Error('User or Character not found');
-    const userObj = user.toJSON();
-    delete userObj.email;
-    const { fightsLost, fame } = await enrichCharacter(user.Character);
-    if (!userObj.Character) {
-      return { ...userObj, fame, fightsLost, isVIP: false };
+    try {
+      const user = await User.findByPk(userId, {
+        include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
+      });
+      if (!user || !user.Character) throw new Error('User or Character not found');
+      const userObj = user.toJSON();
+      delete userObj.email;
+      const { fightsLost, fame } = await enrichCharacter(user.Character);
+      // Fetch assassinations stat
+      let assassinations = 0;
+      try {
+        const stat = await Statistic.findOne({ where: { userId } });
+        if (stat) assassinations = stat.assassinations || 0;
+      } catch (statError) {
+        console.error('[ProfileService] Error fetching statistics:', statError);
+        assassinations = 0;
+      }
+      if (!userObj.Character) {
+        return { ...userObj, fame, fightsLost, assassinations, isVIP: false };
+      }
+      const rest = { ...userObj };
+      delete rest.Character;
+      // Only spread plain character data, not Sequelize instance
+      const characterData = typeof userObj.Character.toJSON === 'function'
+        ? userObj.Character.toJSON()
+        : userObj.Character;
+      return {
+        ...rest,
+        ...characterData,
+        isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
+        fame,
+        fightsLost,
+        assassinations,
+      };
+    } catch (error) {
+      console.error('[ProfileService] Error getting user profile:', error);
+      throw error;
     }
-    const rest = { ...userObj };
-    delete rest.Character;
-    // Only spread plain character data, not Sequelize instance
-    const characterData = typeof userObj.Character.toJSON === 'function'
-      ? userObj.Character.toJSON()
-      : userObj.Character;
-    return {
-      ...rest,
-      ...characterData,
-      isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
-      fame,
-      fightsLost,
-    };
   }
 
   // Get user profile by username
   static async getUserProfileByUsername(username) {
-    const user = await User.findOne({
-      where: { username },
-      include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
-    });
-    if (!user || !user.Character) throw new Error('User or Character not found');
-    const userObj = user.toJSON();
-    delete userObj.email;
-    const { fightsLost, fame } = await enrichCharacter(user.Character);
-    if (!userObj.Character) {
-      return { ...userObj, fame, fightsLost, isVIP: false };
+    try {
+      const user = await User.findOne({
+        where: { username },
+        include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
+      });
+      if (!user || !user.Character) throw new Error('User or Character not found');
+      const userObj = user.toJSON();
+      delete userObj.email;
+      const { fightsLost, fame } = await enrichCharacter(user.Character);
+      // Fetch assassinations stat
+      let assassinations = 0;
+      try {
+        const stat = await Statistic.findOne({ where: { userId: user.id } });
+        if (stat) assassinations = stat.assassinations || 0;
+      } catch (statError) {
+        console.error('[ProfileService] Error fetching statistics:', statError);
+        assassinations = 0;
+      }
+      if (!userObj.Character) {
+        return { ...userObj, fame, fightsLost, assassinations, isVIP: false };
+      }
+      const rest = { ...userObj };
+      delete rest.Character;
+      // Only spread plain character data, not Sequelize instance
+      const characterData = typeof userObj.Character.toJSON === 'function'
+        ? userObj.Character.toJSON()
+        : userObj.Character;
+      return {
+        ...rest,
+        ...characterData,
+        isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
+        fame,
+        fightsLost,
+        assassinations,
+      };
+    } catch (error) {
+      console.error('[ProfileService] Error getting user profile by username:', error);
+      throw error;
     }
-    const rest = { ...userObj };
-    delete rest.Character;
-    // Only spread plain character data, not Sequelize instance
-    const characterData = typeof userObj.Character.toJSON === 'function'
-      ? userObj.Character.toJSON()
-      : userObj.Character;
-    return {
-      ...rest,
-      ...characterData,
-      isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
-      fame,
-      fightsLost,
-    };
   }
 
   // Get public user info by ID (for /api/profile/:id)

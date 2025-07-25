@@ -3,8 +3,10 @@ import { Character } from '../models/Character.js';
 import { CharacterService } from './CharacterService.js';
 import { Hospital, Jail } from '../models/Confinement.js';
 import { sequelize } from '../config/db.js';
-import { io } from '../socket.js';
+import { io, emitNotification } from '../socket.js';
 import { User } from '../models/User.js';
+import { TaskService } from './TaskService.js';
+import { NotificationService } from './NotificationService.js';
 
 export class CrimeService {
   // Utility helpers
@@ -63,7 +65,7 @@ export class CrimeService {
       description: crime.description,
       isEnabled:  crime.isEnabled,
       req_level:  crime.req_level,
-      energyCost: crime.energyCost,
+      energyCost: c.energyCost,
       successRate: crime.successRate,
       minReward:  crime.minReward,
       maxReward:  crime.maxReward,
@@ -239,7 +241,7 @@ export class CrimeService {
       await character.save({ transaction: tx });
 
       // Increment crimes stat
-      await CharacterService.addStat(userId, "crimes");
+      await CharacterService.addStat(userId, "crimes", 1, tx);
 
       // Audit log
       await CrimeLog.create({
@@ -260,6 +262,56 @@ export class CrimeService {
         io.to(String(userId)).emit('hud:update', hudData);
       }
       
+      // After successful crime execution (success === true):
+      if (success) {
+        await TaskService.updateProgress(userId, 'crimes_committed', 1);
+      }
+
+      // Create notifications
+      try {
+        if (success) {
+          // Success notification
+          const successNotification = await NotificationService.createNotification(
+            userId,
+            'SYSTEM',
+            'نجحت في الجريمة',
+            `نجحت في تنفيذ "${crime.name}" وحصلت على ${payout} مال و ${expGain} خبرة`,
+            { 
+              crimeName: crime.name,
+              payout,
+              expGain,
+              energyCost: crime.energyCost
+            }
+          );
+          emitNotification(userId, successNotification);
+        } else {
+          // Failure notification
+          let failureMessage = `فشلت في تنفيذ "${crime.name}"`;
+          if (confinementDetails) {
+            if (confinementDetails.type === 'jail') {
+              failureMessage += ` وتم سجنك لمدة ${confinementDetails.minutes} دقيقة`;
+            } else if (confinementDetails.type === 'hospital') {
+              failureMessage += ` وتم إدخالك المستشفى لمدة ${confinementDetails.minutes} دقيقة`;
+            }
+          }
+          
+          const failureNotification = await NotificationService.createNotification(
+            userId,
+            'SYSTEM',
+            'فشلت في الجريمة',
+            failureMessage,
+            { 
+              crimeName: crime.name,
+              confinementDetails
+            }
+          );
+          emitNotification(userId, failureNotification);
+        }
+      } catch (notificationError) {
+        console.error('[CrimeService] Notification error:', notificationError);
+        // Continue even if notifications fail
+      }
+
       return {
           success,
           payout,

@@ -74,66 +74,14 @@ async function seedCrimes() {
 }
 
 async function seedHouses() {
-  try {
-    console.log('🏠 Seeding houses...');
-    await House.destroy({ where: {} });
-    await House.bulkCreate([
-      { name: 'غرفة في السطح',          cost:  1000,   energyRegen:  5,  defenseBonus:  2,  hpBonus: 100,   description: 'مكان متواضع للراحة بعد أول مهمة.' },
-      { name: 'شقة في حي شعبي',          cost:  5000,   energyRegen: 10,  defenseBonus:  5,  hpBonus: 250,   description: 'أفضل من لا شيء، لكنها ليست آمنة بالكامل.' },
-      { name: 'دور أرضي منعزل',         cost: 15000,   energyRegen: 15,  defenseBonus:  8,  hpBonus: 500,   description: 'هدوء وراحة نسبية.' },
-      { name: 'فيلا صغيرة',             cost: 35000,   energyRegen: 20,  defenseBonus: 12,  hpBonus: 900,   description: 'مكان أنيق يوفر الحماية والطاقة.' },
-      { name: 'قصر في ضواحي المدينة',    cost: 80000,   energyRegen: 30,  defenseBonus: 18,  hpBonus: 1600,  description: 'قصر واسع وآمن في مكان بعيد.' },
-      { name: 'ملجأ تحت الأرض',         cost: 150000,  energyRegen: 40,  defenseBonus: 25,  hpBonus: 2500,  description: 'مكان مجهز بالكامل للبقاء والاختباء.' },
-      { name: 'يخت خاص',                cost: 300000,  energyRegen: 50,  defenseBonus: 32,  hpBonus: 4000,  description: 'موقعك متغير دوماً — حماية عالية وراحة فاخرة.' },
-      { name: 'بنتهاوس في ناطحة سحاب',  cost: 600000,  energyRegen: 60,  defenseBonus: 40,  hpBonus: 6000,  description: 'مستوى النخبة. الأفضل من كل شيء.' },
-      { name: 'مخبأ في الجبال',         cost: 1200000, energyRegen: 70,  defenseBonus: 50,  hpBonus: 9000,  description: 'عزلة تامة، حماية قصوى.' },
-      { name: 'قاعدة عمليات سرية',      cost: 2500000, energyRegen: 80,  defenseBonus: 60,  hpBonus: 14000, description: 'مجهزة بأحدث تقنيات الأمان والبقاء.' },
-    ]);
-    console.log('✅ Houses seeded successfully');
-  } catch (error) {
-    console.error('❌ Error seeding houses:', error);
-    throw error;
-  }
+  console.log('🏠 Skipping houses seeding (managed via admin panel)');
 }
-
 async function seedCars() {
-  try {
-    console.log('🚗 Seeding cars...');
-    await Car.destroy({ where: {} });
-    await Car.bulkCreate([
-      { name: 'سيارة قديمة', cost: 5000, attackBonus: 10, defenseBonus: 2, description: 'سيارة قديمة لكنها تعمل.' },
-      { name: 'سيدان حديثة', cost: 20000, attackBonus: 25, defenseBonus: 4, description: 'سيدان مريحة وسريعة نسبياً.' },
-      { name: 'سيارة رياضية', cost: 75000, attackBonus: 60, defenseBonus: 7, description: 'قوة وسرعة في كل منعطف.' },
-      { name: 'جيب مدرع', cost: 200000, attackBonus: 90, defenseBonus: 12, description: 'حماية عالية وقوة دفع.' },
-      { name: 'سيارة فاخرة', cost: 500000, attackBonus: 130, defenseBonus: 16, description: 'رمز الفخامة والقوة.' },
-      { name: 'سيارة خارقة', cost: 1200000, attackBonus: 200, defenseBonus: 22, description: 'سرعة لا تصدق وهجوم مدمر.' },
-      { name: 'دبابة خفيفة', cost: 3000000, attackBonus: 350, defenseBonus: 40, description: 'قوة هجومية ودفاعية لا مثيل لها.' },
-    ]);
-    console.log('✅ Cars seeded successfully');
-  } catch (error) {
-    console.error('❌ Error seeding cars:', error);
-    throw error;
-  }
+  console.log('🚗 Skipping cars seeding (managed via admin panel)');
 }
-
 async function seedDogs() {
-  try {
-    console.log('🐕 Seeding dogs...');
-    await Dog.destroy({ where: {} });
-    await Dog.bulkCreate([
-      { name: 'كلب حراسة صغير', cost: 3000, powerBonus: 15, description: 'كلب صغير لكنه شجاع.' },
-      { name: 'بولدوغ قوي', cost: 12000, powerBonus: 40, description: 'قوة عضلية وحماية ممتازة.' },
-      { name: 'دوبرمان مدرب', cost: 40000, powerBonus: 90, description: 'ذكي وسريع الاستجابة.' },
-      { name: 'رودفايلر شرس', cost: 120000, powerBonus: 180, description: 'هجوم ودفاع لا يستهان به.' },
-      { name: 'كلب ذئب نادر', cost: 350000, powerBonus: 350, description: 'قوة أسطورية وولاء مطلق.' },
-    ]);
-    console.log('✅ Dogs seeded successfully');
-  } catch (error) {
-    console.error('❌ Error seeding dogs:', error);
-    throw error;
-  }
+  console.log('🐕 Skipping dogs seeding (managed via admin panel)');
 }
-
 
 
 async function seedUsersAndCharacters() {

@@ -10,8 +10,9 @@ export class CarService {
   }
 
   // Get all available cars
-  static async getAllCars() {
+  static async getAllCars(filter = {}) {
     return await Car.findAll({
+      where: filter,
       order: [['cost', 'ASC']]
     });
   }
@@ -51,10 +52,6 @@ export class CarService {
         throw new Error('Character or car not found');
       }
 
-      if (character.money < car.cost) {
-        throw new Error('Not enough money');
-      }
-
       // Check if user already owns this car
       const existingCar = await UserCar.findOne({
         where: { userId, carId },
@@ -65,8 +62,19 @@ export class CarService {
         throw new Error('Already own this car');
       }
 
-      // Purchase the car
-      character.money -= car.cost;
+      // Check currency and deduct appropriate amount
+      if (car.currency === 'blackcoin') {
+        if (character.blackcoins < car.cost) {
+          throw new Error('Not enough blackcoins');
+        }
+        character.blackcoins -= car.cost;
+      } else {
+        if (character.money < car.cost) {
+          throw new Error('Not enough money');
+        }
+        character.money -= car.cost;
+      }
+
       await character.save({ transaction: t });
 
       const userCar = await UserCar.create({
@@ -76,7 +84,12 @@ export class CarService {
       }, { transaction: t });
 
       await t.commit();
-      return { userCar, car, remainingMoney: character.money };
+      return { 
+        userCar, 
+        car, 
+        remainingMoney: character.money,
+        remainingBlackcoins: character.blackcoins
+      };
     } catch (error) {
       await t.rollback();
       throw error;

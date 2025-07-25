@@ -1,5 +1,6 @@
-import { DataTypes } from 'sequelize';
+import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
+import { User } from './User.js';
 
 export const Statistic = sequelize.define('Statistic', {
   userId:     { type: DataTypes.INTEGER, allowNull: false, unique: true },

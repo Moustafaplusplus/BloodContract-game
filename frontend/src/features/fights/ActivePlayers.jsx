@@ -4,9 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sword, User, Clock, AlertTriangle } from 'lucide-react';
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 
 const API = import.meta.env.VITE_API_URL;
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
 
 // Improved avatar URL handling with better fallback
 const getAvatarUrl = (url) => {
@@ -114,6 +115,13 @@ export default function ActivePlayers() {
     }
   };
 
+  if (isLoading) {
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل اللاعبين النشطين..." />;
+  }
+  if (error) {
+    return <LoadingOrErrorPlaceholder error errorText="حدث خطأ أثناء تحميل اللاعبين" />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
       <div className="relative w-full h-32 sm:h-48 md:h-64 rounded-2xl overflow-hidden mb-6 sm:mb-10 flex items-center justify-center bg-gradient-to-br from-accent-red/40 to-black/60 border-2 border-accent-red animate-fade-in">
@@ -123,15 +131,11 @@ export default function ActivePlayers() {
           <p className="text-hitman-300 text-base sm:text-lg">شاهد جميع اللاعبين المتصلين أو النشطين خلال آخر 30 دقيقة</p>
         </div>
       </div>
-      {isLoading ? (
-        <div className="text-center py-8">جاري تحميل اللاعبين النشطين...</div>
-      ) : error ? (
-        <div className="text-center py-8 text-red-500">حدث خطأ أثناء تحميل اللاعبين</div>
+      {users.length === 0 ? (
+        <LoadingOrErrorPlaceholder error errorText="لا يوجد لاعبون نشطون حالياً" />
       ) : (
         <div className="max-w-2xl mx-auto space-y-4">
-          {users.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">لا يوجد لاعبون نشطون حالياً</div>
-          ) : users.map((user) => {
+          {users.map((user) => {
             const xpWarning = getXPWarning(stats?.level || 1, user.level);
             
             return (

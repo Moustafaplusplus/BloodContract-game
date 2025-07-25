@@ -19,6 +19,7 @@ User.init({
   age:      { type: DataTypes.INTEGER, validate: { min: 13, max: 120 } },
   gender:   { type: DataTypes.ENUM('male', 'female'), allowNull: false, validate: { notEmpty: true } },
   password: { type: DataTypes.STRING, allowNull: false, validate: { len: [6, 100] } },
+  googleId: { type: DataTypes.STRING, unique: true, allowNull: true },
   bio:       { type: DataTypes.TEXT, defaultValue: '' },
   avatarUrl: { type: DataTypes.STRING },
   isVip:     { type: DataTypes.BOOLEAN, defaultValue: false },

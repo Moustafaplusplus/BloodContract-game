@@ -2,6 +2,7 @@ import { Gang, GangMember, GangJoinRequest } from '../models/Gang.js';
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
+import { TaskService } from './TaskService.js';
 
 export class GangService {
   // Create a new gang
@@ -45,6 +46,8 @@ export class GangService {
       userId: leaderId,
       role: 'LEADER'
     });
+
+    await TaskService.updateProgress(leaderId, 'gang_created', 1);
 
     return gang;
   }
@@ -267,6 +270,8 @@ export class GangService {
     character.money -= amount;
     await character.save();
 
+    await TaskService.updateProgress(userId, 'gang_money_contributed', amount);
+
     return { gangMoney: gang.money, characterMoney: character.money };
   }
 
@@ -487,6 +492,8 @@ export class GangService {
       userId: joinRequest.userId,
       role: 'MEMBER'
     });
+
+    await TaskService.updateProgress(requesterId, 'gang_joined', 1);
 
     return { message: 'Join request accepted', member: newMember };
   }

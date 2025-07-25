@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Sword, Zap, Target, Trophy } from 'lucide-react';
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 
 const AttackResultModal = ({ open, onClose, success, reward, posterName, message, fightResult }) => {
   const [step, setStep] = useState(0);
@@ -20,16 +21,7 @@ const AttackResultModal = ({ open, onClose, success, reward, posterName, message
 
   // Loading state
   if (!fightResult) {
-    return (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-      }}>
-        <div style={{ background: '#111', color: '#fff', border: '2px solid #a00', borderRadius: '12px', padding: '2rem', minWidth: '320px', maxWidth: '600px', boxShadow: '0 0 16px #a00a', textAlign: 'center', position: 'relative' }}>
-          <h2 style={{ color: '#fff', marginBottom: '1rem' }}>جاري تجهيز القتال...</h2>
-          <div style={{ color: '#aaa', marginBottom: '1rem' }}>يرجى الانتظار حتى يتم تنفيذ الهجوم ومعالجة النتيجة...</div>
-        </div>
-      </div>
-    );
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تجهيز القتال..." />;
   }
 
   // Fight result display
@@ -78,7 +70,6 @@ const AttackResultModal = ({ open, onClose, success, reward, posterName, message
             )}
             {success && (
               <>
-                <div style={{ marginBottom: 8 }}><b>صاحب العقد:</b> {posterName}</div>
                 <div style={{ marginBottom: 16 }}><b>المكافأة:</b> ${reward}</div>
               </>
             )}

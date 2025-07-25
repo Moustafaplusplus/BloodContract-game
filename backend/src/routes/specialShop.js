@@ -18,4 +18,11 @@ router.get('/special', SpecialShopController.getSpecialItems);
 // POST /api/special-shop/buy/special/:id
 router.post('/buy/special/:id', auth, SpecialShopController.buySpecialItem);
 
+// GET /api/special-shop/cars
+router.get('/cars', SpecialShopController.getSpecialCars);
+// GET /api/special-shop/houses
+router.get('/houses', SpecialShopController.getSpecialHouses);
+// GET /api/special-shop/dogs
+router.get('/dogs', SpecialShopController.getSpecialDogs);
+
 export default router; 

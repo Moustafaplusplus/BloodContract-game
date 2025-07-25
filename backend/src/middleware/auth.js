@@ -7,8 +7,17 @@ const SECRET = process.env.JWT_SECRET;
 if (!SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 export async function auth(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  // Log the Authorization header for debugging
+  console.log('[AUTH] Authorization header:', req.headers['authorization']);
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) {
+    console.log('[AUTH] No Authorization header present');
+    return res.status(401).json({ message: 'No authentication token provided' });
+  }
+  const token = authHeader.split(' ')[1];
+  console.log('[AUTH] Extracted token:', token ? 'Present' : 'Missing');
   if (!token) {
+    console.log('[AUTH] No token found after Bearer');
     return res.status(401).json({ message: 'No authentication token provided' });
   }
   

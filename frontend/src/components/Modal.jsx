@@ -63,7 +63,7 @@ const Modal = ({
       />
       
       {/* Modal */}
-      <div className={`relative bg-gradient-to-br from-hitman-900 to-black border-2 ${getBorderColor()} rounded-2xl shadow-2xl max-w-md w-full mx-auto p-8 text-white animate-fade-in`}>
+      <div className={`relative bg-gradient-to-br from-bloodcontract-900 to-black border-2 ${getBorderColor()} rounded-2xl shadow-2xl max-w-md w-full mx-auto p-8 text-white animate-fade-in`}>
         {/* Close button */}
         <button 
           onClick={onClose}
@@ -88,7 +88,7 @@ const Modal = ({
           <div className="w-24 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto mb-6" />
 
           {/* Message */}
-          <p className="text-hitman-300 text-lg leading-relaxed mb-8">
+          <p className="text-bloodcontract-300 text-lg leading-relaxed mb-8">
             {message}
           </p>
 
@@ -100,7 +100,7 @@ const Modal = ({
             {showCancel && (
               <button
                 onClick={onClose}
-                className="px-6 py-3 bg-hitman-700 hover:bg-hitman-600 text-white font-bold rounded-lg transition-all duration-200 border border-hitman-600"
+                className="px-6 py-3 bg-bloodcontract-700 hover:bg-bloodcontract-600 text-white font-bold rounded-lg transition-all duration-200 border border-bloodcontract-600"
               >
                 {cancelText}
               </button>

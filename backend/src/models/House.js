@@ -33,6 +33,18 @@ House.init({
   description: {
     type: DataTypes.TEXT,
     allowNull: false
+  },
+  imageUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  rarity: {
+    type: DataTypes.STRING,
+    defaultValue: 'COMMON'
+  },
+  currency: {
+    type: DataTypes.ENUM('money', 'blackcoin'),
+    defaultValue: 'money'
   }
 }, {
   sequelize,

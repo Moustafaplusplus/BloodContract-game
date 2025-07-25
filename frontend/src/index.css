@@ -88,8 +88,12 @@
     @apply bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent;
   }
 
-  .bg-gradient-hitman {
+  .bg-gradient-bloodcontract {
     @apply bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900;
+  }
+
+  .font-bouya {
+    font-family: "BouyaMessy", cursive;
   }
 }
 
@@ -309,7 +313,7 @@
     }
   }
 
-  .hitman-background {
+  .bloodcontract-background {
     position: absolute;
     inset: 0;
     background:

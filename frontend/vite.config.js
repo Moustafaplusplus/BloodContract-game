@@ -15,27 +15,31 @@ export default defineConfig({
     },
   },
   server: {
-    // Proxy /api/* requests to backend on port 5000
+    // Proxy /api/* requests to backend on port 5001
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false,
       },
-      '/crimes': {
-        target: 'http://localhost:5000',
+      '/cars': {
+        target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false,
+      },
+      '/houses': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+      '/dogs': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
       },
       '/weapons': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false,
       },
       '/armors': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false,
       },
     },
   },

@@ -102,7 +102,7 @@ export default function CreateGangModal({ onClose }) {
                   className="mr-3 text-accent-blue"
                 />
                 <div className="flex items-center gap-3">
-                  <Coins className="w-5 h-5 text-accent-yellow" />
+                  <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-5 h-5 object-contain" />
                   <div>
                     <div className="font-medium text-white">30 بلاك كوين</div>
                     <div className="text-sm text-hitman-400">الطريقة الأرخص</div>

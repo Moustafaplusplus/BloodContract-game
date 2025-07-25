@@ -33,7 +33,7 @@ const LevelUpModal = ({ isOpen, onClose, levelUpRewards, levelsGained }) => {
       />
       
       {/* Modal */}
-      <div className="relative bg-gradient-to-br from-hitman-900 to-black border-2 border-accent-red/30 rounded-2xl shadow-2xl max-w-lg w-full mx-auto p-8 text-white animate-fade-in">
+      <div className="relative bg-gradient-to-br from-bloodcontract-900 to-black border-2 border-accent-red/30 rounded-2xl shadow-2xl max-w-lg w-full mx-auto p-8 text-white animate-fade-in">
         {/* Close button */}
         <button 
           onClick={onClose}
@@ -57,7 +57,7 @@ const LevelUpModal = ({ isOpen, onClose, levelUpRewards, levelsGained }) => {
           </h2>
 
           {/* Subtitle */}
-          <p className="text-hitman-300 text-lg mb-6">
+          <p className="text-bloodcontract-300 text-lg mb-6">
             {isMultipleLevels 
               ? `لقد ارتقيت ${levelsGained} مستويات!` 
               : `لقد وصلت إلى المستوى ${levelUpRewards[0].level}!`
@@ -74,25 +74,25 @@ const LevelUpModal = ({ isOpen, onClose, levelUpRewards, levelsGained }) => {
             {/* Total Rewards */}
             <div className="grid grid-cols-2 gap-4">
               {/* Max Energy */}
-              <div className="bg-hitman-800/50 border border-hitman-700 rounded-xl p-4 text-center">
+              <div className="bg-bloodcontract-800/50 border border-bloodcontract-700 rounded-xl p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
                   <Zap className="w-6 h-6 text-accent-yellow mr-2" />
                   <span className="text-lg font-bold text-accent-yellow">+{totalRewards.maxEnergy}</span>
                 </div>
-                <span className="text-sm text-hitman-300">الطاقة القصوى</span>
+                <span className="text-sm text-bloodcontract-300">الطاقة القصوى</span>
               </div>
 
               {/* Max HP */}
-              <div className="bg-hitman-800/50 border border-hitman-700 rounded-xl p-4 text-center">
+              <div className="bg-bloodcontract-800/50 border border-bloodcontract-700 rounded-xl p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
                   <Heart className="w-6 h-6 text-accent-green mr-2" />
                   <span className="text-lg font-bold text-accent-green">+{totalRewards.maxHp}</span>
                 </div>
-                <span className="text-sm text-hitman-300">الصحة القصوى</span>
+                <span className="text-sm text-bloodcontract-300">الصحة القصوى</span>
               </div>
 
               {/* Strength */}
-              <div className="bg-hitman-800/50 border border-hitman-700 rounded-xl p-4 text-center">
+              <div className="bg-bloodcontract-800/50 border border-bloodcontract-700 rounded-xl p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
                   <TrendingUp className="w-6 h-6 text-accent-red mr-2" />
                   <span className="text-lg font-bold text-accent-red">+{totalRewards.strength}</span>

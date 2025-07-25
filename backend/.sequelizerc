@@ -1,0 +1,9 @@
+const path = require('path');
+
+module.exports = {
+  // Tell sequelize-cli to use the CJS file
+  config: path.resolve('config', 'config.cjs'),
+  // (optional) keep the default folders for migrations & models
+  'migrations-path': path.resolve('migrations'),
+  'models-path':     path.resolve('src', 'models'),
+};

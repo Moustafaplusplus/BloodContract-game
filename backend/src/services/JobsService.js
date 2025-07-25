@@ -5,6 +5,9 @@ import { CharacterService } from './CharacterService.js';
 import { sequelize } from '../config/db.js';
 import { Op } from 'sequelize';
 import { User } from '../models/User.js';
+import { TaskService } from './TaskService.js';
+import { emitNotification } from '../socket.js';
+import { NotificationService } from './NotificationService.js';
 
 export class JobsService {
   // Job definitions with tiers
@@ -429,6 +432,9 @@ export class JobsService {
             character.exp += finalExp;
             await CharacterService.maybeLevelUp(character);
             await character.save({ transaction: t });
+            
+            // Track job completion for tasks
+            await TaskService.updateProgress(jobRecord.userId, 'jobs_completed', 1);
           }
 
           totalPaid += finalSalary;
@@ -437,6 +443,45 @@ export class JobsService {
       }
 
       await t.commit();
+      
+      // Create notifications for job payouts
+      try {
+        for (const jobRecord of activeJobs) {
+          const jobDefinition = await JobDefinition.findByPk(jobRecord.jobType);
+          if (!jobDefinition || !jobDefinition.isEnabled) continue;
+
+          const lastPaid = new Date(jobRecord.lastPaidAt);
+          const daysSinceLastPaid = Math.floor((now - lastPaid) / (1000 * 60 * 60 * 24));
+
+          if (daysSinceLastPaid >= 1) {
+            const salary = jobDefinition.salary * daysSinceLastPaid;
+            const exp = jobDefinition.expPerDay * daysSinceLastPaid;
+            
+            // Get character for VIP bonus calculation
+            const character = await Character.findOne({ where: { userId: jobRecord.userId } });
+            let finalSalary = salary;
+            let finalExp = exp;
+            
+            // VIP bonus
+            if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
+              finalSalary = Math.round(salary * 1.5);
+              finalExp = Math.round(exp * 1.5);
+            }
+            
+            // Create job salary notification
+            const notification = await NotificationService.createJobSalaryNotification(
+              jobRecord.userId,
+              jobDefinition.name,
+              finalSalary
+            );
+            emitNotification(jobRecord.userId, notification);
+          }
+        }
+      } catch (notificationError) {
+        console.error('[JobsService] Notification error:', notificationError);
+        // Continue even if notifications fail
+      }
+      
       // Job payouts completed
     } catch (err) {
       await t.rollback();

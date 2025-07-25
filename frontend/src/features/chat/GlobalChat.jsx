@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '@/hooks/useSocket';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 import axios from 'axios';
@@ -7,6 +8,10 @@ import { toast } from 'react-toastify';
 import { MessageCircle, Send, Volume2, VolumeX, Edit2, Trash2, UserX, UserMinus, Ban } from 'lucide-react';
 import { Shield, Star } from 'lucide-react';
 import notificationSound from '/notification.mp3'; // Place a notification.mp3 in public/
+import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+import VipName from '../profile/VipName.jsx';
+import '../profile/vipSparkle.css';
+import { jwtDecode } from 'jwt-decode';
 
 export default function GlobalChat() {
   const [messages, setMessages] = useState([]);
@@ -17,11 +22,23 @@ export default function GlobalChat() {
   const [soundMuted, setSoundMuted] = useState(false);
   const messagesEndRef = useRef(null);
   const { socket } = useSocket();
+  const { token } = useAuth();
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editContent, setEditContent] = useState('');
-  const userId = localStorage.getItem('userId'); // Assumes userId is stored in localStorage after login
+  
+  // Get userId from JWT token instead of localStorage
+  const userId = token ? (() => {
+    try {
+      const decoded = jwtDecode(token);
+      return decoded.id;
+    } catch {
+      return null;
+    }
+  })() : null;
+  
   const audioRef = useRef(null);
   const [userInteracted, setUserInteracted] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   // Fetch user info for optimistic messages
   const [userInfo, setUserInfo] = useState({ username: '', avatarUrl: '', isAdmin: false, isVip: false });
@@ -169,6 +186,18 @@ export default function GlobalChat() {
       socket.emit('leave_global_chat');
     };
   }, [socket, userInteracted, soundMuted, userId]);
+
+  // Listen for online_count event
+  useEffect(() => {
+    if (!socket) return;
+    const handleOnlineCount = ({ count }) => setOnlineCount(count);
+    socket.on('online_count', handleOnlineCount);
+    // Request current count on mount
+    socket.emit('get_online_count');
+    return () => {
+      socket.off('online_count', handleOnlineCount);
+    };
+  }, [socket]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -441,6 +470,10 @@ export default function GlobalChat() {
   const [userMenu, setUserMenu] = useState({ open: false, anchor: null, user: null });
   const navigate = useNavigate();
 
+  if (loading) {
+    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل الرسائل..." />;
+  }
+
   return (
     <div
       className="flex flex-col bg-black rounded-xl shadow-lg overflow-hidden border border-zinc-800 w-full h-screen min-h-screen pt-28 sm:pt-32"
@@ -451,6 +484,7 @@ export default function GlobalChat() {
         <div className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-accent-red" />
           <h2 className="text-base sm:text-lg font-bold text-accent-red">الدردشة العامة</h2>
+          <span className="ml-2 text-green-400 font-bold text-xs">{onlineCount} متصل الآن</span>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -493,11 +527,7 @@ export default function GlobalChat() {
         {loadingMore && (
           <div className="flex items-center justify-center text-xs text-zinc-400 mb-2">جاري تحميل المزيد...</div>
         )}
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-zinc-400">جاري تحميل الرسائل...</div>
-          </div>
-        ) : messages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-zinc-500">لا توجد رسائل بعد</div>
           </div>
@@ -505,7 +535,7 @@ export default function GlobalChat() {
           messages.slice(-visibleCount).map((message) => {
             // Get user info for avatar and badges
             const user = message.User || message;
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
             let avatarUrl = user.avatarUrl || '/avatars/default.png';
             if (avatarUrl.startsWith('/avatars/')) {
               avatarUrl = backendUrl + avatarUrl;
@@ -540,9 +570,10 @@ export default function GlobalChat() {
                       <span className="font-semibold text-accent-red flex items-center gap-1 cursor-pointer hover:underline"
                         onClick={e => setUserMenu({ open: true, anchor: e.target, user: { userId: message.userId, username: user.username, isVip: user.isVip, isAdmin: user.isAdmin } })}
                       >
-                        {user.username}
+                        <VipName isVIP={isVip} className="compact">
+                          {user.username}
+                        </VipName>
                         {isAdmin && <Shield className="w-4 h-4 text-accent-red" title="مشرف" />}
-                        {isVip && !isAdmin && <Star className="w-4 h-4 text-yellow-400" title="VIP" />}
                       </span>
                     )}
                     {/* Message content or edit input */}

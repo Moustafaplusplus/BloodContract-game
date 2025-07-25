@@ -9,7 +9,7 @@ export default function DashboardLayout({ children }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="h-screen bg-black text-white overflow-hidden flex flex-col pt-[56px]">
+    <div className="h-screen bg-black text-white overflow-hidden flex flex-col pt-[60px] lg:pt-[60px]">
       {/* HUD with menu button inside */}
       <HUD menuButton={<MenuButton isOpen={isOpen} setIsOpen={setIsOpen} />} />
       {/* Navigation sidebar */}

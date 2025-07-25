@@ -64,6 +64,13 @@ export default function Hospital() {
     fetchHospitalStatus();
   }, [token, navigate]);
 
+  // Fetch hospital count immediately on mount
+  useEffect(() => {
+    axios.get("/api/confinement/hospital/count")
+      .then(res => setHospitalCount(res.data.count))
+      .catch(() => setHospitalCount(null));
+  }, []);
+
   // Update timer
   useEffect(() => {
     if (hospitalStatus?.inHospital && totalTime && remainingTime > 0) {

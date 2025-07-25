@@ -35,13 +35,23 @@ export default function CharacterManagement() {
   // Fetch all characters
   const { data: charactersData, isLoading: charactersLoading } = useQuery({
     queryKey: ['admin-characters', debouncedSearchTerm],
-    queryFn: () => axios.get(`/api/admin/characters?search=${debouncedSearchTerm}`).then(res => res.data),
+    queryFn: () => {
+      const token = localStorage.getItem('jwt');
+      return axios.get(`/api/admin/characters?search=${debouncedSearchTerm}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(res => res.data);
+    },
     staleTime: 30 * 1000,
   });
 
   // Update character mutation
   const updateCharacterMutation = useMutation({
-    mutationFn: ({ id, updates }) => axios.put(`/api/admin/characters/${id}`, updates),
+    mutationFn: ({ id, updates }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.put(`/api/admin/characters/${id}`, updates, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-characters']);
       toast.success('تم تحديث الشخصية بنجاح');
@@ -55,7 +65,12 @@ export default function CharacterManagement() {
 
   // Adjust money mutation
   const adjustMoneyMutation = useMutation({
-    mutationFn: ({ id, amount }) => axios.post(`/api/admin/characters/${id}/money`, { amount }),
+    mutationFn: ({ id, amount }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.post(`/api/admin/characters/${id}/money`, { amount }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['admin-characters']);
       toast.success(`تم تعديل المال: ${data.data.adjustment > 0 ? '+' : ''}${data.data.adjustment}`);
@@ -67,7 +82,12 @@ export default function CharacterManagement() {
 
   // Adjust blackcoins mutation
   const adjustBlackcoinsMutation = useMutation({
-    mutationFn: ({ id, amount }) => axios.post(`/api/admin/characters/${id}/blackcoins`, { amount }),
+    mutationFn: ({ id, amount }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.post(`/api/admin/characters/${id}/blackcoins`, { amount }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['admin-characters']);
       toast.success(`تم تعديل البلاك كوينز: ${data.data.adjustment > 0 ? '+' : ''}${data.data.adjustment}`);
@@ -79,7 +99,12 @@ export default function CharacterManagement() {
 
   // Set level mutation
   const setLevelMutation = useMutation({
-    mutationFn: ({ id, level }) => axios.post(`/api/admin/characters/${id}/level`, { level }),
+    mutationFn: ({ id, level }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.post(`/api/admin/characters/${id}/level`, { level }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['admin-characters']);
       toast.success(`تم تغيير المستوى من ${data.data.oldLevel} إلى ${data.data.newLevel}`);
@@ -91,7 +116,12 @@ export default function CharacterManagement() {
 
   // Reset character mutation
   const resetCharacterMutation = useMutation({
-    mutationFn: ({ id }) => axios.post(`/api/admin/characters/${id}/reset`, { confirmPassword: 'CONFIRM_RESET' }),
+    mutationFn: ({ id }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.post(`/api/admin/characters/${id}/reset`, { confirmPassword: 'CONFIRM_RESET' }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-characters']);
       toast.success('تم إعادة تعيين الشخصية بنجاح');
@@ -103,29 +133,35 @@ export default function CharacterManagement() {
 
   // Ban user mutation
   const banUserMutation = useMutation({
-    mutationFn: ({ userId, banned, reason }) => axios.post(`/api/admin/system/users/${userId}/ban`, { banned, reason }),
+    mutationFn: ({ userId, banned, reason }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.post(`/api/admin/users/${userId}/ban`, { banned, reason }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin-characters']);
-      toast.success('تم تحديث حالة الحظر بنجاح');
+      queryClient.invalidateQueries(['admin-users']);
+      toast.success('تم تحديث حالة المستخدم بنجاح');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تحديث حالة الحظر');
+      toast.error(error.response?.data?.error || 'فشل في تحديث حالة المستخدم');
     },
   });
 
   // Get user IPs mutation
   const getUserIpsMutation = useMutation({
-    mutationFn: ({ userId }) => axios.get(`/api/admin/system/users/${userId}/ips`),
+    mutationFn: ({ userId }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.get(`/api/admin/users/${userId}/ips`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
     onSuccess: (data) => {
-      const ips = data.data;
-      const realIps = ips.filter(ip => !ip.ipAddress.startsWith('192.168.1.'));
-      const ipList = realIps.length > 0 
-        ? realIps.map(ip => `${ip.ipAddress} (${new Date(ip.lastSeen).toLocaleDateString()})`).join('\n')
-        : 'لم يسجل دخول بعد';
-      alert(`IP History for user:\n\n${ipList}`);
+      setUserIps(data.data);
+      setShowIpsModal(true);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في جلب سجل IP');
+      toast.error(error.response?.data?.error || 'فشل في جلب عناوين IP للمستخدم');
     },
   });
 

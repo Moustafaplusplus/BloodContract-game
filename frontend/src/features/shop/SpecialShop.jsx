@@ -3,66 +3,442 @@ import { toast } from 'react-toastify';
 import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
 import { useSocket } from "@/hooks/useSocket";
-import { Star, ImageIcon } from 'lucide-react';
+import { Star, ImageIcon, ShoppingCart, Shield, Sword, Home, Car, Dog, Gift, Coins, Zap, Heart, Package, DollarSign, Clock } from 'lucide-react';
+import { handleImageError } from '@/utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
 
+// Rarity colors
+const rarityColors = {
+  common: 'text-gray-400',
+  uncommon: 'text-green-400',
+  rare: 'text-blue-400',
+  epic: 'text-purple-400',
+  legend: 'text-yellow-400'
+};
+
+// Rarity icons
+const rarityIcons = {
+  common: '⭐',
+  uncommon: '⭐⭐',
+  rare: '⭐⭐⭐',
+  epic: '⭐⭐⭐⭐',
+  legend: '⭐⭐⭐⭐⭐'
+};
+
 function BlackcoinIcon() {
   return (
-    <span className="inline-block w-5 h-5 rounded-full bg-gradient-to-br from-black via-zinc-900 to-zinc-800 border-2 border-accent-red flex items-center justify-center mr-1">
-      <span className="text-xs text-accent-red font-bold">ع</span>
-    </span>
+    <>
+      <img 
+        src="/images/blackcoins-icon.png" 
+        alt="Blackcoin"
+        className="w-5 h-5 object-contain"
+        onError={(e) => {
+          // Fallback to CSS icon if image fails to load
+          e.target.style.display = 'none';
+          e.target.nextSibling.style.display = 'inline-block';
+        }}
+      />
+      <span className="inline-block w-5 h-5 rounded-full bg-gradient-to-br from-black via-zinc-900 to-zinc-800 border-2 border-accent-red flex items-center justify-center mr-1 hidden">
+        <span className="text-xs text-accent-red font-bold">ع</span>
+      </span>
+    </>
   );
 }
+
+// ItemCard component for weapons and armors
+function ItemCard({ item, onBuy, type }) {
+  const isSpecial = type === 'special';
+  
+  return (
+    <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-xl p-4 space-y-3 hover:bg-hitman-700/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20">
+      {/* Item Image Placeholder */}
+      <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
+        {item.imageUrl ? (
+          <img 
+            src={item.imageUrl} 
+            alt={item.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => handleImageError(e, item.imageUrl)}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
+          <ImageIcon className="w-8 h-8 text-hitman-400" />
+        </div>
+      </div>
+
+      {/* Item Info */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-white text-sm truncate">{item.name}</h4>
+          <span className={`text-xs ${rarityColors[item.rarity]}`}>
+            {rarityIcons[item.rarity]}
+          </span>
+        </div>
+
+        {/* Item Stats */}
+        <div className="space-y-1 text-xs">
+          {item.damage && (
+            <div className="flex items-center text-red-400">
+              <Sword className="w-3 h-3 mr-1" />
+              <span>ضرر: {item.damage}</span>
+            </div>
+          )}
+          {item.def && (
+            <div className="flex items-center text-blue-400">
+              <Shield className="w-3 h-3 mr-1" />
+              <span>دفاع: {item.def}</span>
+            </div>
+          )}
+          {item.energyBonus && (
+            <div className="flex items-center text-yellow-400">
+              <Zap className="w-3 h-3 mr-1" />
+              <span>طاقة: +{item.energyBonus}</span>
+            </div>
+          )}
+          {item.hpBonus && (
+            <div className="flex items-center text-green-400">
+              <Heart className="w-3 h-3 mr-1" />
+              <span>صحة: +{item.hpBonus}</span>
+            </div>
+          )}
+          {isSpecial && item.effect && (
+            <div className="flex items-center text-purple-400">
+              <Package className="w-3 h-3 mr-1" />
+              <span className="text-xs">{item.effect}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Price and Buy Button */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center text-accent-red font-bold text-sm">
+            <BlackcoinIcon />
+            <span>{item.price}</span>
+          </div>
+          <button
+            onClick={() => onBuy(item, type)}
+            className="bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white text-xs px-3 py-1 rounded-lg font-bold transition-all duration-300 flex items-center hover:scale-105"
+          >
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            شراء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// CarCard component for cars
+function CarCard({ car, onBuy }) {
+  const rarity = car.rarity?.toLowerCase() || 'common';
+  
+  return (
+    <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-xl p-4 space-y-3 hover:bg-hitman-700/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20">
+      {/* Car Image */}
+      <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
+        {car.imageUrl ? (
+          <img 
+            src={car.imageUrl} 
+            alt={car.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => handleImageError(e, car.imageUrl)}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${car.imageUrl ? 'hidden' : 'flex'}`}>
+          <Car className="w-8 h-8 text-hitman-400" />
+        </div>
+      </div>
+
+      {/* Car Info */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-white text-sm truncate">{car.name}</h4>
+          <span className={`text-xs ${rarityColors[rarity]}`}>
+            {rarityIcons[rarity]}
+          </span>
+        </div>
+
+        {/* Car Stats */}
+        <div className="space-y-1 text-xs">
+          {car.attackBonus > 0 && (
+            <div className="flex items-center text-red-400">
+              <Sword className="w-3 h-3 mr-1" />
+              <span>هجوم: +{car.attackBonus}</span>
+            </div>
+          )}
+          {car.defenseBonus > 0 && (
+            <div className="flex items-center text-blue-400">
+              <Shield className="w-3 h-3 mr-1" />
+              <span>دفاع: +{car.defenseBonus}</span>
+            </div>
+          )}
+          {car.energyRegen > 0 && (
+            <div className="flex items-center text-yellow-400">
+              <Zap className="w-3 h-3 mr-1" />
+              <span>طاقة: +{car.energyRegen}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Price and Buy Button */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center text-accent-red font-bold text-sm">
+            <BlackcoinIcon />
+            <span>{car.cost}</span>
+          </div>
+          <button
+            onClick={() => onBuy(car)}
+            className="bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white text-xs px-3 py-1 rounded-lg font-bold transition-all duration-300 flex items-center hover:scale-105"
+          >
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            شراء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// HouseCard component for houses
+function HouseCard({ house, onBuy }) {
+  const rarity = house.rarity?.toLowerCase() || 'common';
+  
+  return (
+    <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-xl p-4 space-y-3 hover:bg-hitman-700/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20">
+      {/* House Image */}
+      <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
+        {house.imageUrl ? (
+          <img 
+            src={house.imageUrl} 
+            alt={house.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => handleImageError(e, house.imageUrl)}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${house.imageUrl ? 'hidden' : 'flex'}`}>
+          <Home className="w-8 h-8 text-hitman-400" />
+        </div>
+      </div>
+
+      {/* House Info */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-white text-sm truncate">{house.name}</h4>
+          <span className={`text-xs ${rarityColors[rarity]}`}>
+            {rarityIcons[rarity]}
+          </span>
+        </div>
+
+        {/* House Stats */}
+        <div className="space-y-1 text-xs">
+          {house.defenseBonus > 0 && (
+            <div className="flex items-center text-blue-400">
+              <Shield className="w-3 h-3 mr-1" />
+              <span>دفاع: +{house.defenseBonus}</span>
+            </div>
+          )}
+          {house.hpBonus > 0 && (
+            <div className="flex items-center text-green-400">
+              <Heart className="w-3 h-3 mr-1" />
+              <span>صحة: +{house.hpBonus}</span>
+            </div>
+          )}
+          {house.energyRegen > 0 && (
+            <div className="flex items-center text-yellow-400">
+              <Zap className="w-3 h-3 mr-1" />
+              <span>طاقة: +{house.energyRegen}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Price and Buy Button */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center text-accent-red font-bold text-sm">
+            <BlackcoinIcon />
+            <span>{house.cost}</span>
+          </div>
+          <button
+            onClick={() => onBuy(house)}
+            className="bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white text-xs px-3 py-1 rounded-lg font-bold transition-all duration-300 flex items-center hover:scale-105"
+          >
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            شراء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// DogCard component for dogs
+function DogCard({ dog, onBuy }) {
+  const rarity = dog.rarity?.toLowerCase() || 'common';
+  
+  return (
+    <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-xl p-4 space-y-3 hover:bg-hitman-700/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20">
+      {/* Dog Image */}
+      <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
+        {dog.imageUrl ? (
+          <img 
+            src={dog.imageUrl} 
+            alt={dog.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => handleImageError(e, dog.imageUrl)}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${dog.imageUrl ? 'hidden' : 'flex'}`}>
+          <Dog className="w-8 h-8 text-hitman-400" />
+        </div>
+      </div>
+
+      {/* Dog Info */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-white text-sm truncate">{dog.name}</h4>
+          <span className={`text-xs ${rarityColors[rarity]}`}>
+            {rarityIcons[rarity]}
+          </span>
+        </div>
+
+        {/* Dog Stats */}
+        <div className="space-y-1 text-xs">
+          {dog.powerBonus > 0 && (
+            <div className="flex items-center text-red-400">
+              <Sword className="w-3 h-3 mr-1" />
+              <span>قوة الهجوم: +{dog.powerBonus}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Price and Buy Button */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center text-accent-red font-bold text-sm">
+            <BlackcoinIcon />
+            <span>{dog.cost}</span>
+          </div>
+          <button
+            onClick={() => onBuy(dog)}
+            className="bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white text-xs px-3 py-1 rounded-lg font-bold transition-all duration-300 flex items-center hover:scale-105"
+          >
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            شراء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TABS = [
+  { key: 'vip', label: 'متجر VIP', icon: <Star className="w-5 h-5 text-yellow-400" /> },
+  { key: 'blackcoins', label: 'متجر العملة السوداء', icon: <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-5 h-5 object-contain" /> },
+  { key: 'special', label: 'عناصر خاصة', icon: <Gift className="w-5 h-5 text-accent-red" /> },
+  { key: 'weapons', label: 'الأسلحة والدروع', icon: <Sword className="w-5 h-5 text-white" /> },
+  { key: 'cars', label: 'السيارات', icon: <Car className="w-5 h-5 text-white" /> },
+  { key: 'houses', label: 'المنازل', icon: <Home className="w-5 h-5 text-white" /> },
+  { key: 'dogs', label: 'الكلاب', icon: <Dog className="w-5 h-5 text-white" /> },
+];
 
 export default function SpecialShop() {
   const { token } = useAuth();
   const { stats, invalidateHud } = useHud();
   const { socket } = useSocket();
+  const [activeTab, setActiveTab] = useState('vip');
+
+  // --- VIP, Blackcoin, Special Items ---
   const [specialItems, setSpecialItems] = useState([]);
   const [blackcoinPackages, setBlackcoinPackages] = useState([]);
   const [vipPackages, setVipPackages] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // --- Weapons & Armors ---
+  const [weapons, setWeapons] = useState([]);
+  const [armors, setArmors] = useState([]);
+  const [loadingWeapons, setLoadingWeapons] = useState(false);
+
+  // --- Cars ---
+  const [cars, setCars] = useState([]);
+  const [loadingCars, setLoadingCars] = useState(false);
+
+  // --- Houses ---
+  const [houses, setHouses] = useState([]);
+  const [loadingHouses, setLoadingHouses] = useState(false);
+
+  // --- Dogs ---
+  const [dogs, setDogs] = useState([]);
+  const [loadingDogs, setLoadingDogs] = useState(false);
+
+  // --- Fetchers ---
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const [specialRes, packagesRes, vipRes] = await Promise.all([
-          fetch(`${API}/api/special-shop/special`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API}/api/special-shop/blackcoin-packages`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${token}` } })
-        ]);
-        if (specialRes.status === 401 || packagesRes.status === 401 || vipRes.status === 401) {
-          toast.error('يجب تسجيل الدخول للوصول إلى سوق العملة السوداء');
-          setSpecialItems([]);
-          setBlackcoinPackages([]);
-          setVipPackages([]);
-          setLoading(false);
-          return;
-        }
-        const specialData = await specialRes.json();
-        // Merge weapons and armors into one array for display
-        const mergedSpecial = [
-          ...(Array.isArray(specialData.weapons) ? specialData.weapons : []),
-          ...(Array.isArray(specialData.armors) ? specialData.armors : [])
-        ];
-        setSpecialItems(mergedSpecial);
-        const packagesData = await packagesRes.json();
-        const vipData = await vipRes.json();
-        setBlackcoinPackages(Array.isArray(packagesData) ? packagesData : []);
-        setVipPackages(Array.isArray(vipData) ? vipData : []);
-      } catch (error) {
-        console.error('Failed to fetch special shop items:', error);
-        toast.error('فشل في تحميل عناصر سوق العملة السوداء');
-        setSpecialItems([]);
-        setBlackcoinPackages([]);
-        setVipPackages([]);
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    Promise.all([
+      fetch(`${API}/api/special-shop/special`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/api/special-shop/blackcoin-packages`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${token}` } })
+    ]).then(async ([specialRes, packagesRes, vipRes]) => {
+      if (specialRes.status === 401 || packagesRes.status === 401 || vipRes.status === 401) {
+        toast.error('يجب تسجيل الدخول للوصول إلى سوق العملة السوداء');
+        setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setLoading(false); return;
       }
-    };
-    fetchItems();
+      const specialData = await specialRes.json();
+      const mergedSpecial = [
+        ...(Array.isArray(specialData.weapons) ? specialData.weapons : []),
+        ...(Array.isArray(specialData.armors) ? specialData.armors : [])
+      ];
+      setSpecialItems(mergedSpecial);
+      setBlackcoinPackages(await packagesRes.json());
+      setVipPackages(await vipRes.json());
+      setLoading(false);
+    }).catch(() => {
+      toast.error('فشل في تحميل عناصر سوق العملة السوداء');
+      setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setLoading(false);
+    });
   }, [token]);
+
+  useEffect(() => {
+    if (activeTab === 'weapons') {
+      setLoadingWeapons(true);
+      Promise.all([
+        fetch(`${API}/api/shop/weapons`),
+        fetch(`${API}/api/shop/armors`)
+      ]).then(async ([wRes, aRes]) => {
+        setWeapons(await wRes.json());
+        setArmors(await aRes.json());
+        setLoadingWeapons(false);
+      }).catch(() => { setWeapons([]); setArmors([]); setLoadingWeapons(false); });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'cars') {
+      setLoadingCars(true);
+      fetch(`${API}/api/special-shop/cars`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => { setCars(data); setLoadingCars(false); })
+        .catch(() => { setCars([]); setLoadingCars(false); });
+    }
+  }, [activeTab, token]);
+
+  useEffect(() => {
+    if (activeTab === 'houses') {
+      setLoadingHouses(true);
+      fetch(`${API}/api/special-shop/houses`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => { setHouses(data); setLoadingHouses(false); })
+        .catch(() => { setHouses([]); setLoadingHouses(false); });
+    }
+  }, [activeTab, token]);
+
+  useEffect(() => {
+    if (activeTab === 'dogs') {
+      setLoadingDogs(true);
+      fetch(`${API}/api/special-shop/dogs`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => { setDogs(data); setLoadingDogs(false); })
+        .catch(() => { setDogs([]); setLoadingDogs(false); });
+    }
+  }, [activeTab, token]);
 
   // Real-time HUD updates
   useEffect(() => {
@@ -76,44 +452,33 @@ export default function SpecialShop() {
     };
   }, [socket, invalidateHud]);
 
+  // --- Actions ---
   const buyVIP = async (packageId) => {
     try {
       const res = await fetch(`${API}/api/special-shop/buy/vip`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       toast.success('تم شراء VIP بنجاح!');
       invalidateHud?.();
-    } catch (err) {
-      toast.error(err.message || 'فشل شراء VIP');
-    }
+    } catch (err) { toast.error(err.message || 'فشل شراء VIP'); }
   };
-
   const buyBlackcoin = async (packageId) => {
     try {
       const res = await fetch(`${API}/api/special-shop/buy/blackcoin`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       toast.success('تم شراء الباقة بنجاح!');
       invalidateHud?.();
-    } catch (err) {
-      toast.error(err.message || 'فشل شراء العملة السوداء');
-    }
+    } catch (err) { toast.error(err.message || 'فشل شراء العملة السوداء'); }
   };
-
   const buySpecial = async (item) => {
     try {
       let quantity = 1;
@@ -124,20 +489,322 @@ export default function SpecialShop() {
       }
       const res = await fetch(`${API}/api/special-shop/buy/special/${item.id}`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       toast.success('تم الشراء بنجاح!');
       invalidateHud?.();
-    } catch (err) {
-      toast.error(err.message || 'فشل في الشراء');
-    }
+    } catch (err) { toast.error(err.message || 'فشل في الشراء'); }
   };
+
+  const buyCar = async (car) => {
+    try {
+      const res = await fetch(`${API}/api/cars/buy`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carId: car.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message);
+      toast.success('تم شراء السيارة بنجاح!');
+      invalidateHud?.();
+    } catch (err) { toast.error(err.message || 'فشل في شراء السيارة'); }
+  };
+
+  const buyHouse = async (house) => {
+    try {
+      const res = await fetch(`${API}/api/houses/buy`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ houseId: house.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message);
+      toast.success('تم شراء المنزل بنجاح!');
+      invalidateHud?.();
+    } catch (err) { toast.error(err.message || 'فشل في شراء المنزل'); }
+  };
+
+  const buyDog = async (dog) => {
+    try {
+      const res = await fetch(`${API}/api/dogs/buy`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dogId: dog.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message);
+      toast.success('تم شراء الكلب بنجاح!');
+      invalidateHud?.();
+    } catch (err) { toast.error(err.message || 'فشل في شراء الكلب'); }
+  };
+
+  // --- Renderers ---
+  function renderTabContent() {
+    if (activeTab === 'vip') {
+      return (
+        <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-yellow mb-4 flex items-center gap-2">
+            <Star className="w-6 h-6 text-yellow-400" />
+            اشترِ عضوية VIP
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {vipPackages.map(pkg => (
+              <div key={`vip-${pkg.id}`} className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl overflow-hidden group hover:border-accent-yellow/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-yellow/20">
+                {/* VIP Image Container */}
+                <div className="relative h-32 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
+                  <img 
+                    src="/images/VIP.png" 
+                    alt="VIP Package"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center hidden">
+                    <Star className="w-12 h-12 text-yellow-400" />
+                  </div>
+                  {/* VIP Badge */}
+                  <div className="absolute top-3 left-3">
+                    <div className="px-3 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-sm text-yellow-400 border border-yellow-400/30">
+                      VIP
+                    </div>
+                  </div>
+                </div>
+
+                {/* VIP Details */}
+                <div className="p-4">
+                  <h3 className="font-bold text-lg mb-2 text-white group-hover:text-accent-yellow transition-colors">
+                    {pkg.name}
+                  </h3>
+                  
+                  {/* Duration */}
+                  <div className="flex items-center mb-3">
+                    <Clock className="w-4 h-4 text-blue-400 mr-2" />
+                    <span className="text-sm text-blue-400 font-bold">{pkg.durationDays} يوم</span>
+                  </div>
+
+                  {/* Price */}
+                  <div className="flex items-center justify-between mb-4 bg-hitman-800/30 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <BlackcoinIcon />
+                      <span className="text-accent-red font-bold text-lg">{pkg.price}</span>
+                    </div>
+                    <span className="text-xs text-hitman-400">عملة سوداء</span>
+                  </div>
+
+                  {/* Buy Button */}
+                  <button
+                    onClick={() => buyVIP(pkg.id)}
+                    className="w-full bg-gradient-to-r from-accent-yellow to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={stats?.blackcoins < pkg.price}
+                  >
+                    <Star className="w-4 h-4" />
+                    شراء VIP
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'blackcoins') {
+      return (
+        <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
+            <BlackcoinIcon />
+            اشترِ باقات العملة السوداء
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {blackcoinPackages.map(pkg => (
+              <div key={`blackcoin-${pkg.id}`} className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl overflow-hidden group hover:border-accent-red/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20">
+                {/* Blackcoin Image Container */}
+                <div className="relative h-32 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
+                  <img 
+                    src="/images/Blackcoins.png" 
+                    alt="Blackcoin Package"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center hidden">
+                    <BlackcoinIcon />
+                  </div>
+                  {/* Blackcoin Badge */}
+                  <div className="absolute top-3 left-3">
+                    <div className="px-3 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-sm text-accent-red border border-accent-red/30">
+                      عملة سوداء
+                    </div>
+                  </div>
+                </div>
+
+                {/* Blackcoin Details */}
+                <div className="p-4">
+                  <h3 className="font-bold text-lg mb-2 text-white group-hover:text-accent-red transition-colors">
+                    {pkg.name}
+                  </h3>
+                  
+                  {/* USD Price */}
+                  <div className="flex items-center mb-3">
+                    <DollarSign className="w-4 h-4 text-green-400 mr-2" />
+                    <span className="text-sm text-green-400 font-bold">${pkg.usdPrice}</span>
+                  </div>
+
+                  {/* Blackcoin Amount */}
+                  <div className="flex items-center justify-between mb-3 bg-hitman-800/30 rounded-lg p-3">
+                    <div className="flex items-center">
+                      <BlackcoinIcon />
+                      <span className="text-accent-yellow font-bold text-lg">{pkg.blackcoinAmount + (pkg.bonus || 0)}</span>
+                    </div>
+                    <span className="text-xs text-hitman-400">عملة سوداء</span>
+                  </div>
+
+                  {/* Bonus */}
+                  {pkg.bonus > 0 && (
+                    <div className="flex items-center mb-4 bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                      <Gift className="w-4 h-4 text-green-400 mr-2" />
+                      <span className="text-sm text-green-400 font-bold">+{pkg.bonus} مكافأة</span>
+                    </div>
+                  )}
+
+                  {/* Buy Button */}
+                  <button
+                    onClick={() => buyBlackcoin(pkg.id)}
+                    className="w-full bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105"
+                  >
+                    <BlackcoinIcon />
+                    شراء الباقة
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'special') {
+      return (
+        <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
+            <BlackcoinIcon />
+            عناصر خاصة (عملة سوداء)
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {specialItems.length === 0 && (
+              <div className="text-center text-hitman-400 col-span-full">لا توجد عناصر خاصة حالياً.</div>
+            )}
+            {specialItems.map(item => (
+              <ItemCard
+                key={`special-${item.damage ? 'weapon' : 'armor'}-${item.id}`}
+                item={item}
+                onBuy={buySpecial}
+                type="special"
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'weapons') {
+      if (loadingWeapons) return <div className="text-center py-8">جاري تحميل الأسلحة والدروع...</div>;
+      // Filter to only blackcoin items
+      const blackcoinWeapons = weapons.filter(item => item.currency === 'blackcoin');
+      const blackcoinArmors = armors.filter(item => item.currency === 'blackcoin');
+      return (
+        <div className="max-w-5xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
+            <Sword className="w-6 h-6 text-white" />
+            الأسلحة والدروع
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {blackcoinWeapons.map(item => (
+              <ItemCard
+                key={`weapon-${item.id}`}
+                item={item}
+                onBuy={buySpecial}
+                type="special"
+              />
+            ))}
+            {blackcoinArmors.map(item => (
+              <ItemCard
+                key={`armor-${item.id}`}
+                item={item}
+                onBuy={buySpecial}
+                type="special"
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'cars') {
+      if (loadingCars) return <div className="text-center py-8">جاري تحميل السيارات...</div>;
+      return (
+        <div className="max-w-5xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
+            <Car className="w-6 h-6 text-white" />
+            السيارات
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {cars.map(car => (
+              <CarCard
+                key={car.id}
+                car={car}
+                onBuy={buyCar}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'houses') {
+      if (loadingHouses) return <div className="text-center py-8">جاري تحميل المنازل...</div>;
+      return (
+        <div className="max-w-5xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
+            <Home className="w-6 h-6 text-white" />
+            المنازل
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {houses.map(house => (
+              <HouseCard
+                key={house.id}
+                house={house}
+                onBuy={buyHouse}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'dogs') {
+      if (loadingDogs) return <div className="text-center py-8">جاري تحميل الكلاب...</div>;
+      return (
+        <div className="max-w-5xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
+            <Dog className="w-6 h-6 text-white" />
+            الكلاب
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {dogs.map(dog => (
+              <DogCard
+                key={dog.id}
+                dog={dog}
+                onBuy={buyDog}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   if (loading) {
     return (
@@ -156,11 +823,9 @@ export default function SpecialShop() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Red glowy shop name */}
       <h1 className="text-4xl font-bouya text-center mb-10 animate-glow-red" style={{textShadow: '0 0 16px #ff1744, 0 0 32px #ff1744, 0 0 48px #ff1744'}}>
         سوق العملة السوداء
       </h1>
-      {/* Blackcoin balance */}
       <div className="max-w-4xl mx-auto mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex items-center gap-4 text-lg font-bold">
           <BlackcoinIcon />
@@ -179,137 +844,25 @@ export default function SpecialShop() {
           )}
         </div>
       </div>
-      {/* VIP Purchase Section */}
-      <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
-        <h2 className="text-2xl font-bouya text-accent-yellow mb-4 flex items-center gap-2">
-          <Star className="w-6 h-6 text-yellow-400" />
-          اشترِ عضوية VIP
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {vipPackages.map(pkg => (
-            <div key={`vip-${pkg.id}`} className="bg-black/60 border border-yellow-700 rounded-xl p-4 flex flex-col items-center gap-2">
-              <div className="text-lg font-bold text-yellow-300 flex items-center gap-1">
-                <Star className="w-5 h-5 text-yellow-400" /> {pkg.name}
-              </div>
-              <div className="flex items-center gap-1 text-accent-red font-bold text-xl">
-                <BlackcoinIcon />
-                <span>{pkg.price}</span>
-              </div>
-              <button
-                onClick={() => buyVIP(pkg.id)}
-                className="mt-2 bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center gap-2 hover:scale-105"
-                disabled={stats?.blackcoins < pkg.price}
-              >
-                شراء VIP
-              </button>
-            </div>
-          ))}
-        </div>
+      {/* Tabs */}
+      <div className="max-w-5xl mx-auto mb-8 flex flex-wrap gap-2 justify-center animate-fade-in">
+        {TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 text-lg ${
+              activeTab === tab.key
+                ? 'bg-gradient-to-r from-accent-red to-red-700 text-white shadow-lg shadow-accent-red/30'
+                : 'bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 text-hitman-300 hover:bg-hitman-700/50 hover:text-white'
+            }`}
+          >
+            {tab.icon}
+            <span className="ml-2">{tab.label}</span>
+          </button>
+        ))}
       </div>
-      {/* Blackcoin Packages Section */}
-      <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
-        <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
-          <BlackcoinIcon />
-          اشترِ باقات العملة السوداء
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {blackcoinPackages.map(pkg => (
-            <div key={`blackcoin-${pkg.id}`} className="bg-black/60 border border-accent-red rounded-xl p-4 flex flex-col items-center gap-2">
-              <div className="text-lg font-bold text-accent-red flex items-center gap-1">
-                <BlackcoinIcon /> {pkg.name}
-              </div>
-              <div className="text-sm text-hitman-300 text-center">
-                ${pkg.usdPrice}
-              </div>
-              <div className="flex items-center gap-1 text-accent-yellow font-bold text-xl">
-                <BlackcoinIcon />
-                <span>{pkg.blackcoinAmount + (pkg.bonus || 0)}</span>
-              </div>
-              {pkg.bonus > 0 && (
-                <div className="text-xs text-green-400">
-                  +{pkg.bonus} مكافأة
-                </div>
-              )}
-              <button
-                onClick={() => buyBlackcoin(pkg.id)}
-                className="mt-2 bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center gap-2 hover:scale-105"
-              >
-                شراء الباقة
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Special Items Section */}
-      <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
-        <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
-          <BlackcoinIcon />
-          عناصر خاصة (عملة سوداء)
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {specialItems.length === 0 && (
-            <div className="text-center text-hitman-400 col-span-full">لا توجد عناصر خاصة حالياً.</div>
-          )}
-          {specialItems.map(item => (
-            <div key={`special-${item.damage ? 'weapon' : 'armor'}-${item.id}`} className="bg-black/60 border border-accent-red rounded-xl p-4 flex flex-col items-center gap-2">
-              <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600 mb-2">
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-full h-full object-cover rounded-lg"
-                    onError={e => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
-                  <ImageIcon className="w-8 h-8 text-hitman-400" />
-                </div>
-              </div>
-              <div className="font-semibold text-white text-sm truncate mb-1">{item.name}</div>
-              
-              {/* Item Stats */}
-              <div className="space-y-1 text-xs text-center">
-                {item.damage && (
-                  <div className="flex items-center justify-center text-red-400">
-                    <span>ضرر: {item.damage}</span>
-                  </div>
-                )}
-                {item.def && (
-                  <div className="flex items-center justify-center text-blue-400">
-                    <span>دفاع: {item.def}</span>
-                  </div>
-                )}
-                {item.energyBonus && item.energyBonus > 0 && (
-                  <div className="flex items-center justify-center text-yellow-400">
-                    <span>طاقة: +{item.energyBonus}</span>
-                  </div>
-                )}
-                {item.hpBonus && item.hpBonus > 0 && (
-                  <div className="flex items-center justify-center text-green-400">
-                    <span>صحة: +{item.hpBonus}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-1 text-accent-red font-bold text-base mb-2">
-                <BlackcoinIcon />
-                <span>{item.price}</span>
-                <span className="text-xs">عملة سوداء</span>
-              </div>
-              <button
-                onClick={() => buySpecial(item)}
-                className="bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center gap-2 hover:scale-105"
-                disabled={stats?.blackcoins < item.price}
-              >
-                شراء
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Tab Content */}
+      {renderTabContent()}
     </div>
   );
 }

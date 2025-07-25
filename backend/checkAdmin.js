@@ -11,14 +11,14 @@ async function checkAndFixAdmin() {
 
     // Check if admin user exists
     const adminUser = await User.findOne({ 
-      where: { email: 'admin@hitman.com' } 
+      where: { email: 'admin@bloodcontract.com' } 
     });
 
     if (!adminUser) {
       console.log('❌ Admin user not found. Creating...');
       const newAdmin = await User.create({
         username: 'admin',
-        email: 'admin@hitman.com',
+        email: 'admin@bloodcontract.com',
         password: 'admin123',
         age: 25,
         gender: 'male',

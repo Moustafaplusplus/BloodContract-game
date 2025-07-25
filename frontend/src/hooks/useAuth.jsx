@@ -85,9 +85,13 @@ export function AuthProvider({ children }) {
   }, [token, isAuthed]);
 
   const setToken = useCallback(async (jwt) => {
+    console.log('[Auth] Setting new token for user change');
     localStorage.setItem("jwt", jwt);
     setTokenState(jwt);
     setIsAuthed(true);
+    
+    // Dispatch custom event for SocketContext to react to auth changes
+    window.dispatchEvent(new CustomEvent('auth-change'));
     
     // Check if user is admin
     try {
@@ -101,10 +105,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    console.log('[Auth] Logging out user');
     localStorage.removeItem("jwt");
     setTokenState(null);
     setIsAuthed(false);
     setIsAdmin(false);
+    
+    // Dispatch custom event for SocketContext to react to auth changes
+    window.dispatchEvent(new CustomEvent('auth-change'));
   }, []);
 
   const value = {
