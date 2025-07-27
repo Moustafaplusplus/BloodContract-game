@@ -66,7 +66,8 @@ export class SpecialShopController {
     try {
       const weapons = await SpecialShopService.getAllWeapons({ currency: 'blackcoin' });
       const armors = await SpecialShopService.getAllArmors({ currency: 'blackcoin' });
-      res.json({ weapons, armors });
+      const specialItems = await SpecialShopService.getAllSpecialItems({ currency: 'blackcoin' });
+      res.json({ weapons, armors, specialItems });
     } catch (error) {
       console.error('Special shop items error:', error);
       res.sendStatus(500);

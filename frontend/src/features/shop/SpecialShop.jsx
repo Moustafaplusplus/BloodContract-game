@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
 import { useSocket } from "@/hooks/useSocket";
 import { Star, ImageIcon, ShoppingCart, Shield, Sword, Home, Car, Dog, Gift, Coins, Zap, Heart, Package, DollarSign, Clock } from 'lucide-react';
-import { handleImageError } from '@/utils/imageUtils';
+import { handleImageError, getImageUrl } from '@/utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -56,7 +56,7 @@ function ItemCard({ item, onBuy, type }) {
       <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
         {item.imageUrl ? (
           <img 
-            src={item.imageUrl} 
+            src={getImageUrl(item.imageUrl)} 
             alt={item.name}
             className="w-full h-full object-cover rounded-lg"
             onError={(e) => handleImageError(e, item.imageUrl)}
@@ -71,9 +71,6 @@ function ItemCard({ item, onBuy, type }) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="font-semibold text-white text-sm truncate">{item.name}</h4>
-          <span className={`text-xs ${rarityColors[item.rarity]}`}>
-            {rarityIcons[item.rarity]}
-          </span>
         </div>
 
         {/* Item Stats */}
@@ -103,10 +100,26 @@ function ItemCard({ item, onBuy, type }) {
             </div>
           )}
           {isSpecial && item.effect && (
-            <div className="flex items-center text-purple-400">
-              <Package className="w-3 h-3 mr-1" />
-              <span className="text-xs">{item.effect}</span>
-            </div>
+            <>
+              {item.effect.health && (
+                <div className="flex items-center text-green-400">
+                  <Heart className="w-3 h-3 mr-1" />
+                  <span className="text-xs">صحة: {item.effect.health === 'max' ? '100%' : `+${item.effect.health}`}</span>
+                </div>
+              )}
+              {item.effect.energy && (
+                <div className="flex items-center text-yellow-400">
+                  <Zap className="w-3 h-3 mr-1" />
+                  <span className="text-xs">طاقة: {item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`}</span>
+                </div>
+              )}
+              {item.effect.duration > 0 && (
+                <div className="flex items-center text-purple-400">
+                  <Package className="w-3 h-3 mr-1" />
+                  <span className="text-xs">المدة: {item.effect.duration} ثانية</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -333,7 +346,7 @@ function DogCard({ dog, onBuy }) {
 const TABS = [
   { key: 'vip', label: 'متجر VIP', icon: <Star className="w-5 h-5 text-yellow-400" /> },
   { key: 'blackcoins', label: 'متجر العملة السوداء', icon: <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-5 h-5 object-contain" /> },
-  { key: 'special', label: 'عناصر خاصة', icon: <Gift className="w-5 h-5 text-accent-red" /> },
+  { key: 'special', label: 'عناصر خاصة', icon: <Package className="w-5 h-5 text-purple-400" /> },
   { key: 'weapons', label: 'الأسلحة والدروع', icon: <Sword className="w-5 h-5 text-white" /> },
   { key: 'cars', label: 'السيارات', icon: <Car className="w-5 h-5 text-white" /> },
   { key: 'houses', label: 'المنازل', icon: <Home className="w-5 h-5 text-white" /> },
@@ -373,7 +386,7 @@ export default function SpecialShop() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/api/special-shop/special`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/api/special-items?currency=blackcoin`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${API}/api/special-shop/blackcoin-packages`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${token}` } })
     ]).then(async ([specialRes, packagesRes, vipRes]) => {
@@ -382,11 +395,8 @@ export default function SpecialShop() {
         setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setLoading(false); return;
       }
       const specialData = await specialRes.json();
-      const mergedSpecial = [
-        ...(Array.isArray(specialData.weapons) ? specialData.weapons : []),
-        ...(Array.isArray(specialData.armors) ? specialData.armors : [])
-      ];
-      setSpecialItems(mergedSpecial);
+      console.log('Special items data:', specialData);
+      setSpecialItems(Array.isArray(specialData) ? specialData : []);
       setBlackcoinPackages(await packagesRes.json());
       setVipPackages(await vipRes.json());
       setLoading(false);
@@ -487,7 +497,7 @@ export default function SpecialShop() {
         const parsed = parseInt(input);
         if (!isNaN(parsed) && parsed > 0) quantity = parsed;
       }
-      const res = await fetch(`${API}/api/special-shop/buy/special/${item.id}`, {
+      const res = await fetch(`${API}/api/special-items/buy/${item.id}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
@@ -689,19 +699,22 @@ export default function SpecialShop() {
       );
     }
     if (activeTab === 'special') {
+      console.log('Rendering special tab, items:', specialItems);
+      if (loading) return <div className="text-center py-8">جاري تحميل العناصر الخاصة...</div>;
       return (
         <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
           <h2 className="text-2xl font-bouya text-accent-red mb-4 flex items-center gap-2">
-            <BlackcoinIcon />
-            عناصر خاصة (عملة سوداء)
+            <Package className="w-6 h-6 text-purple-400" />
+            العناصر الخاصة
           </h2>
+          <p className="text-hitman-300 mb-6">جرعات ومواد خاصة لتعزيز قدراتك</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {specialItems.length === 0 && (
               <div className="text-center text-hitman-400 col-span-full">لا توجد عناصر خاصة حالياً.</div>
             )}
             {specialItems.map(item => (
               <ItemCard
-                key={`special-${item.damage ? 'weapon' : 'armor'}-${item.id}`}
+                key={`special-${item.id}`}
                 item={item}
                 onBuy={buySpecial}
                 type="special"

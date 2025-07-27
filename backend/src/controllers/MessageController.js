@@ -109,7 +109,7 @@ const MessageController = {
       const { messageId } = req.params;
       const message = await Message.findByPk(messageId);
       if (!message) return res.status(404).json({ error: 'Message not found' });
-      message.read = true;
+      message.isRead = true;
       await message.save();
       res.json(message);
     } catch (err) {
@@ -154,7 +154,26 @@ const MessageController = {
       console.log('[INBOX] userIds:', userIds);
       const users = await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ['id', 'username'] });
       console.log('[INBOX] users:', users.map(u => u.id));
-      const result = users.map(u => ({ userId: u.id, username: u.username }));
+      
+      // Check for unread messages for each conversation
+      const result = await Promise.all(users.map(async (user) => {
+        const unreadCount = await Message.count({
+          where: {
+            senderId: user.id,
+            receiverId: myId,
+            isRead: false,
+            deleted: false
+          }
+        });
+        
+        return {
+          userId: user.id,
+          username: user.username,
+          hasUnreadMessages: unreadCount > 0,
+          unreadCount: unreadCount
+        };
+      }));
+      
       res.json(result);
     } catch (err) {
       console.error('[INBOX] Error:', err);

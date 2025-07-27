@@ -1,6 +1,7 @@
 import { InventoryItem } from '../models/Inventory.js';
 import { Character } from '../models/Character.js';
 import { Weapon, Armor } from '../models/Shop.js';
+import { SpecialItem } from '../models/SpecialItem.js';
 import { io } from '../socket.js';
 
 export class InventoryService {
@@ -8,6 +9,7 @@ export class InventoryService {
   static canonicalType(type) {
     if (type === "weapon") return "weapon";
     if (type === "armor") return "armor";
+    if (type === "special") return "special";
     return null;
   }
 
@@ -15,6 +17,7 @@ export class InventoryService {
     switch (type) {
       case "weapon": return Weapon;
       case "armor": return Armor;
+      case "special": return SpecialItem;
       default: return null;
     }
   }
@@ -25,7 +28,8 @@ export class InventoryService {
     const items = await Promise.all(rows.map(async (row) => {
       const refModel = this.modelFor(row.itemType);
       const ref = refModel ? await refModel.findByPk(row.itemId) : null;
-      return {
+      
+      const item = {
         id: row.id,
         itemId: row.itemId,
         type: row.itemType,
@@ -34,7 +38,12 @@ export class InventoryService {
         quantity: row.quantity,
         ...ref?.toJSON(),
       };
+      
+      // Ensure the type field is not overridden by the reference model
+      item.type = row.itemType;
+      return item;
     }));
+    
     return { items };
   }
 
@@ -146,5 +155,76 @@ export class InventoryService {
       await InventoryItem.create({ userId, itemType, itemId, equipped: false, slot: null, quantity });
     }
     return true;
+  }
+
+  static async useSpecialItem(userId, itemId) {
+    const item = await SpecialItem.findByPk(itemId);
+    if (!item) {
+      throw new Error("item not found");
+    }
+
+    const character = await Character.findOne({ where: { userId } });
+    if (!character) {
+      throw new Error("character not found");
+    }
+
+    // Check if user has the item
+    const inventoryItem = await InventoryItem.findOne({
+      where: { userId, itemType: 'special', itemId, equipped: false }
+    });
+
+    if (!inventoryItem || inventoryItem.quantity < 1) {
+      throw new Error("item not owned");
+    }
+
+
+
+    // Apply effects
+    const effects = item.effect;
+    let effectApplied = false;
+
+    if (effects.health) {
+      const maxHp = character.getMaxHp();
+      if (effects.health === 'max') {
+        character.hp = maxHp;
+      } else {
+        character.hp = Math.min(character.hp + effects.health, maxHp);
+      }
+      effectApplied = true;
+    }
+
+    if (effects.energy) {
+      const maxEnergy = character.maxEnergy;
+      if (effects.energy === 'max') {
+        character.energy = maxEnergy;
+      } else {
+        character.energy = Math.min(character.energy + effects.energy, maxEnergy);
+      }
+      effectApplied = true;
+    }
+
+    // Save character changes
+    await character.save();
+
+    // Update inventory - item is consumed
+    inventoryItem.quantity -= 1;
+    
+    if (inventoryItem.quantity <= 0) {
+      await inventoryItem.destroy();
+    } else {
+      await inventoryItem.save();
+    }
+
+    // Emit HUD update
+    if (io) {
+      io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+    }
+
+    return {
+      message: "item used successfully",
+      item: item,
+      effects: effects,
+      effectApplied
+    };
   }
 } 

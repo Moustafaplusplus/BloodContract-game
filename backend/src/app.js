@@ -45,9 +45,11 @@ import { House as HouseModel, UserHouse as UserHouseModel } from './models/House
 import housesRouter from './routes/houses.js';
 import { InventoryItem } from './models/Inventory.js';
 import { Weapon, Armor } from './models/Shop.js';
+import { SpecialItem } from './models/SpecialItem.js';
 import shopRouter from './routes/shop.js';
 import specialShopRouter from './routes/specialShop.js';
 import inventoryRouter from './routes/inventory.js';
+import specialItemsRouter from './routes/specialItems.js';
 
 import jobsRouter from './routes/jobs.js';
 import { Friendship } from './models/Friendship.js';
@@ -89,7 +91,7 @@ import { configurePassport } from './config/passport.js';
 [
   User, CharacterModel,
   JailModel, HospitalModel, Crime, CrimeLog,
-  Weapon, Armor, InventoryItem,
+  Weapon, Armor, InventoryItem, SpecialItem,
   HouseModel, UserHouseModel,
   FightModel, BankAccount,
   CarModel,
@@ -169,6 +171,7 @@ app.use('/api/bloodcontracts', bloodContractsRouter);
 app.use('/api/houses',           housesRouter);
 app.use('/api/shop',             shopRouter);
 app.use('/api/special-shop',     specialShopRouter);
+app.use('/api/special-items',    specialItemsRouter);
 app.use('/api/inventory',        inventoryRouter);
 
 app.use('/api/jobs',             jobsRouter);

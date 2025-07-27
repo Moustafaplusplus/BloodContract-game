@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useFriendRequests } from "@/hooks/useFriendRequests";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 // Shape-based Icons (no emojis)
 const MenuIcon = () => (
@@ -206,6 +208,8 @@ export function MenuButton({ isOpen, setIsOpen }) {
 export default function Navigation({ isOpen, setIsOpen }) {
   const { logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { pendingCount } = useFriendRequests();
+  const { unreadCount } = useUnreadMessages();
 
   const handleLogout = () => {
     logout();
@@ -232,8 +236,8 @@ export default function Navigation({ isOpen, setIsOpen }) {
     { to: "/dashboard/cars", label: "السيارات", icon: CarIcon },
     { to: "/dashboard/dogs", label: "الكلاب", icon: TrophyIcon },
     { to: "/dashboard/gangs", label: "العصابات", icon: GroupIcon },
-    { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus },
-    { to: "/dashboard/messages", label: "الرسائل", icon: ChatIcon },
+    { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus, hasNotification: pendingCount > 0, notificationCount: pendingCount },
+    { to: "/dashboard/messages", label: "الرسائل", icon: ChatIcon, hasNotification: unreadCount > 0, notificationCount: unreadCount },
     { to: "/dashboard/global-chat", label: "الدردشة العامة", icon: ChatIcon },
     { to: "/dashboard/tasks", label: "المهام", icon: TasksIcon },
     { to: "/dashboard/ministry-mission", label: "مهام الوزارة", icon: MissionIcon },
@@ -284,7 +288,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
                   to={item.to}
                   onClick={() => setIsOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-white hover:bg-red-900/30 border-r-4 group ${
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-white hover:bg-red-900/30 border-r-4 group relative ${
                       isActive
                         ? "bg-red-900/50 border-red-500 text-red-300 font-bold shadow-lg shadow-red-900/20"
                         : "border-transparent hover:border-red-600"
@@ -293,6 +297,11 @@ export default function Navigation({ isOpen, setIsOpen }) {
                 >
                   <item.icon className="flex-shrink-0 group-hover:text-red-400" />
                   <span className={`text-sm${item.className ? ` ${item.className}` : ''}`}>{item.label}</span>
+                  {item.hasNotification && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
+                      {item.notificationCount > 99 ? '99+' : item.notificationCount}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </div>

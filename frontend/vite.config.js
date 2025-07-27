@@ -41,6 +41,10 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true,
       },
+      '/special-items': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
     },
   },
 });

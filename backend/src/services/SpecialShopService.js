@@ -3,6 +3,7 @@ import { Character } from '../models/Character.js';
 import { InventoryItem } from '../models/Inventory.js';
 import { User } from '../models/User.js';
 import { BlackcoinPackage, BlackcoinTransaction } from '../models/Blackcoin.js';
+import { SpecialItem } from '../models/SpecialItem.js';
 import { sequelize } from '../config/db.js';
 
 export class SpecialShopService {
@@ -11,6 +12,10 @@ export class SpecialShopService {
   }
   static async getAllArmors(filter = {}) {
     return await Armor.findAll({ where: filter });
+  }
+  
+  static async getAllSpecialItems(filter = {}) {
+    return await SpecialItem.findAll({ where: { ...filter, isAvailable: true } });
   }
   static async purchaseVIP(userId, packageId) {
     const user = await User.findByPk(userId);

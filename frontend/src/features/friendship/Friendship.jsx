@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useFriendRequests } from '@/hooks/useFriendRequests';
 
 export default function Friendship() {
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const { refetch: refetchPendingCount } = useFriendRequests();
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,8 @@ export default function Friendship() {
       await axios.post(`/api/friendship/accept`, { friendshipId: id });
       setPendingRequests(pendingRequests.filter(r => r.id !== id));
       fetchData();
+      // Refetch pending count to update navigation counter
+      refetchPendingCount();
     } catch (err) {
       setError("تعذر قبول الطلب.");
     }
@@ -81,6 +85,8 @@ export default function Friendship() {
     try {
       await axios.post(`/api/friendship/reject`, { friendshipId: id });
       setPendingRequests(pendingRequests.filter(r => r.id !== id));
+      // Refetch pending count to update navigation counter
+      refetchPendingCount();
     } catch (err) {
       setError("تعذر رفض الطلب.");
     }

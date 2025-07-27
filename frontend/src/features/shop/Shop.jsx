@@ -15,29 +15,14 @@ import {
   Heart, 
   Star,
   ImageIcon,
-  ShoppingCart
+  ShoppingCart,
+  Gem
 } from 'lucide-react';
-import { handleImageError } from '@/utils/imageUtils';
+import { handleImageError, getImageUrl } from '@/utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
 
-// Rarity colors
-const rarityColors = {
-  common: 'text-gray-400',
-  uncommon: 'text-green-400',
-  rare: 'text-blue-400',
-  epic: 'text-purple-400',
-  legend: 'text-yellow-400'
-};
 
-// Rarity icons
-const rarityIcons = {
-  common: '⭐',
-  uncommon: '⭐⭐',
-  rare: '⭐⭐⭐',
-  epic: '⭐⭐⭐⭐',
-  legend: '⭐⭐⭐⭐⭐'
-};
 
 function ItemCard({ item, onBuy, type }) {
   const isSpecial = type === 'special';
@@ -48,7 +33,7 @@ function ItemCard({ item, onBuy, type }) {
       <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
         {item.imageUrl ? (
           <img 
-            src={item.imageUrl} 
+            src={getImageUrl(item.imageUrl)} 
             alt={item.name}
             className="w-full h-full object-cover rounded-lg"
             onError={(e) => handleImageError(e, item.imageUrl)}
@@ -63,9 +48,6 @@ function ItemCard({ item, onBuy, type }) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="font-semibold text-white text-sm truncate">{item.name}</h4>
-          <span className={`text-xs ${rarityColors[item.rarity]}`}>
-            {rarityIcons[item.rarity]}
-          </span>
         </div>
 
         {/* Item Stats */}
@@ -95,17 +77,32 @@ function ItemCard({ item, onBuy, type }) {
             </div>
           )}
           {isSpecial && item.effect && (
-            <div className="flex items-center text-purple-400">
-              <Package className="w-3 h-3 mr-1" />
-              <span className="text-xs">{item.effect}</span>
-            </div>
+            <>
+              {item.effect.health && (
+                <div className="flex items-center text-green-400">
+                  <Heart className="w-3 h-3 mr-1" />
+                  <span className="text-xs">صحة: {item.effect.health === 'max' ? '100%' : `+${item.effect.health}`}</span>
+                </div>
+              )}
+              {item.effect.energy && (
+                <div className="flex items-center text-yellow-400">
+                  <Zap className="w-3 h-3 mr-1" />
+                  <span className="text-xs">طاقة: {item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`}</span>
+                </div>
+              )}
+
+            </>
           )}
         </div>
 
         {/* Price and Buy Button */}
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center text-accent-green font-bold text-sm">
-            <DollarSign className="w-3 h-3 mr-1" />
+            {item.currency === 'blackcoin' ? (
+              <Gem className="w-3 h-3 mr-1 text-yellow-400" />
+            ) : (
+              <DollarSign className="w-3 h-3 mr-1" />
+            )}
             <span>{item.price}</span>
           </div>
           <button
@@ -128,19 +125,23 @@ export default function Shop() {
   const [activeTab, setActiveTab] = useState('weapons');
   const [weapons, setWeapons] = useState([]);
   const [armors, setArmors] = useState([]);
+  const [specialItems, setSpecialItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const [weaponsRes, armorsRes] = await Promise.all([
+        const [weaponsRes, armorsRes, specialItemsRes] = await Promise.all([
           fetch(`${API}/api/shop/weapons`),
-          fetch(`${API}/api/shop/armors`)
+          fetch(`${API}/api/shop/armors`),
+          fetch(`${API}/api/special-items`)
         ]);
         const weaponsData = await weaponsRes.json();
         const armorsData = await armorsRes.json();
+        const specialItemsData = await specialItemsRes.json();
         setWeapons(weaponsData);
         setArmors(armorsData);
+        setSpecialItems(specialItemsData);
       } catch (error) {
         console.error('Failed to fetch shop items:', error);
         toast.error('فشل في تحميل عناصر المتجر');
@@ -171,7 +172,8 @@ export default function Shop() {
         const parsed = parseInt(input);
         if (!isNaN(parsed) && parsed > 0) quantity = parsed;
       }
-      const res = await fetch(`${API}/api/shop/buy/${type}/${item.id}`, {
+      const endpoint = type === 'special' ? `${API}/api/special-items/buy/${item.id}` : `${API}/api/shop/buy/${type}/${item.id}`;
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -190,13 +192,15 @@ export default function Shop() {
 
   const tabs = [
     { id: 'weapons', name: 'الأسلحة', icon: Sword, count: weapons.length },
-    { id: 'armors', name: 'الدروع', icon: Shield, count: armors.length }
+    { id: 'armors', name: 'الدروع', icon: Shield, count: armors.length },
+    { id: 'special', name: 'العناصر الخاصة', icon: Gem, count: specialItems.length }
   ];
 
   const getCurrentItems = () => {
     switch (activeTab) {
       case 'weapons': return weapons;
       case 'armors': return armors;
+      case 'special': return specialItems;
       default: return [];
     }
   };

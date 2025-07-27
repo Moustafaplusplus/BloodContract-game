@@ -64,4 +64,21 @@ export class InventoryController {
       res.sendStatus(500);
     }
   }
+
+  static async useSpecialItem(req, res) {
+    try {
+      const { itemId } = req.body;
+      const result = await InventoryService.useSpecialItem(req.user.id, itemId);
+      res.json(result);
+    } catch (error) {
+      if (error.message === 'item not owned') {
+        return res.status(404).json({ message: error.message });
+      }
+      if (error.message.includes('cooldown')) {
+        return res.status(400).json({ message: error.message });
+      }
+      console.error('[Inventory] Use special item failed', error);
+      res.sendStatus(500);
+    }
+  }
 } 

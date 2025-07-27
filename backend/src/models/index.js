@@ -27,6 +27,7 @@ import { sequelize } from '../config/db.js';
 import { ProfileRating } from './ProfileRating.js';
 import { Task, UserTaskProgress } from './Task.js';
 import { Notification } from './Notification.js';
+import { SpecialItem } from './SpecialItem.js';
 
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 Message.belongsTo(User, { as: 'receiver', foreignKey: 'receiverId' });
@@ -88,5 +89,6 @@ export {
   ProfileRating,
   Task,
   UserTaskProgress,
-  Notification
+  Notification,
+  SpecialItem
 }; 

@@ -14,7 +14,8 @@ import {
   Dog,
   Award,
   Coins,
-  Star
+  Star,
+  Package
 } from 'lucide-react';
 import CharacterManagement from './components/CharacterManagement';
 import CrimeManagement from './components/CrimeManagement';
@@ -32,6 +33,7 @@ import TasksManagement from './components/TasksManagement';
 import PromotionManagement from './components/PromotionManagement';
 import BlackcoinPackageManagement from './components/BlackcoinPackageManagement';
 import VIPPackageManagement from './components/VIPPackageManagement';
+import SpecialItemManagement from './components/SpecialItemManagement';
 
 const TABS = [
   { key: 'overview', label: 'نظرة عامة', icon: Activity },
@@ -39,6 +41,7 @@ const TABS = [
   { key: 'crimes', label: 'إدارة الجرائم', icon: Target },
   { key: 'weapons', label: 'إدارة الأسلحة', icon: Sword },
   { key: 'armors', label: 'إدارة الدروع', icon: Shield },
+  { key: 'special-items', label: 'العناصر الخاصة', icon: Package },
   { key: 'houses', label: 'إدارة المنازل', icon: Home },
   { key: 'cars', label: 'إدارة السيارات', icon: Briefcase },
   { key: 'dogs', label: 'إدارة الكلاب', icon: Dog },
@@ -121,6 +124,7 @@ export default function AdminPanel() {
         {activeTab === 'crimes' && <CrimeManagement />}
         {activeTab === 'weapons' && <WeaponManagement />}
         {activeTab === 'armors' && <ArmorManagement />}
+        {activeTab === 'special-items' && <SpecialItemManagement />}
         {activeTab === 'houses' && <HouseManagement />}
         {activeTab === 'cars' && <CarManagement />}
         {activeTab === 'dogs' && <DogManagement />}

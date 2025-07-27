@@ -19,4 +19,7 @@ router.post('/unequip', InventoryController.unequipItem);
 // POST /api/inventory/sell - Sell an item
 router.post('/sell', InventoryController.sellItem);
 
+// POST /api/inventory/use-special - Use a special item
+router.post('/use-special', InventoryController.useSpecialItem);
+
 export default router; 

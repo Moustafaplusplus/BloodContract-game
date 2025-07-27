@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuth } from '@/hooks/useAuth';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { User, Search } from 'lucide-react';
 import notificationSound from '/notification.mp3';
@@ -23,6 +24,7 @@ const getAvatarUrl = (url) => {
 export default function Messages() {
   const { socket } = useSocket();
   const { token } = useAuth();
+  const { refetch: refetchUnreadCount } = useUnreadMessages();
   const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -96,6 +98,18 @@ export default function Messages() {
     axios.get('/api/messages/inbox', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(res => {
         setConversations(res.data);
+        // Update unread state based on new data structure
+        const unreadState = {};
+        res.data.forEach(conversation => {
+          if (conversation.hasUnreadMessages) {
+            unreadState[conversation.userId] = true;
+          }
+        });
+        setUnread(unreadState);
+        
+        // Refetch unread count to update navigation counter
+        refetchUnreadCount();
+        
         // If coming from profile, auto-select user
         if (location.state && location.state.userId) {
           const user = res.data.find(u => u.userId === location.state.userId);
@@ -112,7 +126,33 @@ export default function Messages() {
     if (selectedUser && userId) {
       setLoadingMessages(true);
       axios.get(`/api/messages/${selectedUser.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-        .then(res => setMessages(res.data))
+        .then(res => {
+          setMessages(res.data);
+          // Mark all unread messages from this user as read
+          const unreadMessages = res.data.filter(msg => 
+            msg.senderId === selectedUser.userId && 
+            msg.receiverId === userId && 
+            !msg.isRead
+          );
+          
+          if (unreadMessages.length > 0) {
+            // Mark each unread message as read
+            Promise.all(unreadMessages.map(msg => 
+              axios.patch(`/api/messages/read/${msg.id}`, {}, { 
+                headers: token ? { Authorization: `Bearer ${token}` } : {} 
+              })
+            )).then(() => {
+              // Update local state to mark messages as read
+              setMessages(prev => prev.map(msg => 
+                unreadMessages.some(unread => unread.id === msg.id) 
+                  ? { ...msg, isRead: true }
+                  : msg
+              ));
+              // Refetch unread count to update navigation counter
+              refetchUnreadCount();
+            }).catch(console.error);
+          }
+        })
         .catch(() => setMessages([]))
         .finally(() => setLoadingMessages(false));
       // Clear unread badge for this user
