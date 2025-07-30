@@ -18,7 +18,6 @@ COPY backend/src/ ./src/
 COPY backend/config/ ./config/
 COPY backend/migrations/ ./migrations/
 COPY backend/sequelize.config.cjs ./
-COPY backend/.sequelizerc ./
 
 # Expose port
 EXPOSE 3000
