@@ -1,7 +1,8 @@
 FROM node:18-alpine
 
-# Install pnpm
-RUN npm install -g pnpm@10.12.4
+# Install pnpm using a more reliable method
+RUN apk add --no-cache curl && \
+    curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm@10.12.4
 
 # Set working directory
 WORKDIR /app
