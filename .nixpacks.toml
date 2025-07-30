@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs", "pnpm"]
+nixPkgs = ["nodejs", "npm"]
 
 [phases.install]
-cmds = ["cd backend && pnpm install --no-frozen-lockfile"]
+cmds = ["cd backend && npm install --production"]
 
 [phases.build]
-cmds = ["echo 'Build phase completed'"]
+cmds = ["cd backend && npm run verify"]
 
 [start]
 cmd = "cd backend && npm start" 
