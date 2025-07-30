@@ -213,6 +213,15 @@ app.use('/api/game-news', gameNewsRouter);
 app.use('/api/login-gift', loginGiftRouter);
 app.use('/api/features', featuresRouter);
 
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 /* ─────────── Global error handler ─────────── */
 app.use(errorHandler);
 

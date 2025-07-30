@@ -3,12 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const dbConfig = {
-  username: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  host:     process.env.DB_HOST,
-  port:     Number(process.env.DB_PORT),
-  dialect:  'postgres',
+  url: process.env.DATABASE_URL,
+  dialect: 'postgres',
   logging: false,
   // Add connection pool configuration to prevent connection exhaustion
   pool: {
@@ -25,11 +21,10 @@ const dbConfig = {
   },
   // Add dialect options for better connection handling
   dialectOptions: {
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     connectTimeout: 30000, // Reduced from 60000
     acquireTimeout: 30000, // Reduced from 60000
     timeout: 30000, // Reduced from 60000
-    // Add SSL configuration if needed
-    // ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     // Add statement timeout to prevent long-running queries
     statement_timeout: 15000, // Reduced from 30000
     // Add idle session timeout
@@ -37,7 +32,7 @@ const dbConfig = {
   },
 };
 
-const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, dbConfig);
+const sequelize = new Sequelize(process.env.DATABASE_URL, dbConfig);
 
 // Connection event handlers (logs removed to reduce console spam)
 sequelize.addHook('beforeConnect', async (config) => {
