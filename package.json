@@ -1,7 +1,13 @@
 {
-	"dependencies": {
-		"emoji-mart": "^5.6.0",
-		"emoji-picker-react": "^4.13.2",
-		"socket.io-client": "^4.8.1"
-	}
+  "name": "bloodcontract-game",
+  "version": "1.0.0",
+  "description": "Blood Contract Browser Game",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "build": "cd backend && npm run verify"
+  },
+  "engines": {
+    "node": "18.x"
+  }
 }
