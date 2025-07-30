@@ -127,25 +127,7 @@ app.set('etag', false);                     // prevents 304 responses with empty
 
 // CORS configuration
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      process.env.CLIENT_URL,
-      process.env.CORS_ORIGIN,
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:4173',
-      'https://bloodcontract-game-production.up.railway.app'
-    ].filter(Boolean);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins for now
   credentials: true,
   optionsSuccessStatus: 200
 };

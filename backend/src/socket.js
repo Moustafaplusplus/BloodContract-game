@@ -14,14 +14,7 @@ export function initSocket(server) {
   io = new Server(server, {
     path: '/ws',
     cors: { 
-      origin: [
-        process.env.CLIENT_URL,
-        process.env.CORS_ORIGIN,
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://localhost:4173',
-        'https://bloodcontract-game-production.up.railway.app'
-      ].filter(Boolean),
+      origin: true, // Allow all origins for now
       credentials: true 
     },
     transports: ['websocket', 'polling'], // Add polling as fallback
