@@ -1,16 +1,13 @@
 FROM node:18-alpine
 
-# Install pnpm using npm (more reliable than curl)
-RUN npm install -g pnpm@10.12.4
-
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
 
-# Install dependencies with better caching
-RUN pnpm install --frozen-lockfile --no-optional
+# Install dependencies
+RUN npm install --production
 
 # Copy source code and configuration files
 COPY src/ ./src/
@@ -45,4 +42,4 @@ RUN echo "Checking critical files..." && \
 EXPOSE 3000
 
 # Start the application
-CMD ["pnpm", "start"] 
+CMD ["npm", "start"] 
