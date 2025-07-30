@@ -5,4 +5,10 @@ npm-debug.log
 README.md
 .env
 .DS_Store
-*.log 
+*.log
+test-firebase.js
+debug-avatar-upload.js
+uploadDefaultAvatars.js
+makeAdmin.js
+setup-firebase.js
+firebase-service-account.json 

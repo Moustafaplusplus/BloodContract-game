@@ -12,9 +12,13 @@ fi
 
 echo "✅ DATABASE_URL is configured"
 
+# Verify deployment files
+echo "🔍 Verifying deployment files..."
+node verify-deployment.js
+
 # Install dependencies
 echo "📦 Installing dependencies..."
-npm install
+pnpm install --no-frozen-lockfile
 
 # Run database migrations
 echo "🗄️ Running database migrations..."
