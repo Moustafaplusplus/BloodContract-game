@@ -15,13 +15,7 @@ export class MessageService {
       content
     });
     
-    // Get sender name for notification
-    const sender = await Character.findOne({ where: { userId: senderId } });
-    const senderName = sender ? sender.name : 'Unknown User';
-    
-    // Create notification using NotificationService
-    const notification = await NotificationService.createMessageReceivedNotification(receiverId, senderName);
-    emitNotification(receiverId, notification);
+    // Message notifications removed as requested
     
     return message;
   }
@@ -38,12 +32,12 @@ export class MessageService {
         {
           model: Character,
           as: 'Sender',
-          attributes: ['id', 'name']
+          attributes: ['id', 'name', 'vipExpiresAt']
         },
         {
           model: Character,
           as: 'Receiver',
-          attributes: ['id', 'name']
+          attributes: ['id', 'name', 'vipExpiresAt']
         }
       ],
       order: [['createdAt', 'DESC']],

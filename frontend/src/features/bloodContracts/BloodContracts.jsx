@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import CreateContract from './CreateContract';
 import ContractsList from './ContractsList';
 import AttackResultModal from './AttackResultModal';
@@ -43,10 +44,14 @@ const BloodContracts = ({ currentUserId }) => {
         setRefreshKey(k => k + 1);
       } else {
         setAttackSuccess(false);
-        setModalMessage(data.message || 'فشل الهجوم.');
+        if (data.message?.includes('لا يمكن تنفيذ العقد لأن الهدف محمي من الهجمات حالياً')) {
+          toast.error('🛡️ لا يمكن تنفيذ العقد لأن الهدف محمي من الهجمات حالياً.');
+        } else {
+          setModalMessage(data.message || 'فشل الهجوم.');
+        }
         setFightResult(data.fightResult);
       }
-    } catch {
+    } catch (error) {
       setAttackSuccess(false);
       setModalMessage('حدث خطأ أثناء الاتصال بالخادم.');
       setFightResult(null);

@@ -54,8 +54,7 @@ export default function TasksManagement() {
     setLoading(true);
     try {
       const token = localStorage.getItem('jwt');
-      console.log('Debug: Token exists:', !!token);
-      console.log('Debug: Token value:', token ? token.substring(0, 20) + '...' : 'null');
+      
       
       const res = await axios.get('/api/tasks/all', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},

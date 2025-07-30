@@ -1,5 +1,6 @@
 import { GlobalMessage } from '../models/GlobalMessage.js';
 import { User } from '../models/User.js';
+import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 
 const GlobalChatController = {
@@ -20,21 +21,25 @@ const GlobalChatController = {
         include: [
           {
             model: User,
-            attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip']
+            attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'],
+            include: [{ model: Character, attributes: ['name', 'vipExpiresAt'] }]
           }
         ]
       });
       
-      // Map messages to include avatarUrl, isAdmin, isVip
+      // Map messages to include avatarUrl, isAdmin, isVip, and current character name
       const mapped = messages.reverse().map(msg => {
         const user = msg.User || {};
+        const character = user.Character || {};
         return {
           id: msg.id,
           userId: msg.userId,
-          username: msg.username,
-          avatarUrl: user.avatarUrl || '/avatars/default.png',
+          username: msg.username, // Keep original username for reference
+          displayName: character.name || msg.username, // Use character name if available, fallback to username
+          avatarUrl: user.avatarUrl,
           isAdmin: user.isAdmin || false,
           isVip: user.isVip || false,
+          vipExpiresAt: character.vipExpiresAt,
           content: msg.content,
           messageType: msg.messageType,
           createdAt: msg.createdAt
@@ -63,19 +68,23 @@ const GlobalChatController = {
         include: [
           {
             model: User,
-            attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip']
+            attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'],
+            include: [{ model: Character, attributes: ['name', 'vipExpiresAt'] }]
           }
         ]
       });
       const mapped = messages.reverse().map(msg => {
         const user = msg.User || {};
+        const character = user.Character || {};
         return {
           id: msg.id,
           userId: msg.userId,
-          username: msg.username,
-          avatarUrl: user.avatarUrl || '/avatars/default.png',
+          username: msg.username, // Keep original username for reference
+          displayName: character.name || msg.username, // Use character name if available, fallback to username
+          avatarUrl: user.avatarUrl,
           isAdmin: user.isAdmin || false,
           isVip: user.isVip || false,
+          vipExpiresAt: character.vipExpiresAt,
           content: msg.content,
           messageType: msg.messageType,
           createdAt: msg.createdAt

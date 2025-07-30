@@ -15,14 +15,17 @@ import {
   Award,
   Coins,
   Star,
-  Package
+  Package,
+  DollarSign,
+  BookOpen,
+  Bot,
+  Gift
 } from 'lucide-react';
 import CharacterManagement from './components/CharacterManagement';
 import CrimeManagement from './components/CrimeManagement';
 import WeaponManagement from './components/WeaponManagement';
 import ArmorManagement from './components/ArmorManagement';
 import JobManagement from './components/JobManagement';
-import SystemStats from './components/SystemStats';
 import Overview from './components/Overview';
 import IpManagement from './components/IpManagement';
 import SuggestionManagement from './components/SuggestionManagement';
@@ -32,11 +35,16 @@ import CarManagement from './components/CarManagement';
 import TasksManagement from './components/TasksManagement';
 import PromotionManagement from './components/PromotionManagement';
 import BlackcoinPackageManagement from './components/BlackcoinPackageManagement';
+import MoneyPackageManagement from './components/MoneyPackageManagement';
 import VIPPackageManagement from './components/VIPPackageManagement';
 import SpecialItemManagement from './components/SpecialItemManagement';
+import MinistryMissionManagement from './components/MinistryMissionManagement';
+import BotManagement from './components/BotManagement';
+import GameNewsManagement from './components/GameNewsManagement';
+import LoginGiftManagement from './components/LoginGiftManagement';
 
 const TABS = [
-  { key: 'overview', label: 'نظرة عامة', icon: Activity },
+  { key: 'overview', label: 'لوحة التحكم', icon: Activity },
   { key: 'characters', label: 'إدارة الشخصيات', icon: Users },
   { key: 'crimes', label: 'إدارة الجرائم', icon: Target },
   { key: 'weapons', label: 'إدارة الأسلحة', icon: Sword },
@@ -46,13 +54,17 @@ const TABS = [
   { key: 'cars', label: 'إدارة السيارات', icon: Briefcase },
   { key: 'dogs', label: 'إدارة الكلاب', icon: Dog },
   { key: 'jobs', label: 'إدارة الوظائف', icon: Briefcase },
+  { key: 'ministry-missions', label: 'مهام الوزارة', icon: BookOpen },
   { key: 'blackcoin-packages', label: 'باقات العملة السوداء', icon: Coins },
+  { key: 'money-packages', label: 'باقات المال', icon: DollarSign },
   { key: 'vip-packages', label: 'باقات VIP', icon: Star },
   { key: 'suggestions', label: 'الاقتراحات والبلاغات', icon: MessageSquare },
-  { key: 'system', label: 'إحصائيات النظام', icon: TrendingUp },
   { key: 'ips', label: 'إدارة عناوين IP', icon: Shield },
   { key: 'tasks', label: 'إدارة المهام', icon: Activity },
   { key: 'promotions', label: 'إدارة الرتب', icon: Award },
+  { key: 'bots', label: 'إدارة البوتات', icon: Bot },
+  { key: 'game-news', label: 'أخبار اللعبة', icon: MessageSquare },
+  { key: 'login-gift', label: 'مكافآت الدخول اليومية', icon: Gift },
 ];
 
 export default function AdminPanel() {
@@ -129,13 +141,17 @@ export default function AdminPanel() {
         {activeTab === 'cars' && <CarManagement />}
         {activeTab === 'dogs' && <DogManagement />}
         {activeTab === 'jobs' && <JobManagement />}
+        {activeTab === 'ministry-missions' && <MinistryMissionManagement />}
         {activeTab === 'blackcoin-packages' && <BlackcoinPackageManagement />}
+        {activeTab === 'money-packages' && <MoneyPackageManagement />}
         {activeTab === 'vip-packages' && <VIPPackageManagement />}
         {activeTab === 'suggestions' && <SuggestionManagement />}
-        {activeTab === 'system' && <SystemStats />}
         {activeTab === 'ips' && <IpManagement />}
         {activeTab === 'tasks' && <TasksManagement />}
         {activeTab === 'promotions' && <PromotionManagement />}
+        {activeTab === 'bots' && <BotManagement />}
+        {activeTab === 'game-news' && <GameNewsManagement />}
+        {activeTab === 'login-gift' && <LoginGiftManagement />}
       </div>
     </div>
   );

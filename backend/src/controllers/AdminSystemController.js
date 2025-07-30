@@ -6,8 +6,10 @@ import { House } from '../models/House.js';
 import { Dog } from '../models/Dog.js';
 import { Weapon, Armor } from '../models/Shop.js';
 import { BlackcoinPackage } from '../models/Blackcoin.js';
+import { MoneyPackage } from '../models/MoneyPackage.js';
 import { VIPPackage } from '../models/Shop.js';
 import { sequelize } from '../config/db.js';
+import { AdminSystemService } from '../services/AdminSystemService.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -597,6 +599,119 @@ export class AdminSystemController {
     } catch (error) {
       console.error('Delete VIP package error:', error);
       res.status(500).json({ message: 'فشل في حذف باقة VIP' });
+    }
+  }
+
+  // Money Package Management
+  static async getAllMoneyPackages(req, res) {
+    try {
+      const packages = await MoneyPackage.findAll({
+        order: [['blackcoinCost', 'ASC']]
+      });
+      res.json(packages);
+    } catch (error) {
+      console.error('Get money packages error:', error);
+      res.status(500).json({ message: 'فشل في تحميل باقات المال' });
+    }
+  }
+
+  static async createMoneyPackage(req, res) {
+    try {
+      const { name, blackcoinCost, moneyAmount, bonus, isActive, description } = req.body;
+      const pkg = await MoneyPackage.create({
+        name,
+        blackcoinCost,
+        moneyAmount,
+        bonus: bonus || 0,
+        isActive: isActive !== undefined ? isActive : true,
+        description
+      });
+      res.status(201).json(pkg);
+    } catch (error) {
+      console.error('Create money package error:', error);
+      res.status(500).json({ message: 'فشل في إنشاء باقة المال' });
+    }
+  }
+
+  static async updateMoneyPackage(req, res) {
+    try {
+      const { id } = req.params;
+      const { name, blackcoinCost, moneyAmount, bonus, isActive, description } = req.body;
+      
+      const pkg = await MoneyPackage.findByPk(id);
+      if (!pkg) {
+        return res.status(404).json({ message: 'الباقة غير موجودة' });
+      }
+
+      await pkg.update({
+        name,
+        blackcoinCost,
+        moneyAmount,
+        bonus: bonus || 0,
+        isActive: isActive !== undefined ? isActive : pkg.isActive,
+        description
+      });
+
+      res.json(pkg);
+    } catch (error) {
+      console.error('Update money package error:', error);
+      res.status(500).json({ message: 'فشل في تحديث باقة المال' });
+    }
+  }
+
+  static async deleteMoneyPackage(req, res) {
+    try {
+      const { id } = req.params;
+      const pkg = await MoneyPackage.findByPk(id);
+      if (!pkg) {
+        return res.status(404).json({ message: 'الباقة غير موجودة' });
+      }
+
+      await pkg.destroy();
+      res.json({ message: 'تم حذف الباقة بنجاح' });
+    } catch (error) {
+      console.error('Delete money package error:', error);
+      res.status(500).json({ message: 'فشل في حذف باقة المال' });
+    }
+  }
+
+  // Generate login token for any user (admin feature)
+  static async generateUserLoginToken(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      const result = await AdminSystemService.generateUserLoginToken(parseInt(userId));
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('Error generating user login token:', error);
+      if (error.message === 'User not found' || error.message === 'User has no character') {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Get user's inventory (admin feature)
+  static async getUserInventory(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      const result = await AdminSystemService.getUserInventory(parseInt(userId));
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('Error getting user inventory:', error);
+      if (error.message === 'User not found' || error.message === 'User has no character') {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(500).json({ error: 'Internal server error' });
     }
   }
 }

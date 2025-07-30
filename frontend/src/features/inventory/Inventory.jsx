@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useHud } from "@/hooks/useHud"
+import { useQueryClient } from '@tanstack/react-query'
 import Modal from "@/components/Modal"
-import { Sword, Shield, Zap, Heart, ImageIcon, XCircle, Trash2, Star, Gem, Package, Play } from "lucide-react"
+import GangBombModal from "./GangBombModal"
+import MoneyIcon from "@/components/MoneyIcon"
+import { Sword, Shield, Zap, Heart, ImageIcon, XCircle, Trash2, Star, Gem, Package, Play, Bomb, Clock } from "lucide-react"
 import { getImageUrl } from '@/utils/imageUtils'
 
 const API = import.meta.env.VITE_API_URL
@@ -64,10 +67,10 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
 
       {/* Glow effects */}
       {item.type === 'special' ? (
-        <div className="absolute inset-0 rounded-2xl opacity-20 bg-gradient-to-br from-purple-400/20 to-pink-500/20" />
+        <div className="absolute inset-0 rounded-2xl opacity-20 bg-gradient-to-br from-purple-400/20 to-pink-500/20 pointer-events-none" />
       ) : (
         <div
-          className={`absolute inset-0 rounded-2xl opacity-20 ${
+          className={`absolute inset-0 rounded-2xl opacity-20 pointer-events-none ${
             item.rarity === "legend"
               ? "bg-gradient-to-br from-yellow-400/20 to-orange-500/20"
               : item.rarity === "epic"
@@ -125,6 +128,15 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
             {item.effect.energy && (
               <Stat icon={Zap} color="text-yellow-400" value={item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`} label="طاقة" />
             )}
+            {item.effect.experience && (
+              <Stat icon={Sword} color="text-blue-400" value={`+${item.effect.experience}`} label="خبرة" />
+            )}
+            {item.type === 'EXPERIENCE_POTION' && item.levelRequired && (
+              <Stat icon={Shield} color="text-purple-400" value={item.levelRequired} label="المستوى المطلوب" />
+            )}
+            {item.effect.cdReset && (
+              <Stat icon={Clock} color="text-green-400" value="إعادة تعيين" label="أوقات الانتظار" />
+            )}
             {item.effect.duration > 0 && (
               <Stat icon={Package} color="text-purple-400" value={`${item.effect.duration}s`} label="المدة" />
             )}
@@ -139,7 +151,7 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 mt-2">
+      <div className="flex gap-2 mt-2 relative z-20">
         {isEquipped ? (
           <button
             onClick={() => onUnequip(item)}
@@ -149,37 +161,59 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
           </button>
         ) : (
           <>
-            {item.type === 'special' && onUse && (
-              <button
-                onClick={() => onUse(item)}
-                className="bg-gradient-to-r from-green-700 to-green-800 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 rounded-lg flex-1 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-green-900/30 border border-green-600/30"
-              >
-                <Play className="w-5 h-5" /> استخدام
-              </button>
+            {item.type === 'special' && onUse ? (
+              // Special items: Use button + Sell button
+              <>
+        
+                <button
+                  onClick={() => {
+                    onUse(item);
+                  }}
+                  className="bg-gradient-to-r from-green-700 to-green-800 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 rounded-lg flex-1 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-green-900/30 border border-green-600/30 cursor-pointer z-10 relative"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <Play className="w-5 h-5" /> استخدام
+                </button>
+                <button
+                  onClick={() => {
+                    onSell(item);
+                  }}
+                  className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 rounded-lg flex-1 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-red-900/30 border border-red-600/30 cursor-pointer z-10 relative"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <Trash2 className="w-5 h-5" /> بيع
+                </button>
+              </>
+            ) : (
+              // Regular items: Equip dropdown + Sell button
+              <>
+                {slotOptions && slotOptions.length > 0 && (
+                  <select
+                    className="flex-1 bg-black/60 border border-red-900/30 text-white rounded-lg px-3 py-2 text-base focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
+                    defaultValue=""
+                    onChange={(e) => onEquip(item, e.target.value)}
+                  >
+                    <option value="" disabled>
+                      اختر مكان التجهيز
+                    </option>
+                    {slotOptions.map((slot) => (
+                      <option key={slot.value} value={slot.value}>
+                        {slot.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={() => {
+                    onSell(item);
+                  }}
+                  className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 rounded-lg flex-1 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-red-900/30 border border-red-600/30 cursor-pointer z-10 relative"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <Trash2 className="w-5 h-5" /> بيع
+                </button>
+              </>
             )}
-
-            {slotOptions && slotOptions.length > 0 && (
-              <select
-                className="flex-1 bg-black/60 border border-red-900/30 text-white rounded-lg px-3 py-2 text-base focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
-                defaultValue=""
-                onChange={(e) => onEquip(item, e.target.value)}
-              >
-                <option value="" disabled>
-                  اختر مكان التجهيز
-                </option>
-                {slotOptions.map((slot) => (
-                  <option key={slot.value} value={slot.value}>
-                    {slot.label}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={() => onSell(item)}
-              className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 rounded-lg flex-1 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-red-900/30 border border-red-600/30"
-            >
-              <Trash2 className="w-5 h-5" /> بيع
-            </button>
           </>
         )}
       </div>
@@ -213,10 +247,13 @@ function SectionHeader({ icon: Icon, title, color = "text-red-500", accentColor 
 export default function Inventory() {
   const { token } = useAuth()
   const { invalidateHud } = useHud()
+  const queryClient = useQueryClient()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [modal, setModal] = useState({ open: false })
+  const [inputValue, setInputValue] = useState('')
+  const [gangBombModal, setGangBombModal] = useState({ open: false, itemId: null })
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -227,7 +264,6 @@ export default function Inventory() {
         })
         if (!res.ok) throw new Error("فشل في تحميل الجرد")
         const data = await res.json()
-        console.log('Inventory data:', data.items)
         setItems(data.items || [])
       } catch (err) {
         setError(err.message)
@@ -242,8 +278,6 @@ export default function Inventory() {
     const weapons = items.filter((i) => weaponTypes.includes(i.type))
     const armors = items.filter((i) => i.type === "armor")
     const specials = items.filter((i) => i.type === "special")
-    console.log('Grouped items:', { weapons: weapons.length, armors: armors.length, specials: specials.length })
-    console.log('Special items:', specials)
     return { weapons, armors, specials }
   }
 
@@ -308,22 +342,29 @@ export default function Inventory() {
     setModal({
       open: true,
       type: "warning",
-      title: "تأكيد البيع",
-      message: `هل أنت متأكد أنك تريد بيع (${item.name})؟ سيتم بيع عنصر واحد فقط.`,
+      title: "خيارات البيع",
+      message: `اختر طريقة بيع (${item.name}):\n\nبيع سريع: 100 مال فوراً\n🏪 السوق السوداء: الانتقال إلى صفحة السوق السوداء لإنشاء إعلان`,
       showCancel: true,
-      confirmText: "تأكيد البيع",
+      confirmText: "بيع سريع (100 مال)",
       cancelText: "إلغاء",
+      extraButton: {
+        text: "الانتقال للسوق السوداء",
+        action: async () => {
+          // Redirect to Black Market page instead of creating listing
+          window.location.href = '/dashboard/black-market';
+        }
+      },
       onConfirm: async () => {
         setModal({ open: true, type: "loading", title: "جاري البيع...", message: "" })
         try {
           const res = await fetch(`${API}/api/inventory/sell`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ type: item.type, itemId: item.itemId }),
+            body: JSON.stringify({ type: item.type, itemId: item.itemId, sellOption: 'quick' }),
           })
           const data = await res.json()
-          if (!res.ok) throw new Error(data.message || "فشل في البيع")
-          setModal({ open: true, type: "success", title: "تم البيع", message: `تم بيع (${item.name}) بنجاح!` })
+          if (!res.ok) throw new Error(data.error || "فشل في البيع")
+          setModal({ open: true, type: "success", title: "تم البيع", message: `تم بيع (${item.name}) بنجاح! حصلت على 100 مال.` })
           setTimeout(() => setModal({ open: false }), 1200)
           invalidateHud?.()
           setTimeout(() => window.location.reload(), 800)
@@ -335,7 +376,89 @@ export default function Inventory() {
   }
 
   const handleUse = async (item) => {
-    // Build effect description
+
+    // Check if it's a gang bomb item
+    if (item.effect && item.effect.gangBomb) {
+      setGangBombModal({ open: true, itemId: item.itemId });
+      return;
+    }
+    
+    // Check if it's a name change item
+    if (item.effect && item.effect.nameChange) {
+      setModal({
+        open: true,
+        type: "input",
+        title: "تغيير الاسم",
+        message: "أدخل الاسم الجديد:",
+        inputPlaceholder: "الاسم الجديد",
+        inputType: "text",
+        showCancel: true,
+        confirmText: "تغيير الاسم",
+        cancelText: "إلغاء",
+        onConfirm: async (newName) => {
+          if (!newName || newName.trim().length < 3) {
+            setModal({ open: true, type: "error", title: "خطأ", message: "الاسم يجب أن يكون 3 أحرف على الأقل" });
+            return;
+          }
+          if (newName.trim().length > 20) {
+            setModal({ open: true, type: "error", title: "خطأ", message: "الاسم يجب أن يكون 20 حرف أو أقل" });
+            return;
+          }
+          
+          // Validate username format
+          const nameRegex = /^[a-zA-Z0-9._-]+$/;
+          if (!nameRegex.test(newName.trim())) {
+            setModal({ open: true, type: "error", title: "خطأ", message: "الاسم يجب أن يحتوي على أحرف وأرقام فقط مع إمكانية استخدام النقاط والشرطات والشرطات السفلية" });
+            return;
+          }
+          
+          // Check for consecutive special characters
+          if (/[._-]{2,}/.test(newName.trim())) {
+            setModal({ open: true, type: "error", title: "خطأ", message: "الاسم لا يمكن أن يحتوي على أحرف خاصة متتالية" });
+            return;
+          }
+          
+          // Check if starts or ends with special characters
+          if (/^[._-]|[._-]$/.test(newName.trim())) {
+            setModal({ open: true, type: "error", title: "خطأ", message: "الاسم لا يمكن أن يبدأ أو ينتهي بحرف خاص" });
+            return;
+          }
+          
+          setModal({ open: true, type: "loading", title: "جاري تغيير الاسم...", message: "" });
+          try {
+            // First use the special item
+            const useRes = await fetch(`${API}/api/inventory/use-special`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ itemId: item.itemId }),
+            });
+            const useData = await useRes.json();
+            if (!useRes.ok) throw new Error(useData.message || "فشل في استخدام العنصر");
+            
+            // Then change the name
+            const nameRes = await fetch(`${API}/api/character/change-name`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ newName: newName.trim() }),
+            });
+            const nameData = await nameRes.json();
+            if (!nameRes.ok) throw new Error(nameData.error || "فشل في تغيير الاسم");
+            
+            setModal({ open: true, type: "success", title: "تم تغيير الاسم", message: `تم تغيير الاسم إلى "${newName.trim()}" بنجاح!` });
+            setTimeout(() => setModal({ open: false }), 2000);
+            invalidateHud?.();
+            // Invalidate character query cache to refresh dashboard and other components
+            queryClient.invalidateQueries(['character']);
+            setTimeout(() => window.location.reload(), 1500);
+          } catch (err) {
+            setModal({ open: true, type: "error", title: "خطأ", message: err.message });
+          }
+        },
+      });
+      return;
+    }
+    
+    // Build effect description for other items
     let effectDescription = '';
     if (item.effect) {
       const effects = [];
@@ -344,6 +467,9 @@ export default function Inventory() {
       }
       if (item.effect.energy) {
         effects.push(`طاقة: ${item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`}`);
+      }
+      if (item.effect.experience) {
+        effects.push(`خبرة: +${item.effect.experience}`);
       }
       if (item.effect.duration > 0) {
         effects.push(`مدة: ${item.effect.duration} ثانية`);
@@ -374,6 +500,8 @@ export default function Inventory() {
           setModal({ open: true, type: "success", title: "تم الاستخدام", message: `تم استخدام (${item.name}) بنجاح!` })
           setTimeout(() => setModal({ open: false }), 1200)
           invalidateHud?.()
+          // Invalidate character query cache to refresh dashboard and other components
+          queryClient.invalidateQueries(['character']);
           setTimeout(() => window.location.reload(), 800)
         } catch (err) {
           setModal({ open: true, type: "error", title: "خطأ", message: err.message })
@@ -536,7 +664,31 @@ export default function Inventory() {
         </section>
 
         {/* Modal for actions */}
-        <Modal {...modal} isOpen={modal.open} onClose={() => setModal({ open: false })} />
+        <Modal 
+          {...modal} 
+          isOpen={modal.open} 
+          onClose={() => {
+            setModal({ open: false });
+            setInputValue('');
+          }}
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+        />
+
+        {/* Gang Bomb Modal */}
+        <GangBombModal
+          isOpen={gangBombModal.open}
+          onClose={() => setGangBombModal({ open: false, itemId: null })}
+          onUse={(result) => {
+            // Handle successful gang bomb use
+            setModal({ open: true, type: "success", title: "تم استخدام قنبلة العصابة", message: "تم استخدام قنبلة العصابة بنجاح!" });
+            setTimeout(() => setModal({ open: false }), 2000);
+            invalidateHud?.();
+            // Refresh inventory
+            setTimeout(() => window.location.reload(), 1500);
+          }}
+          itemId={gangBombModal.itemId}
+        />
       </div>
     </div>
   )

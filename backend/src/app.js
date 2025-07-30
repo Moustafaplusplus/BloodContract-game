@@ -32,6 +32,7 @@ import { startEnergyRegen } from './jobs/energyRegen.js';
 import { startHealthRegen } from './jobs/healthRegen.js';
 import { startJailRelease } from './jobs/jailRelease.js';
 import { startHospitalRelease } from './jobs/hospitalRelease.js';
+import { startContractExpirationJob } from './jobs/contractExpiration.js';
 import { Fight as FightModel } from './models/Fight.js';
 import fightRouter from './routes/fight.js';
 import { BankAccount } from './models/Bank.js';
@@ -69,7 +70,7 @@ import messageRoutes from './routes/message.js';
 import friendshipRoutes from './routes/friendship.js';
 import rankingRouter from './routes/ranking.js';
 import gangRouter from './routes/gang.js';
-import { Gang, GangMember } from './models/Gang.js';
+import { Gang, GangMember, GangJoinRequest } from './models/Gang.js';
 import { IpTracking } from './models/IpTracking.js';
 import { MinistryMission, UserMinistryMission } from './models/MinistryMission.js';
 import { Suggestion } from './models/Suggestion.js';
@@ -85,7 +86,12 @@ import { Task, UserTaskProgress } from './models/Task.js';
 import tasksRouter from './routes/tasks.js';
 import authRouter from './routes/auth.js';
 import notificationRouter from './routes/notifications.js';
+import botsRouter from './routes/bots.js';
+import botActivityService from './services/BotActivityService.js';
 import { configurePassport } from './config/passport.js';
+import gameNewsRouter from './routes/gameNews.js';
+import loginGiftRouter from './routes/loginGift.js';
+import featuresRouter from './routes/features.js';
 
 /* ─────────── Sequelize model auto-init (skip if already inited) ─────────── */
 [
@@ -97,7 +103,7 @@ import { configurePassport } from './config/passport.js';
   CarModel,
   Friendship, Message,
   JobModel, JobHistoryModel,
-  Gang, GangMember,
+  Gang, GangMember, GangJoinRequest,
   IpTracking, MinistryMission, UserMinistryMission, Suggestion, GlobalMessage, ProfileRating,
   Task, UserTaskProgress,
 ].forEach((M) => {
@@ -202,6 +208,10 @@ app.use('/api/global-chat', globalChatRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/bots', botsRouter);
+app.use('/api/game-news', gameNewsRouter);
+app.use('/api/login-gift', loginGiftRouter);
+app.use('/api/features', featuresRouter);
 
 /* ─────────── Global error handler ─────────── */
 app.use(errorHandler);
@@ -218,7 +228,7 @@ const startServer = async () => {
     
     // Test database connection
     await sequelize.authenticate();
-    console.log('🗄️  Postgres connection: OK');
+    console.log('🗄️  Database connection: OK');
 
     // Sync database with models
     await sequelize.sync({ alter: true });
@@ -238,10 +248,13 @@ const startServer = async () => {
     startBankInterest();
     startJobPayouts();
     startJailRelease();
-
-
     startHospitalRelease();
+    startContractExpirationJob();
     console.log('⚙️  Background jobs started ✅');
+
+    // Start bot activity service
+    botActivityService.start();
+    console.log('🤖 Bot activity service started ✅');
 
     // Start listening
     server.listen(PORT, () => {

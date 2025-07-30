@@ -16,7 +16,9 @@ import {
   Star,
   ImageIcon,
   ShoppingCart,
-  Gem
+  Gem,
+  Bomb,
+  Clock
 } from 'lucide-react';
 import { handleImageError, getImageUrl } from '@/utils/imageUtils';
 
@@ -90,7 +92,30 @@ function ItemCard({ item, onBuy, type }) {
                   <span className="text-xs">طاقة: {item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`}</span>
                 </div>
               )}
-
+              {item.effect.experience && (
+                <div className="flex items-center text-blue-400">
+                  <Sword className="w-3 h-3 mr-1" />
+                  <span className="text-xs">خبرة: +{item.effect.experience}</span>
+                </div>
+              )}
+              {item.effect.nameChange && (
+                <div className="flex items-center text-purple-400">
+                  <Package className="w-3 h-3 mr-1" />
+                  <span className="text-xs">تغيير الاسم</span>
+                </div>
+              )}
+              {item.effect.gangBomb && (
+                <div className="flex items-center text-red-400">
+                  <Bomb className="w-3 h-3 mr-1" />
+                  <span className="text-xs">قنبلة عصابة - إدخال جميع الأعضاء المستشفى</span>
+                </div>
+              )}
+              {item.effect.cdReset && (
+                <div className="flex items-center text-green-400">
+                  <Clock className="w-3 h-3 mr-1" />
+                  <span className="text-xs">إعادة تعيين أوقات الانتظار - إزالة جميع أوقات الانتظار فوراً</span>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -134,7 +159,7 @@ export default function Shop() {
         const [weaponsRes, armorsRes, specialItemsRes] = await Promise.all([
           fetch(`${API}/api/shop/weapons`),
           fetch(`${API}/api/shop/armors`),
-          fetch(`${API}/api/special-items`)
+          fetch(`${API}/api/special-items?currency=money`)
         ]);
         const weaponsData = await weaponsRes.json();
         const armorsData = await armorsRes.json();
@@ -261,7 +286,7 @@ export default function Shop() {
               key={item.id} 
               item={item} 
               onBuy={buy} 
-              type={activeTab.slice(0, -1)} // Remove 's' from end
+              type={activeTab === 'special' ? 'special' : activeTab.slice(0, -1)} // Fix for special items
             />
           ))}
         </div>

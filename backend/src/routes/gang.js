@@ -12,38 +12,38 @@ router.use(auth);
 router.post('/', validate('createGang'), GangController.createGang);
 router.get('/', GangController.getAllGangs);
 router.get('/user/mine', GangController.getUserGang);
+router.get('/user/join-requests', GangController.getUserJoinRequests);
 router.post('/leave', GangController.leaveGang);
 
 
 
 // Gang vault
-router.get('/:gangId/vault', GangController.getVault);
-router.patch('/:gangId/vault', GangController.updateVault);
+router.get('/:id/vault', GangController.getVault);
+router.patch('/:id/vault', GangController.updateVault);
 // Gang board
-router.patch('/:gangId/board', GangController.updateBoard);
+router.patch('/:id/board', GangController.updateBoard);
 
 // Gang details
 router.get('/:id', GangController.getGangById);
 
 // Gang membership
-router.post('/:gangId/join', GangController.joinGang);
-router.post('/:gangId/transfer-leadership', GangController.transferLeadership);
-router.post('/:gangId/kick', GangController.kickMember);
-router.post('/:gangId/promote', GangController.promoteMember);
-router.post('/:gangId/demote', GangController.demoteOfficer);
+router.post('/:id/join', GangController.joinGang);
+router.post('/:id/transfer-leadership', GangController.transferLeadership);
+router.post('/:id/kick', GangController.kickMember);
+router.post('/:id/promote', GangController.promoteMember);
+router.post('/:id/demote', GangController.demoteOfficer);
 
 // Join requests
-router.get('/:gangId/join-requests', GangController.getJoinRequests);
-router.post('/:gangId/join-requests/accept', GangController.acceptJoinRequest);
-router.post('/:gangId/join-requests/reject', GangController.rejectJoinRequest);
-router.delete('/:gangId/join-requests/cancel', GangController.cancelJoinRequest);
-router.get('/user/join-requests', GangController.getUserJoinRequests);
+router.get('/:id/join-requests', GangController.getJoinRequests);
+router.post('/:id/join-requests/accept', GangController.acceptJoinRequest);
+router.post('/:id/join-requests/reject', GangController.rejectJoinRequest);
+router.delete('/:id/join-requests/cancel', GangController.cancelJoinRequest);
 
 // Gang finances
-router.post('/:gangId/contribute', GangController.contributeMoney);
+router.post('/:id/contribute', GangController.contributeMoney);
 // Gang owner actions
-router.delete('/:gangId', GangController.deleteGang);
-router.post('/:gangId/transfer-money', GangController.transferFromVault);
+router.delete('/:id', GangController.deleteGang);
+router.post('/:id/transfer-money', GangController.transferFromVault);
 
 
 export default router;

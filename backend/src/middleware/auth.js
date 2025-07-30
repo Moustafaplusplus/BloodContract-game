@@ -7,24 +7,19 @@ const SECRET = process.env.JWT_SECRET;
 if (!SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 export async function auth(req, res, next) {
-  // Log the Authorization header for debugging
-  console.log('[AUTH] Authorization header:', req.headers['authorization']);
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
-    console.log('[AUTH] No Authorization header present');
     return res.status(401).json({ message: 'No authentication token provided' });
   }
   const token = authHeader.split(' ')[1];
-  console.log('[AUTH] Extracted token:', token ? 'Present' : 'Missing');
   if (!token) {
-    console.log('[AUTH] No token found after Bearer');
     return res.status(401).json({ message: 'No authentication token provided' });
   }
   
   try {
     const decoded = jwt.verify(token, SECRET);
     if (!decoded?.id) {
-      return res.status(403).json({ message: 'Invalid authentication token' });
+      return res.status(403).json({ message: 'Invalid authentication token - missing user ID' });
     }
 
     // Get user and check for bans
@@ -101,12 +96,13 @@ export async function auth(req, res, next) {
           { where: { userId: decoded.id } }
         );
       } catch (e) {
-        // Don't block request if this fails
+        // Don't block request if this fails - character might not exist yet
         console.error('Failed to update lastActive:', e);
       }
     }
     next();
   } catch (err) {
+    console.error('Auth middleware error:', err);
     const msg = err.name === 'TokenExpiredError' 
       ? 'Authentication token expired' 
       : 'Invalid authentication token';

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth.jsx';
+import MoneyIcon from '@/components/MoneyIcon';
 
 const MinistryMission = () => {
   const { token } = useAuth();
@@ -308,7 +309,10 @@ const MinistryMission = () => {
                     )}
                     {missionRewards.money > 0 && (
                       <div className="flex items-center justify-between bg-zinc-700 rounded p-2">
-                        <span className="text-green-400">💰 المال</span>
+                        <span className="text-green-400 flex items-center gap-1">
+                          <MoneyIcon className="w-4 h-4" />
+                          المال
+                        </span>
                         <span className="font-bold text-white">+{missionRewards.money.toLocaleString()}</span>
                       </div>
                     )}

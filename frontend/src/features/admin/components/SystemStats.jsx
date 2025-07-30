@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import MoneyIcon from '@/components/MoneyIcon';
 import { 
   TrendingUp,
   AlertTriangle,
@@ -55,7 +56,10 @@ export default function SystemStats() {
             <span className="font-bold">{systemStats?.averageLevel || 1}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-hitman-300">إجمالي المال في النظام:</span>
+            <span className="text-hitman-300 flex items-center gap-2">
+              <MoneyIcon className="w-4 h-4" />
+              إجمالي المال في النظام:
+            </span>
             <span className="font-bold">${(systemStats?.totalMoney || 0).toLocaleString()}</span>
           </div>
           <div className="flex justify-between">

@@ -96,10 +96,10 @@ export class CarController {
     try {
       const { carId } = req.params;
       const result = await CarService.sellCar(req.user.id, carId);
-      res.json(result);
+      res.json({ message: 'Car sold', refund: result.refund, carId: result.carId, currency: result.currency });
     } catch (error) {
       console.error('Sell car error:', error);
-      if (error.message === 'Car not owned') {
+      if (error.message === 'You do not own this car') {
         return res.status(400).json({ error: error.message });
       }
       if (error.message === 'Cannot sell active car. Deactivate it first.') {

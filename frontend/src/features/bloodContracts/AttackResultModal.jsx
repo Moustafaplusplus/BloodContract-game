@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sword, Zap, Target, Trophy } from 'lucide-react';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+import VipName from '../profile/VipName.jsx';
 
 const AttackResultModal = ({ open, onClose, success, reward, posterName, message, fightResult }) => {
   const [step, setStep] = useState(0);
@@ -58,7 +59,7 @@ const AttackResultModal = ({ open, onClose, success, reward, posterName, message
         {step >= (log?.length || 0) && (
           <>
             <div style={{ marginBottom: 12 }}>
-              <b>الفائز:</b> {winner?.username}
+              <b>الفائز:</b> <VipName user={winner} />
             </div>
             <div style={{ marginBottom: 12 }}>
               <b>الجولات:</b> {rounds}

@@ -75,6 +75,21 @@ UserPromotion.init({
   timestamps: true
 });
 
+// Daily Task Model
+export class UserDailyTask extends Model {}
+
+UserDailyTask.init({
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  userId: { type: DataTypes.INTEGER, allowNull: false, unique: true },
+  lastClaimDate: { type: DataTypes.DATE, allowNull: true },
+  isCompleted: { type: DataTypes.BOOLEAN, defaultValue: false },
+}, {
+  sequelize,
+  modelName: 'UserDailyTask',
+  tableName: 'UserDailyTasks',
+  timestamps: true
+});
+
 // Associations
 Task.hasMany(UserTaskProgress, { foreignKey: 'taskId' });
 UserTaskProgress.belongsTo(Task, { foreignKey: 'taskId' });

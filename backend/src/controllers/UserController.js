@@ -75,7 +75,19 @@ export class UserController {
     try {
       const user = await UserService.getUserById(req.params.id);
       if (!user) return res.status(404).json({ message: 'المستخدم غير موجود.' });
-      res.json({ id: user.id, username: user.username });
+      
+      // Get character information
+      const { Character } = await import('../models/Character.js');
+      const character = await Character.findOne({ where: { userId: user.id } });
+      
+      res.json({ 
+        id: user.id, 
+        username: user.username,
+        character: character ? {
+          name: character.name,
+          level: character.level
+        } : null
+      });
     } catch (error) {
       res.status(500).json({ message: 'فشل جلب المستخدم', error: error.message });
     }

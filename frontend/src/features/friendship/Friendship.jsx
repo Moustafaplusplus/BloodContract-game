@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useFriendRequests } from '@/hooks/useFriendRequests';
+import { Link } from 'react-router-dom';
+import { User } from 'lucide-react';
+import VipName from '../profile/VipName.jsx';
+import '../profile/vipSparkle.css';
+
+// Utility to get avatar URL
+const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+const getAvatarUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return backendUrl + url;
+  return backendUrl + '/' + url;
+};
 
 export default function Friendship() {
   const [friends, setFriends] = useState([]);
@@ -36,16 +49,20 @@ export default function Friendship() {
 
   // Search users
   const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!search.trim() || search.length < 2) return;
+    const q = e.target.value;
+    setSearch(q);
+    if (!q.trim() || q.length < 2) {
+      setSearchResults([]);
+      return;
+    }
     setSearchLoading(true);
     setError("");
     setSuccess("");
     try {
-      const res = await axios.get(`/api/v1/search/users?query=${encodeURIComponent(search)}`);
+      const res = await axios.get(`/api/messages/search/users?q=${encodeURIComponent(q)}`);
       setSearchResults(res.data);
     } catch (err) {
-      setError("تعذر البحث عن المستخدمين.");
+      setSearchResults([]);
     } finally {
       setSearchLoading(false);
     }
@@ -117,7 +134,28 @@ export default function Friendship() {
             {friends.length === 0 && <li className="text-red-300">لا يوجد أصدقاء بعد.</li>}
             {friends.map(friend => (
               <li key={friend.id} className="flex items-center justify-between bg-black/60 rounded-lg px-4 py-2 border border-red-800">
-                <span className="font-medium">{friend.username}</span>
+                <div className="flex items-center gap-3">
+                  {getAvatarUrl(friend.avatarUrl) ? (
+                    <img
+                      src={getAvatarUrl(friend.avatarUrl)}
+                      alt="avatar"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  {/* Fallback icon when no avatar or image fails to load */}
+                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getAvatarUrl(friend.avatarUrl) ? 'hidden' : 'flex'}`}>
+                    <span className="text-sm font-bold text-accent-red">
+                      {(friend.displayName || friend.name || friend.username || "?")[0]}
+                    </span>
+                  </div>
+                  <div>
+                    <VipName user={friend} showUsername={true} />
+                  </div>
+                </div>
                 <button
                   onClick={() => handleRemove(friend.id)}
                   className="px-3 py-1 rounded bg-red-700 hover:bg-red-900 text-white text-xs font-bold shadow"
@@ -138,7 +176,28 @@ export default function Friendship() {
             {pendingRequests.length === 0 && <li className="text-red-300">لا توجد طلبات معلقة.</li>}
             {pendingRequests.map(req => (
               <li key={req.id} className="flex items-center justify-between bg-black/60 rounded-lg px-4 py-2 border border-red-800">
-                <span className="font-medium">{req.Requester?.username}</span>
+                <div className="flex items-center gap-3">
+                  {getAvatarUrl(req.Requester?.avatarUrl) ? (
+                    <img
+                      src={getAvatarUrl(req.Requester?.avatarUrl)}
+                      alt="avatar"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  {/* Fallback icon when no avatar or image fails to load */}
+                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getAvatarUrl(req.Requester?.avatarUrl) ? 'hidden' : 'flex'}`}>
+                    <span className="text-sm font-bold text-accent-red">
+                      {(req.Requester?.displayName || req.Requester?.name || req.Requester?.username || "?")[0]}
+                    </span>
+                  </div>
+                  <div>
+                    <VipName user={req.Requester} showUsername={true} />
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleAccept(req.id)}
@@ -158,30 +217,40 @@ export default function Friendship() {
       {/* Add Friend/Search */}
       <section className="bg-zinc-900 rounded-xl p-4 shadow-lg border border-red-900">
         <h2 className="text-xl text-red-400 mb-2">إضافة صديق</h2>
-        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4">
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={handleSearch}
             placeholder="ابحث عن اسم المستخدم أو اسم الشخصية..."
             className="flex-1 px-3 py-2 rounded bg-black text-white border border-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
           />
-          <button
-            type="submit"
-            className="px-4 py-2 rounded bg-red-700 hover:bg-red-900 text-white font-bold shadow"
-            disabled={searchLoading}
-          >بحث</button>
-        </form>
+          {searchLoading && <span className="text-xs text-red-300 px-2 py-2">جاري البحث...</span>}
+        </div>
         {searchLoading && <div className="text-center text-red-300">جاري البحث...</div>}
         {searchResults.length > 0 && (
           <ul className="space-y-2">
             {searchResults.map(user => (
               <li key={user.id} className="flex items-center justify-between bg-black/60 rounded-lg px-4 py-2 border border-red-800">
-                <div>
-                  <span className="font-medium">{user.username}</span>
-                  {user.Character && (
-                    <span className="ml-2 text-xs text-red-300">({user.Character.name})</span>
-                  )}
+                <div className="flex items-center gap-3">
+                  {getAvatarUrl(user.avatarUrl) ? (
+                    <img
+                      src={getAvatarUrl(user.avatarUrl)}
+                      alt="avatar"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  {/* Fallback icon when no avatar or image fails to load */}
+                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getAvatarUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
+                    <span className="text-sm font-bold text-accent-red">
+                      {(user.displayName || user.name || user.username || "?")[0]}
+                    </span>
+                  </div>
+                  <VipName user={user} showUsername={true} />
                 </div>
                 <button
                   onClick={() => handleAddFriend(user.id)}

@@ -15,6 +15,10 @@ export class ConfinementService {
     return Math.max(0, Math.ceil((releasedAt.getTime() - Date.now()) / 60000));
   }
 
+  static secondsLeft(releasedAt) {
+    return Math.max(0, Math.floor((releasedAt.getTime() - Date.now()) / 1000));
+  }
+
   static emitStatus(userId, payload) {
     if (io) {
       io.to(`user:${userId}`).emit("confinementUpdate", payload);
@@ -33,15 +37,14 @@ export class ConfinementService {
     
     if (!rec) return { inJail: false };
     
-    const mins = this.minutesLeft(rec.releasedAt);
-    // Dynamic bail cost based on level: base cost + level multiplier
-    const levelMultiplier = Math.max(0.5, Math.min(2.0, character.level / 10));
-    const baseCost = rec.bailRate || 50;
-    const cost = Math.round(baseCost * levelMultiplier);
+    const remainingSeconds = this.secondsLeft(rec.releasedAt);
+          // Fixed bail cost: 100 money per minute
+      const minutesLeft = Math.ceil(remainingSeconds / 60);
+      const cost = minutesLeft * 100;
     
     return { 
       inJail: true, 
-      remainingSeconds: mins * 60, 
+      remainingSeconds: remainingSeconds, 
       cost: cost, 
       crimeId: rec.crimeId,
       startedAt: rec.startedAt,
@@ -70,11 +73,10 @@ export class ConfinementService {
         throw new Error("Not in jail");
       }
 
-      const mins = this.minutesLeft(rec.releasedAt);
-      // Dynamic bail cost based on level: base cost + level multiplier
-      const levelMultiplier = Math.max(0.5, Math.min(2.0, character.level / 10));
-      const baseCost = rec.bailRate || 50;
-      const cost = Math.round(baseCost * levelMultiplier);
+      const remainingSeconds = this.secondsLeft(rec.releasedAt);
+      const minutesLeft = Math.ceil(remainingSeconds / 60);
+      // Fixed bail cost: 100 money per minute
+      const cost = minutesLeft * 100;
       
       if (character.money < cost) {
         await t.rollback();
@@ -117,44 +119,30 @@ export class ConfinementService {
   // Hospital operations
   static async getHospitalStatus(userId) {
     try {
-      console.log('[HOSPITAL_SERVICE] Getting status for user:', userId);
-      
       // First get the character ID for this user
       const character = await Character.findOne({ where: { userId } });
       if (!character) {
-        console.log('[HOSPITAL_SERVICE] No character found for user:', userId);
         return { inHospital: false };
       }
       
       const now = this.now();
-      console.log('[HOSPITAL_SERVICE] Current time:', now);
       
       const rec = await Hospital.findOne({ 
         where: { userId: userId, releasedAt: { [Op.gt]: now } } 
       });
       
       if (!rec) {
-        console.log('[HOSPITAL_SERVICE] No active hospital record for user:', userId);
         return { inHospital: false };
       }
       
-      console.log('[HOSPITAL_SERVICE] Found hospital record:', {
-        userId: rec.userId,
-        minutes: rec.minutes,
-        releasedAt: rec.releasedAt,
-        hpLoss: rec.hpLoss,
-        healRate: rec.healRate
-      });
-      
-      const mins = this.minutesLeft(rec.releasedAt);
-      // Dynamic heal cost based on level: base cost + level multiplier
-      const levelMultiplier = Math.max(0.5, Math.min(2.0, character.level / 10));
-      const baseCost = rec.healRate || 40;
-      const cost = Math.round(baseCost * levelMultiplier);
+      const remainingSeconds = this.secondsLeft(rec.releasedAt);
+      // Fixed heal cost: 100 money per minute
+      const minutesLeft = Math.ceil(remainingSeconds / 60);
+      const cost = minutesLeft * 100;
       
       const result = { 
         inHospital: true, 
-        remainingSeconds: mins * 60, 
+        remainingSeconds: remainingSeconds, 
         cost: cost, 
         crimeId: rec.crimeId, 
         hpLoss: rec.hpLoss,
@@ -162,7 +150,6 @@ export class ConfinementService {
         releasedAt: rec.releasedAt
       };
       
-      console.log('[HOSPITAL_SERVICE] Returning result:', result);
       return result;
     } catch (error) {
       console.error('[HOSPITAL_SERVICE] Error in getHospitalStatus:', error);
@@ -192,11 +179,10 @@ export class ConfinementService {
         throw new Error("Not in hospital");
       }
       
-      const mins = this.minutesLeft(rec.releasedAt);
-      // Dynamic heal cost based on level: base cost + level multiplier
-      const levelMultiplier = Math.max(0.5, Math.min(2.0, character.level / 10));
-      const baseCost = rec.healRate || 40;
-      const cost = Math.round(baseCost * levelMultiplier);
+      const remainingSeconds = this.secondsLeft(rec.releasedAt);
+      const minutesLeft = Math.ceil(remainingSeconds / 60);
+      // Fixed heal cost: 100 money per minute
+      const cost = minutesLeft * 100;
       
       if (character.money < cost) {
         await t.rollback();

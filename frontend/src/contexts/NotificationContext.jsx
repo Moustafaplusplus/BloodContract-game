@@ -14,7 +14,7 @@ export const useNotificationContext = () => {
 export const NotificationProvider = ({ children }) => {
   const notificationHook = useNotifications();
 
-  // Poll for unread count every 30 seconds
+  // Poll for unread count every 30 seconds as a fallback
   useEffect(() => {
     const interval = setInterval(() => {
       notificationHook.fetchUnreadCount();
@@ -22,6 +22,11 @@ export const NotificationProvider = ({ children }) => {
 
     return () => clearInterval(interval);
   }, [notificationHook.fetchUnreadCount]);
+
+  // Log when notifications change for debugging
+  useEffect(() => {
+
+  }, [notificationHook.unreadCount]);
 
   return (
     <NotificationContext.Provider value={notificationHook}>

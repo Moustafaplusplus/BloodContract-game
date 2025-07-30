@@ -23,24 +23,16 @@ export function initSocket(server) {
   });
 
   io.on('connection', async (socket) => {
-    console.log('[Socket] New connection attempt:', socket.id);
-    // socket.onAny((event, ...args) => {
-    //   console.log('[Socket] Received event:', event, args);
-    // });
     const token = socket.handshake.auth?.token;
-    console.log('[Socket] Handshake token:', token);
     
     if (!token) {
-      console.log('[Socket] No token provided, disconnecting:', socket.id);
       return socket.disconnect();
     }
 
     try {
       const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('[Socket] Authenticated userId:', userId);
       socket.data.userId = userId;
       socket.join(String(userId));
-      console.log('[Socket] User joined room:', String(userId));
       
       // User connected successfully
 
@@ -62,10 +54,10 @@ export function initSocket(server) {
             // Calculate cooldowns
             const now = Date.now();
             const crimeCooldown = char.crimeCooldown && char.crimeCooldown > now 
-              ? Math.ceil((char.crimeCooldown - now) / 1000) 
+              ? Math.floor((char.crimeCooldown - now) / 1000) 
               : 0;
             const gymCooldown = char.gymCooldown && char.gymCooldown > now 
-              ? Math.ceil((char.gymCooldown - now) / 1000) 
+              ? Math.floor((char.gymCooldown - now) / 1000) 
               : 0;
             
             // Add status data to HUD
@@ -77,18 +69,7 @@ export function initSocket(server) {
               gymCooldown
             };
             
-            console.log(`[Socket] Sending HUD data for user ${userId}:`, {
-              username: hudData.username || 'No username',
-              level: hudData.level || 'No level',
-              userId: hudData.userId || 'No userId',
-              hospitalIn: hospitalStatus.inHospital,
-              jailIn: jailStatus.inJail,
-              crimeCD: crimeCooldown,
-              gymCD: gymCooldown
-            });
             socket.emit('hud:update', enhancedHudData);
-          } else {
-            console.log(`[Socket] No character found for user ${userId}`);
           }
         } catch (error) {
           console.error(`[Socket] Error pushing HUD for user ${userId}:`, error.message);
@@ -106,6 +87,12 @@ export function initSocket(server) {
         } catch (error) {
           console.error(`[Socket] Error handling hud:request for user ${userId}:`, error.message);
         }
+      });
+
+      // Test event handler for debugging
+      socket.on('test', (data) => {
+        console.log(`[Socket] Test event received from user ${userId}:`, data);
+        socket.emit('test_response', { message: 'Test response from server', timestamp: Date.now() });
       });
 
       // --- Messaging system ---
@@ -206,12 +193,10 @@ export function initSocket(server) {
       const onlineGlobalChatUsers = new Set();
 
       socket.on('join_global_chat', async () => {
-        console.log('[Socket] join_global_chat received from user:', userId);
         socket.join('global_chat');
         onlineGlobalChatUsers.add(userId);
         // Emit updated online count to all in global chat
         io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
-        console.log(`[Global Chat] User ${userId} joined global chat (socket ${socket.id})`);
         // Send a test message to confirm connection
         socket.emit('global_message', {
           id: 'test',
@@ -275,6 +260,10 @@ export function initSocket(server) {
 
           console.log('[Global Chat] Creating message for user:', user.username);
           
+          // Get character name for display
+          const character = await Character.findOne({ where: { userId: user.id } });
+          const displayName = character?.name || user.username;
+          
           // Save to database
           const message = await GlobalMessage.create({
             userId: userId,
@@ -290,9 +279,11 @@ export function initSocket(server) {
             id: message.id,
             userId: userId,
             username: user.username,
+            displayName: displayName,
             avatarUrl: user.avatarUrl,
             isAdmin: user.isAdmin,
             isVip: user.isVip,
+            vipExpiresAt: character?.vipExpiresAt,
             content: message.content,
             messageType: message.messageType,
             createdAt: message.createdAt
@@ -418,7 +409,7 @@ export function initSocket(server) {
               id: message.id,
               userId: message.userId,
               username: message.username,
-              avatarUrl: user?.avatarUrl || '/avatars/default.png',
+              avatarUrl: user?.avatarUrl,
               isAdmin: user?.isAdmin || false,
               isVip: user?.isVip || false,
               content: message.content,
@@ -450,7 +441,7 @@ export function initSocket(server) {
               id: message.id,
               userId: message.userId,
               username: message.username,
-              avatarUrl: user?.avatarUrl || '/avatars/default.png',
+              avatarUrl: user?.avatarUrl,
               isAdmin: user?.isAdmin || false,
               isVip: user?.isVip || false,
               content: message.content,
@@ -483,7 +474,7 @@ export function initSocket(server) {
             id: message.id,
             userId: message.userId,
             username: message.username,
-            avatarUrl: user?.avatarUrl || '/avatars/default.png',
+            avatarUrl: user?.avatarUrl,
             isAdmin: user?.isAdmin || false,
             isVip: user?.isVip || false,
             content: message.content,
@@ -531,12 +522,12 @@ export function initSocket(server) {
 
 // Function to emit notification to a specific user
 export const emitNotification = (userId, notification) => {
-  console.log('[Socket] Emitting notification to user:', userId, 'notification:', notification.id);
+  console.log(`[Socket] Emitting notification to user ${userId}:`, notification);
   if (io) {
     io.to(String(userId)).emit('notification', notification);
-    console.log('[Socket] Notification emitted successfully');
+    console.log(`[Socket] Notification emitted successfully to user ${userId}`);
   } else {
-    console.error('[Socket] IO not initialized, cannot emit notification');
+    console.error('[Socket] IO instance not available for notification emission');
   }
 };
 

@@ -6,7 +6,6 @@ import { extractErrorMessage } from '@/utils/errorHandler';
 import { 
   Home, 
   Shield, 
-  Zap, 
   Heart, 
   DollarSign, 
   Star,
@@ -40,7 +39,7 @@ const rarityIcons = {
   legend: '⭐⭐⭐⭐⭐'
 };
 
-function HouseCard({ house, isOwned = false, isEquipped = false, onBuy, onEquip, onSell, buying, equipping, selling }) {
+function HouseCard({ house, isOwned = false, isEquipped = false, onBuy, onEquip, onUnequip, onSell, buying, equipping, unequipping, selling }) {
   const rarity = house.rarity?.toLowerCase() || 'common';
   
   return (
@@ -93,12 +92,6 @@ function HouseCard({ house, isOwned = false, isEquipped = false, onBuy, onEquip,
               <span>صحة: +{house.hpBonus}</span>
             </div>
           )}
-          {house.energyRegen > 0 && (
-            <div className="flex items-center text-yellow-400">
-              <Zap className="w-3 h-3 mr-1" />
-              <span>طاقة: +{house.energyRegen}</span>
-            </div>
-          )}
         </div>
 
         {/* Price */}
@@ -130,7 +123,16 @@ function HouseCard({ house, isOwned = false, isEquipped = false, onBuy, onEquip,
           </button>
         ) : (
           <div className="flex space-x-2 rtl:space-x-reverse">
-            {!isEquipped && (
+            {isEquipped ? (
+              <button
+                onClick={() => onUnequip()}
+                disabled={unequipping}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
+              >
+                <Settings className="w-3 h-3 mr-1" />
+                {unequipping ? '...جاري الإلغاء' : 'إلغاء التفعيل'}
+              </button>
+            ) : (
               <button
                 onClick={() => onEquip(house.id)}
                 disabled={equipping === house.id}
@@ -142,9 +144,8 @@ function HouseCard({ house, isOwned = false, isEquipped = false, onBuy, onEquip,
             )}
             <button
               onClick={() => onSell(house.id)}
-              disabled={selling === house.id || isEquipped}
+              disabled={selling === house.id}
               className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center border border-accent-red disabled:opacity-60"
-              title={isEquipped ? 'لا يمكنك بيع المنزل الحالي' : ''}
             >
               <Trash2 className="w-3 h-3 mr-1" />
               {selling === house.id ? '...جاري البيع' : 'بيع'}
@@ -162,6 +163,7 @@ export default function Houses() {
   const [equipping, setEquipping] = useState(null);
   const [selling, setSelling] = useState(null);
   const [buying, setBuying] = useState(null);
+  const [unequipping, setUnequipping] = useState(null);
 
   // Fetch all available houses (market) - only regular money houses
   const {
@@ -170,7 +172,7 @@ export default function Houses() {
     error: housesError
   } = useQuery({
     queryKey: ['houses'],
-    queryFn: () => axios.get('/api/houses').then(res => res.data.filter(house => house.currency === 'money')),
+    queryFn: () => axios.get('/api/houses').then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -209,13 +211,27 @@ export default function Houses() {
     onError: (error) => toast.error(extractErrorMessage(error)),
   });
 
+  // Unequip house mutation
+  const unequipMutation = useMutation({
+    mutationFn: () => axios.post('/api/houses/unequip').then(res => res.data),
+    onMutate: () => setUnequipping(true),
+    onSettled: () => setUnequipping(null),
+    onSuccess: () => {
+      toast.success('تم إلغاء تفعيل المنزل!');
+      queryClient.invalidateQueries(['character']);
+      queryClient.invalidateQueries(['owned-houses']);
+    },
+    onError: (error) => toast.error(extractErrorMessage(error)),
+  });
+
   // Sell house mutation
   const sellMutation = useMutation({
     mutationFn: (houseId) => axios.post('/api/houses/sell', { houseId }).then(res => res.data),
     onMutate: (houseId) => setSelling(houseId),
     onSettled: () => setSelling(null),
     onSuccess: (data) => {
-      toast.success(`تم بيع المنزل! حصلت على ${data.refund} نقود`);
+      const currencyText = data.currency === 'blackcoin' ? 'عملة سوداء' : 'نقود';
+      toast.success(`تم بيع المنزل! حصلت على ${data.refund} ${currencyText}`);
       queryClient.invalidateQueries(['owned-houses']);
       queryClient.invalidateQueries(['character']);
     },
@@ -317,8 +333,10 @@ export default function Houses() {
                     isOwned={true}
                     isEquipped={isEquipped(houseId)}
                     onEquip={equipMutation.mutate}
+                    onUnequip={unequipMutation.mutate}
                     onSell={sellMutation.mutate}
                     equipping={equipping}
+                    unequipping={unequipping}
                     selling={selling}
                   />
                 ))}
@@ -338,7 +356,9 @@ export default function Houses() {
                   isOwned={isOwned(house.id)}
                   isEquipped={isEquipped(house.id)}
                   onBuy={buyMutation.mutate}
+                  onUnequip={unequipMutation.mutate}
                   buying={buying}
+                  unequipping={unequipping}
                 />
               ))}
             </div>

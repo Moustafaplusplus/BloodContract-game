@@ -24,4 +24,11 @@ router.post('/promotions', auth, adminAuth, TaskController.createPromotion);
 router.put('/promotions/:id', auth, adminAuth, TaskController.updatePromotion);
 router.delete('/promotions/:id', auth, adminAuth, TaskController.deletePromotion);
 
+// Daily task routes
+router.get('/daily/status', auth, TaskController.getDailyTaskStatus);
+router.post('/daily/claim', auth, TaskController.claimDailyTask);
+
+// Unclaimed count route
+router.get('/unclaimed-count', auth, TaskController.getUnclaimedCount);
+
 export default router; 

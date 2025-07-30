@@ -3,6 +3,8 @@ import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 import { TaskService } from './TaskService.js';
+import { NotificationService } from './NotificationService.js';
+import { emitNotification } from '../socket.js';
 
 export class GangService {
   // Create a new gang
@@ -73,7 +75,7 @@ export class GangService {
       for (const member of gang.GangMembers) {
         const character = await Character.findOne({
           where: { userId: member.User.id },
-          attributes: ['id', 'level', 'strength', 'defense', 'hp', 'maxHp']
+          attributes: ['id', 'name', 'level', 'strength', 'defense', 'hp', 'maxHp', 'vipExpiresAt']
         });
         // Convert to plain object to ensure it's included in JSON
         member.User.dataValues.Character = character ? character.toJSON() : null;
@@ -110,7 +112,7 @@ export class GangService {
       for (const gangMember of member.Gang.GangMembers) {
         const character = await Character.findOne({
           where: { userId: gangMember.User.id },
-          attributes: ['id', 'level', 'strength', 'defense', 'hp', 'maxHp']
+          attributes: ['id', 'name', 'level', 'strength', 'defense', 'hp', 'maxHp', 'vipExpiresAt']
         });
         // Convert to plain object to ensure it's included in JSON
         gangMember.User.dataValues.Character = character ? character.toJSON() : null;
@@ -143,7 +145,7 @@ export class GangService {
         for (const member of gang.GangMembers) {
           const character = await Character.findOne({
             where: { userId: member.User.id },
-            attributes: ['id', 'level', 'strength', 'defense', 'hp', 'maxHp']
+            attributes: ['id', 'name', 'level', 'strength', 'defense', 'hp', 'maxHp', 'vipExpiresAt']
           });
           // Convert to plain object to ensure it's included in JSON
           member.User.dataValues.Character = character ? character.toJSON() : null;
@@ -189,11 +191,32 @@ export class GangService {
     }
 
     // Create a pending join request
-    return await GangJoinRequest.create({
+    const joinRequest = await GangJoinRequest.create({
       gangId,
       userId,
       message
     });
+
+    // Get requester and gang info for notification
+    const requester = await Character.findOne({ where: { userId } });
+    const requesterName = requester ? requester.name : 'Unknown User';
+
+    // Send notification to gang leader
+    try {
+      const notification = await NotificationService.createGangJoinRequestNotification(
+        gang.leaderId,
+        requesterName,
+        gang.name
+      );
+      emitNotification(gang.leaderId, notification);
+    } catch (notificationError) {
+      console.error('[GangService] Notification error for join request:', notificationError);
+      // Continue even if notification fails
+    }
+
+
+
+    return joinRequest;
   }
 
   // Leave gang
@@ -210,7 +233,28 @@ export class GangService {
       throw new Error('Leader cannot leave gang. Transfer leadership first.');
     }
 
+    // Get member info before destroying
+    const memberCharacter = await Character.findOne({ where: { userId } });
+    const memberName = memberCharacter ? memberCharacter.name : 'Unknown User';
+    const gang = await Gang.findByPk(member.gangId);
+
     await member.destroy();
+
+    // Send notification to gang leader about member leaving
+    if (gang && gang.leaderId !== userId) {
+      try {
+        const notification = await NotificationService.createGangMemberLeftNotification(
+          gang.leaderId,
+          memberName,
+          gang.name
+        );
+        emitNotification(gang.leaderId, notification);
+      } catch (notificationError) {
+        console.error('[GangService] Notification error for member leaving:', notificationError);
+        // Continue even if notification fails
+      }
+    }
+
     return { message: 'Left gang successfully' };
   }
 
@@ -443,7 +487,13 @@ export class GangService {
       include: [
         {
           model: User,
-          attributes: ['id', 'username']
+          attributes: ['id', 'username'],
+          include: [
+            {
+              model: Character,
+              attributes: ['id', 'name', 'level', 'vipExpiresAt']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'ASC']]
@@ -494,6 +544,24 @@ export class GangService {
     });
 
     await TaskService.updateProgress(requesterId, 'gang_joined', 1);
+
+    // Send notification to the accepted member
+    try {
+      const acceptedMember = await Character.findOne({ where: { userId: joinRequest.userId } });
+      const acceptedMemberName = acceptedMember ? acceptedMember.name : 'Unknown User';
+      
+      const notification = await NotificationService.createNotification(
+        joinRequest.userId,
+        'SYSTEM',
+        'تم قبول طلب الانضمام',
+        `تم قبول طلب انضمامك إلى عصابة ${gang.name}`,
+        { gangName: gang.name, gangId: gang.id }
+      );
+      emitNotification(joinRequest.userId, notification);
+    } catch (notificationError) {
+      console.error('[GangService] Notification error for accepted member:', notificationError);
+      // Continue even if notification fails
+    }
 
     return { message: 'Join request accepted', member: newMember };
   }

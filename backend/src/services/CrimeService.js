@@ -3,10 +3,10 @@ import { Character } from '../models/Character.js';
 import { CharacterService } from './CharacterService.js';
 import { Hospital, Jail } from '../models/Confinement.js';
 import { sequelize } from '../config/db.js';
-import { io, emitNotification } from '../socket.js';
+import { io } from '../socket.js';
 import { User } from '../models/User.js';
 import { TaskService } from './TaskService.js';
-import { NotificationService } from './NotificationService.js';
+
 
 export class CrimeService {
   // Utility helpers
@@ -65,7 +65,7 @@ export class CrimeService {
       description: crime.description,
       isEnabled:  crime.isEnabled,
       req_level:  crime.req_level,
-      energyCost: c.energyCost,
+      energyCost: crime.energyCost,
       successRate: crime.successRate,
       minReward:  crime.minReward,
       maxReward:  crime.maxReward,
@@ -125,8 +125,10 @@ export class CrimeService {
   static async executeCrime(userId, crimeId) {
     const tx = await sequelize.transaction();
     try {
+      console.log(`[CrimeService] Executing crime ${crimeId} for user ${userId}`);
       const crime = await Crime.findByPk(crimeId, { transaction: tx });
       if (!crime || !crime.isEnabled) {
+        console.log(`[CrimeService] Crime not found or disabled:`, { crimeId, crime: crime ? crime.toJSON() : null });
         throw { status: 404, msg: "Crime not found" };
       }
 
@@ -136,6 +138,7 @@ export class CrimeService {
         lock: tx.LOCK.UPDATE 
       });
       if (!character) {
+        console.log(`[CrimeService] Character not found for user ${userId}`);
         throw { status: 404, msg: "Character not found" };
       }
 
@@ -146,13 +149,10 @@ export class CrimeService {
       if (character.energy < crime.energyCost) {
         throw { status: 400, msg: "Not enough energy" };
       }
-      if (crime.req_intel && character.intel < crime.req_intel) {
-        throw { status: 400, msg: "Not enough intelligence" };
-      }
 
       const nowMs = Date.now();
       if (character.crimeCooldown && character.crimeCooldown > nowMs) {
-        const secLeft = Math.ceil((character.crimeCooldown - nowMs) / 1000);
+        const secLeft = Math.floor((character.crimeCooldown - nowMs) / 1000);
         throw { status: 429, msg: "Crime on cooldown", meta: { cooldownLeft: secLeft } };
       }
 
@@ -171,12 +171,10 @@ export class CrimeService {
       character.exp += expGain;
       const levelUpRewards = await CharacterService.maybeLevelUp(character);
 
-      // Handle failure consequences with dynamic scaling based on level
+      // Handle failure consequences with fixed durations from crime configuration
       let redirect = null;
       let confinementDetails = null;
       if (!success) {
-        // Dynamic scaling: higher level = longer confinement and higher fees
-        const levelMultiplier = character.level / 10; // scales with level, no cap
         // Decide outcome: 50% jail, 50% hospital, never both
         let possibleOutcomes = [];
         if (crime.failOutcome === "jail" || crime.failOutcome === "both") possibleOutcomes.push("jail");
@@ -184,14 +182,12 @@ export class CrimeService {
         // If both are possible, pick one randomly
         let chosenOutcome = possibleOutcomes.length === 2 ? (Math.random() < 0.5 ? "jail" : "hospital") : possibleOutcomes[0];
         if (chosenOutcome === "jail") {
-          const dynamicJailMinutes = Math.round(crime.jailMinutes * levelMultiplier);
-          const baseBailRate = 200;
-          const dynamicBailRate = dynamicJailMinutes * baseBailRate;
+          const jailMinutes = crime.jailMinutes || 30; // Default 30 minutes if not set
           const jailRecord = await Jail.create({
             userId: userId,
-            minutes: dynamicJailMinutes,
-            bailRate: dynamicBailRate,
-            releasedAt: new Date(nowMs + dynamicJailMinutes * 60_000),
+            minutes: jailMinutes,
+            bailRate: 200, // Not used anymore but kept for compatibility
+            releasedAt: new Date(nowMs + jailMinutes * 60_000),
           }, { transaction: tx });
           if (io) {
             io.to(`user:${userId}`).emit('jail:enter', {
@@ -202,21 +198,18 @@ export class CrimeService {
           redirect = "/dashboard/jail";
           confinementDetails = {
             type: "jail",
-            minutes: dynamicJailMinutes,
-            bailRate: dynamicBailRate,
+            minutes: jailMinutes,
             releaseAt: jailRecord.releasedAt
           };
         } else if (chosenOutcome === "hospital") {
-          const dynamicHospitalMinutes = Math.round(crime.hospitalMinutes * levelMultiplier);
-          const baseHealRate = 200;
-          const dynamicHealRate = dynamicHospitalMinutes * baseHealRate;
-          const dynamicHpLoss = Math.round((crime.hpLoss || 50) * levelMultiplier);
+          const hospitalMinutes = crime.hospitalMinutes || 30; // Default 30 minutes if not set
+          const hpLoss = crime.hpLoss || 50; // Default HP loss if not set
           const hospitalRecord = await Hospital.create({
             userId: userId,
-            minutes: dynamicHospitalMinutes,
-            hpLoss: dynamicHpLoss,
-            healRate: dynamicHealRate,
-            releasedAt: new Date(nowMs + dynamicHospitalMinutes * 60_000),
+            minutes: hospitalMinutes,
+            hpLoss: hpLoss,
+            healRate: 200, // Not used anymore but kept for compatibility
+            releasedAt: new Date(nowMs + hospitalMinutes * 60_000),
           }, { transaction: tx });
           if (io) {
             io.to(`user:${userId}`).emit('hospital:enter', {
@@ -227,9 +220,8 @@ export class CrimeService {
           redirect = "/dashboard/hospital";
           confinementDetails = {
             type: "hospital",
-            minutes: dynamicHospitalMinutes,
-            healRate: dynamicHealRate,
-            hpLoss: dynamicHpLoss,
+            minutes: hospitalMinutes,
+            hpLoss: hpLoss,
             releaseAt: hospitalRecord.releasedAt
           };
         }
@@ -245,7 +237,7 @@ export class CrimeService {
 
       // Audit log
       await CrimeLog.create({
-        userId: character.id,
+        userId: userId,
         crimeId: crime.id,
         success,
         payout,
@@ -267,50 +259,7 @@ export class CrimeService {
         await TaskService.updateProgress(userId, 'crimes_committed', 1);
       }
 
-      // Create notifications
-      try {
-        if (success) {
-          // Success notification
-          const successNotification = await NotificationService.createNotification(
-            userId,
-            'SYSTEM',
-            'نجحت في الجريمة',
-            `نجحت في تنفيذ "${crime.name}" وحصلت على ${payout} مال و ${expGain} خبرة`,
-            { 
-              crimeName: crime.name,
-              payout,
-              expGain,
-              energyCost: crime.energyCost
-            }
-          );
-          emitNotification(userId, successNotification);
-        } else {
-          // Failure notification
-          let failureMessage = `فشلت في تنفيذ "${crime.name}"`;
-          if (confinementDetails) {
-            if (confinementDetails.type === 'jail') {
-              failureMessage += ` وتم سجنك لمدة ${confinementDetails.minutes} دقيقة`;
-            } else if (confinementDetails.type === 'hospital') {
-              failureMessage += ` وتم إدخالك المستشفى لمدة ${confinementDetails.minutes} دقيقة`;
-            }
-          }
-          
-          const failureNotification = await NotificationService.createNotification(
-            userId,
-            'SYSTEM',
-            'فشلت في الجريمة',
-            failureMessage,
-            { 
-              crimeName: crime.name,
-              confinementDetails
-            }
-          );
-          emitNotification(userId, failureNotification);
-        }
-      } catch (notificationError) {
-        console.error('[CrimeService] Notification error:', notificationError);
-        // Continue even if notifications fail
-      }
+
 
       return {
           success,
@@ -331,6 +280,7 @@ export class CrimeService {
       };
     } catch (err) {
       await tx.rollback();
+      console.error(`[CrimeService] Error executing crime ${crimeId} for user ${userId}:`, err);
       throw err;
     }
   }

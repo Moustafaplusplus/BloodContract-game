@@ -1,5 +1,6 @@
 import { Friendship } from '../models/Friendship.js';
 import { User } from '../models/User.js';
+import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 
 const FriendshipController = {
@@ -37,14 +38,26 @@ const FriendshipController = {
           ]
         },
         include: [
-          { association: 'Requester', attributes: ['id', 'username'] },
-          { association: 'Addressee', attributes: ['id', 'username'] }
+          { 
+            association: 'Requester', 
+            attributes: ['id', 'username'],
+            include: [{ model: Character, attributes: ['name'] }]
+          },
+          { 
+            association: 'Addressee', 
+            attributes: ['id', 'username'],
+            include: [{ model: Character, attributes: ['name'] }]
+          }
         ]
       });
       // Return the friend (not the current user) for each friendship
       const friends = friendships.map(f => {
         let friend = f.Requester.id === userId ? f.Addressee : f.Requester;
-        return { id: friend.id, username: friend.username };
+        return { 
+          id: friend.id, 
+          username: friend.username,
+          name: friend.Character?.name
+        };
       });
       res.json(friends);
     } catch (err) {
@@ -71,7 +84,11 @@ const FriendshipController = {
       const requests = await Friendship.findAll({
         where: { status: 'PENDING', addresseeId: userId },
         include: [
-          { association: 'Requester', attributes: ['id', 'username'] }
+          { 
+            association: 'Requester', 
+            attributes: ['id', 'username'],
+            include: [{ model: Character, attributes: ['name'] }]
+          }
         ]
       });
       res.json(requests);
@@ -123,13 +140,25 @@ const FriendshipController = {
           ]
         },
         include: [
-          { association: 'Requester', attributes: ['id', 'username'] },
-          { association: 'Addressee', attributes: ['id', 'username'] }
+          { 
+            association: 'Requester', 
+            attributes: ['id', 'username'],
+            include: [{ model: Character, attributes: ['name'] }]
+          },
+          { 
+            association: 'Addressee', 
+            attributes: ['id', 'username'],
+            include: [{ model: Character, attributes: ['name'] }]
+          }
         ]
       });
       const friends = friendships.map(f => {
         let friend = f.Requester.id === userId ? f.Addressee : f.Requester;
-        return { id: friend.id, username: friend.username };
+        return { 
+          id: friend.id, 
+          username: friend.username,
+          name: friend.Character?.name
+        };
       });
       res.json(friends);
     } catch (err) {

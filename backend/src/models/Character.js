@@ -47,6 +47,7 @@ Character.init({
   quote: { type: DataTypes.STRING, allowNull: true },
   blackcoins: { type: DataTypes.INTEGER, defaultValue: 0 },
   vipExpiresAt: { type: DataTypes.DATE, allowNull: true, defaultValue: null },
+  attackImmunityExpiresAt: { type: DataTypes.DATE, allowNull: true, defaultValue: null },
 }, {
   sequelize,
   modelName: 'Character',
@@ -59,13 +60,24 @@ Character.prototype.getMaxHp = function() {
   return 1000 + ((this.level - 1) * 100);
 };
 
-// Instance method for safe JSON with equipment bonuses
+  // Instance method for safe JSON with equipment bonuses
 Character.prototype.toSafeJSON = async function () {
   // Eager load equipped house if not already loaded
   let equippedHouse = this.equippedHouse;
   if (!equippedHouse && this.equippedHouseId) {
     const { House } = await import('./House.js');
     equippedHouse = await House.findByPk(this.equippedHouseId);
+  }
+
+  // Get hospital and jail status
+  let hospitalStatus = { inHospital: false, remainingSeconds: 0 };
+  let jailStatus = { inJail: false, remainingSeconds: 0 };
+  try {
+    const { ConfinementService } = await import('../services/ConfinementService.js');
+    hospitalStatus = await ConfinementService.getHospitalStatus(this.userId);
+    jailStatus = await ConfinementService.getJailStatus(this.userId);
+  } catch (error) {
+    console.error('Error getting confinement status:', error);
   }
 
   // Fetch active dog
@@ -180,6 +192,17 @@ Character.prototype.toSafeJSON = async function () {
     equippedHouse:   equippedHouse,
     activeDog:       activeDog,
     vipExpiresAt:    this.vipExpiresAt,
+    attackImmunityExpiresAt: this.attackImmunityExpiresAt,
+    // Calculate cooldowns for frontend
+    crimeCooldown: this.crimeCooldown && this.crimeCooldown > Date.now() 
+      ? Math.floor((this.crimeCooldown - Date.now()) / 1000) 
+      : 0,
+    gymCooldown: this.gymCooldown && this.gymCooldown > Date.now() 
+      ? Math.floor((this.gymCooldown - Date.now()) / 1000) 
+      : 0,
+    // Hospital and jail status
+    hospitalStatus,
+    jailStatus,
     // User data for admin checks
     User: userData,
     // Level-up rewards (if any)
@@ -193,14 +216,21 @@ Character.prototype.toSafeJSON = async function () {
 
 // Instance method for EXP calculation
 Character.prototype.expNeeded = function() {
-  if (this.level <= 50) {
-    // Exponential scaling up to level 50: 100 * 1.1^(level-1)
-    return Math.floor(100 * Math.pow(1.1, this.level - 1));
+  if (this.level <= 20) {
+    // Steep exponential scaling for early game: 200 * 1.15^(level-1)
+    return Math.floor(200 * Math.pow(1.15, this.level - 1));
+  } else if (this.level <= 50) {
+    // Moderate exponential scaling for mid game: baseExp * 1.12^(level-20)
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19)); // exp needed for level 20
+    return Math.floor(baseExp * Math.pow(1.12, this.level - 20));
+  } else if (this.level <= 80) {
+    // Steep linear scaling for late game: baseExp + (level-50) * 15000
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)); // exp needed for level 50
+    return baseExp + (this.level - 50) * 15000;
   } else {
-    // Linear scaling after level 50: base + (level - 50) * increment
-    const baseExp = Math.floor(100 * Math.pow(1.1, 49)); // exp needed for level 50
-    const increment = 5000; // 5000 exp per level after 50
-    return baseExp + (this.level - 50) * increment;
+    // Very steep linear scaling for end game: baseExp + (level-80) * 25000
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000); // exp needed for level 80
+    return baseExp + (this.level - 80) * 25000;
   }
 }; 
 

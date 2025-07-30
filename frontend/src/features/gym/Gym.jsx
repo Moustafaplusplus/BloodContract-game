@@ -5,11 +5,13 @@
  *  • POST /api/jobs/gym/train  { energy }
  *  • Shows gained money / exp; HUD auto‑updates via socket / refetch
  * ----------------------------------------------------------------------------*/
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { useHud } from '@/hooks/useHud';
-import { Dumbbell, Clock, Star, DollarSign, TrendingUp } from 'lucide-react';
+import { useSocket } from '@/hooks/useSocket';
+import { Dumbbell, Clock, Star, TrendingUp } from 'lucide-react';
+import MoneyIcon from '@/components/MoneyIcon';
 
 function formatCooldown(sec) {
   const m = Math.floor((sec || 0) / 60);
@@ -19,32 +21,82 @@ function formatCooldown(sec) {
 
 // Helper function to calculate exp needed for any level (exponential/linear system)
 function calculateExpNeeded(level) {
-  if (level <= 50) {
-    // Exponential scaling up to level 50: 100 * 1.1^(level-1)
-    return Math.floor(100 * Math.pow(1.1, level - 1));
+  if (level <= 20) {
+    // Steep exponential scaling for early game: 200 * 1.15^(level-1)
+    return Math.floor(200 * Math.pow(1.15, level - 1));
+  } else if (level <= 50) {
+    // Moderate exponential scaling for mid game: baseExp * 1.12^(level-20)
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19)); // exp needed for level 20
+    return Math.floor(baseExp * Math.pow(1.12, level - 20));
+  } else if (level <= 80) {
+    // Steep linear scaling for late game: baseExp + (level-50) * 15000
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)); // exp needed for level 50
+    return baseExp + (level - 50) * 15000;
   } else {
-    // Linear scaling after level 50: base + (level - 50) * increment
-    const baseExp = Math.floor(100 * Math.pow(1.1, 49)); // exp needed for level 50
-    const increment = 5000; // 5000 exp per level after 50
-    return baseExp + (level - 50) * increment;
+    // Very steep linear scaling for end game: baseExp + (level-80) * 25000
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000); // exp needed for level 80
+    return baseExp + (level - 80) * 25000;
   }
 }
 
 export default function Gym() {
   const { stats } = useHud();
+  const { socket } = useSocket();
   const [energy, setEnergy] = useState(1);
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [result, setResult] = useState(null);
   const qc = useQueryClient();
 
-  // Cooldown timer
-  useState(() => {
+  // Initialize cooldown from HUD data
+  useEffect(() => {
+    if (stats?.gymCooldown && stats.gymCooldown > 0) {
+      setCooldownLeft(stats.gymCooldown);
+    }
+  }, [stats?.gymCooldown]);
+
+  // Live countdown timer
+  useEffect(() => {
     if (cooldownLeft <= 0) return;
-    const t = setInterval(() => {
-      setCooldownLeft((sec) => (sec > 1 ? sec - 1 : 0));
+    
+    const timer = setInterval(() => {
+      setCooldownLeft(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          return 0;
+        }
+        return newTime;
+      });
     }, 1000);
-    return () => clearInterval(t);
+    
+    return () => clearInterval(timer);
   }, [cooldownLeft]);
+
+  // Listen for HUD updates to sync cooldown
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleHudUpdate = () => {
+      // The HUD data will be updated via the useHud hook
+      // We just need to re-initialize the cooldown when stats change
+      if (stats?.gymCooldown && stats.gymCooldown > 0) {
+        setCooldownLeft(stats.gymCooldown);
+      }
+    };
+    
+    socket.on('hud:update', handleHudUpdate);
+    
+    // Also poll for updates every 10 seconds as a fallback
+    const pollInterval = setInterval(() => {
+      if (stats?.gymCooldown && stats.gymCooldown > 0) {
+        setCooldownLeft(stats.gymCooldown);
+      }
+    }, 10000);
+    
+    return () => {
+      socket.off('hud:update', handleHudUpdate);
+      clearInterval(pollInterval);
+    };
+  }, [socket, stats?.gymCooldown]);
 
   // Preview calculations (match backend logic, including VIP)
   const safeLevel = result?.level ?? stats?.level ?? 1;
@@ -78,8 +130,8 @@ export default function Gym() {
   const expNeededForNextLevel = calculateExpNeeded(safeLevel);
   const maxExpGain = Math.min(vipExp, Math.floor(expNeededForNextLevel * 0.3)); // Max 30% of next level's exp
   
-  // For display
-  const moneyPreview = vipMoney;
+  // For display - round money to whole numbers
+  const moneyPreview = Math.round(vipMoney);
   const expPreview = maxExpGain;
   const cooldownPreview = energy * 10; // 10 seconds per energy (match backend)
 
@@ -98,8 +150,8 @@ export default function Gym() {
     },
     onSuccess: (data) => {
       setResult(data);
-      setCooldownLeft(Math.ceil((data.cooldown || 0)));
-      toast.success(`💰 +${data.moneyGain}$ ⭐ +${data.expGain} exp`);
+      setCooldownLeft(Math.floor((data.cooldown || 0)));
+      toast.success(`+${data.moneyGain}$ مال ⭐ +${data.expGain} خبرة`);
       qc.invalidateQueries(['hud']);
     },
     onError: (err) => {
@@ -134,12 +186,36 @@ export default function Gym() {
       {cooldownLeft > 0 && (
         <div className="mb-8 animate-slide-up">
           <div className="bg-gradient-to-r from-accent-red/20 to-accent-orange/20 border border-accent-red/30 rounded-xl p-6 backdrop-blur-sm">
-            <div className="flex items-center justify-center">
-              <Clock className="w-6 h-6 text-accent-red mr-3" />
-              <div className="text-center">
-                <p className="text-white font-semibold text-lg">فترة هدوء مطلوبة</p>
-                <p className="text-accent-red font-mono text-xl">{formatCooldown(cooldownLeft)}</p>
-                <p className="text-hitman-300 text-sm">يجب الانتظار قبل التمرين التالي</p>
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-4">
+                <Clock className="w-8 h-8 text-accent-red mr-3 animate-pulse" />
+                <h3 className="text-xl font-bold text-accent-red">فترة هدوء مطلوبة</h3>
+              </div>
+              
+              {/* Timer Display */}
+              <div className="text-center mb-4">
+                <div className="text-4xl font-mono text-accent-red mb-2 font-bold">
+                  {formatCooldown(cooldownLeft)}
+                </div>
+                <p className="text-hitman-300 text-sm">الوقت المتبقي قبل التمرين التالي</p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-hitman-300">تقدم فترة الهدوء</span>
+                  <span className="text-accent-red font-bold">
+                    {Math.round(((cooldownPreview - cooldownLeft) / cooldownPreview) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-hitman-700 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-accent-red to-red-600 h-3 rounded-full transition-all duration-1000"
+                    style={{ 
+                      width: `${Math.max(0, Math.min(100, ((cooldownPreview - cooldownLeft) / cooldownPreview) * 100))}%` 
+                    }}
+                  ></div>
+                </div>
               </div>
             </div>
           </div>
@@ -181,8 +257,8 @@ export default function Gym() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
           <div className="bg-hitman-800/30 rounded-lg p-3 text-center">
-            <DollarSign className="w-6 h-6 text-accent-green mx-auto mb-1" />
-            <div className="font-bold text-accent-green text-xl">+{result ? result.moneyGain : moneyPreview}$</div>
+            <MoneyIcon className="w-6 h-6 mx-auto mb-1" />
+            <div className="font-bold text-accent-green text-xl">+{result ? Math.round(result.moneyGain) : moneyPreview}$</div>
             <div className="text-xs text-hitman-400">المال المكتسب</div>
           </div>
           <div className="bg-hitman-800/30 rounded-lg p-3 text-center">
@@ -198,9 +274,9 @@ export default function Gym() {
         </div>
         {/* Bonus breakdown rows */}
         <div className="text-center text-sm text-hitman-300 mt-8">
-          <div>مجموع البونص من المستوى: <span className="text-accent-green font-bold">+{levelMoney - baseMoney}$</span> مال، <span className="text-accent-blue font-bold">+{levelExp - baseExp}</span> خبرة</div>
+          <div>مجموع البونص من المستوى: <span className="text-accent-green font-bold">+{Math.round(levelMoney - baseMoney)}$</span> مال، <span className="text-accent-blue font-bold">+{Math.round(levelExp - baseExp)}</span> خبرة</div>
           {isVip && (
-            <div>مجموع بونص VIP: <span className="text-accent-green font-bold">+{vipMoney - levelMoney}$</span> مال، <span className="text-accent-blue font-bold">+{vipExp - levelExp}</span> خبرة</div>
+            <div>مجموع بونص VIP: <span className="text-accent-green font-bold">+{Math.round(vipMoney - levelMoney)}$</span> مال، <span className="text-accent-blue font-bold">+{Math.round(vipExp - levelExp)}</span> خبرة</div>
           )}
           <div className="mt-2">طاقتك الحالية: <strong className="text-accent-red">{stats.energy}</strong></div>
           <div className="text-xs text-accent-yellow mt-1">الخبرة المطلوبة للمستوى التالي: {expNeededForNextLevel}</div>

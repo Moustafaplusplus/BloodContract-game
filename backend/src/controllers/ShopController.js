@@ -23,8 +23,9 @@ export class ShopController {
 
   static async buyWeapon(req, res) {
     try {
+      const weaponId = parseInt(req.params.id, 10);
       const quantity = parseInt(req.body.quantity) || 1;
-      const result = await ShopService.purchaseWeapon(req.user.id, req.params.id, quantity);
+      const result = await ShopService.purchaseWeapon(req.user.id, weaponId, quantity);
       res.json(result);
     } catch (error) {
       console.error('Buy weapon error:', error);
@@ -40,8 +41,9 @@ export class ShopController {
 
   static async buyArmor(req, res) {
     try {
+      const armorId = parseInt(req.params.id, 10);
       const quantity = parseInt(req.body.quantity) || 1;
-      const result = await ShopService.purchaseArmor(req.user.id, req.params.id, quantity);
+      const result = await ShopService.purchaseArmor(req.user.id, armorId, quantity);
       res.json(result);
     } catch (error) {
       console.error('Buy armor error:', error);

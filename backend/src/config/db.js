@@ -39,22 +39,22 @@ const dbConfig = {
 
 const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, dbConfig);
 
-// Add connection event handlers for better debugging
+// Connection event handlers (logs removed to reduce console spam)
 sequelize.addHook('beforeConnect', async (config) => {
-  console.log('[DB] Attempting database connection...');
+  // Connection attempt
 });
 
 sequelize.addHook('afterConnect', async (connection) => {
-  console.log('[DB] Database connection established');
+  // Connection established
 });
 
 sequelize.addHook('beforeDisconnect', async (connection) => {
-  console.log('[DB] Database connection closing');
+  // Connection closing
 });
 
-// Add error handling for connection issues
+// Error handling for connection issues
 sequelize.addHook('afterDisconnect', async (connection) => {
-  console.log('[DB] Database connection closed');
+  // Connection closed
 });
 
 // Test the connection

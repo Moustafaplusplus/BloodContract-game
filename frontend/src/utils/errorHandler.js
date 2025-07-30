@@ -36,6 +36,67 @@ export const handleApiError = (error, toast) => {
   console.error('API Error:', error);
 };
 
+// Enhanced email validation function
+const validateEmailFormat = (email) => {
+  // Basic email format check
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    return false;
+  }
+
+  // Block disposable/fake email domains
+  const blockedDomains = [
+    'test.com', 'test.org', 'test.net', 'test.co', 'test.io',
+    'example.com', 'example.org', 'example.net', 'example.co',
+    'user.com', 'user.org', 'user.net', 'user.co',
+    'temp.com', 'temp.org', 'temp.net', 'temp.co',
+    'fake.com', 'fake.org', 'fake.net', 'fake.co',
+    'disposable.com', 'disposable.org', 'disposable.net',
+    '10minutemail.com', 'guerrillamail.com', 'mailinator.com',
+    'tempmail.com', 'throwaway.com', 'trashmail.com',
+    'yopmail.com', 'getnada.com', 'mailnesia.com',
+    'sharklasers.com', 'grr.la', 'guerrillamailblock.com',
+    'pokemail.net', 'spam4.me', 'bccto.me', 'chacuo.net',
+    'dispostable.com', 'mailmetrash.com', 'tempr.email',
+    'tmpeml.com', 'tmpmail.org', 'tmpmail.net',
+    'maildrop.cc', 'mailinator.net', 'mailinator.org',
+    'mailinator.com', 'mailinator2.com', 'mailinator3.com',
+    'mailinator4.com', 'mailinator5.com', 'mailinator6.com',
+    'mailinator7.com', 'mailinator8.com', 'mailinator9.com',
+    'mailinator10.com', 'mailinator11.com', 'mailinator12.com',
+    'mailinator13.com', 'mailinator14.com', 'mailinator15.com',
+    'mailinator16.com', 'mailinator17.com', 'mailinator18.com',
+    'mailinator19.com', 'mailinator20.com', 'mailinator21.com',
+    'mailinator22.com', 'mailinator23.com', 'mailinator24.com',
+    'mailinator25.com', 'mailinator26.com', 'mailinator27.com',
+    'mailinator28.com', 'mailinator29.com', 'mailinator30.com',
+    'mailinator31.com', 'mailinator32.com', 'mailinator33.com',
+    'mailinator34.com', 'mailinator35.com', 'mailinator36.com',
+    'mailinator37.com', 'mailinator38.com', 'mailinator39.com',
+    'mailinator40.com', 'mailinator41.com', 'mailinator42.com',
+    'mailinator43.com', 'mailinator44.com', 'mailinator45.com',
+    'mailinator46.com', 'mailinator47.com', 'mailinator48.com',
+    'mailinator49.com', 'mailinator50.com'
+  ];
+
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (blockedDomains.includes(domain)) {
+    return false;
+  }
+
+  // Block single character domains
+  if (domain && domain.length < 2) {
+    return false;
+  }
+
+  // Block domains with only numbers
+  if (domain && /^\d+$/.test(domain.split('.')[0])) {
+    return false;
+  }
+
+  return true;
+};
+
 // Utility function to validate form data on the frontend (before sending to API)
 export const validateForm = (data, rules) => {
   const errors = [];
@@ -67,6 +128,24 @@ export const validateForm = (data, rules) => {
     if (value && rule.pattern && !rule.pattern.test(value)) {
       errors.push(rule.patternMessage || `${rule.label} غير صحيح`);
     }
+
+    // Additional username/character name validation
+    if (value && (field === 'username' || field === 'characterName' || field === 'newName')) {
+      // Check for consecutive special characters
+      if (/[._-]{2,}/.test(value)) {
+        errors.push(`${rule.label} لا يمكن أن يحتوي على أحرف خاصة متتالية`);
+      }
+      
+      // Check if starts or ends with special characters
+      if (/^[._-]|[._-]$/.test(value)) {
+        errors.push(`${rule.label} لا يمكن أن يبدأ أو ينتهي بحرف خاص`);
+      }
+    }
+
+    // Special email validation
+    if (value && field === 'email' && !validateEmailFormat(value)) {
+      errors.push('البريد الإلكتروني غير مسموح به (يجب أن يكون بريد إلكتروني حقيقي)');
+    }
   }
   
   return errors;
@@ -78,12 +157,22 @@ export const validationRules = {
     label: 'اسم المستخدم',
     required: true,
     minLength: 3,
-    maxLength: 30
+    maxLength: 30,
+    pattern: /^[a-zA-Z0-9._-]+$/,
+    patternMessage: 'اسم المستخدم يجب أن يحتوي على أحرف وأرقام فقط مع إمكانية استخدام النقاط والشرطات والشرطات السفلية'
+  },
+  characterName: {
+    label: 'اسم الشخصية',
+    required: true,
+    minLength: 3,
+    maxLength: 20,
+    pattern: /^[a-zA-Z0-9._-]+$/,
+    patternMessage: 'الاسم يجب أن يحتوي على أحرف وأرقام فقط مع إمكانية استخدام النقاط والشرطات والشرطات السفلية'
   },
   email: {
     label: 'البريد الإلكتروني',
     required: true,
-    pattern: /^\S+@\S+\.\S+$/,
+    pattern: /^\S+@\S+\.\S+$/, // Basic pattern for frontend, detailed validation in validateEmailFormat
     patternMessage: 'البريد الإلكتروني غير صحيح'
   },
   password: {

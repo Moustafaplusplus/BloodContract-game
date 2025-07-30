@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'react-hot-toast';
+import VipName from '../profile/VipName.jsx';
+import MoneyIcon from '@/components/MoneyIcon';
 
 const GHOST_ASSASSIN_PRICE = 5;
 
@@ -59,7 +64,7 @@ const GhostAssassinForm = () => {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message === 'Insufficient black coins.' ? 'لا تملك بلاك كوين كافية.' : data.message || 'حدث خطأ ما.');
+        setError(data.message === 'Insufficient black coins.' ? 'لا تملك عملة سودا كافية.' : data.message || 'حدث خطأ ما.');
       } else {
         setResult('تم تنفيذ الاغتيال بنجاح! تم نقل الهدف إلى المستشفى لمدة 30 دقيقة.');
       }
@@ -71,112 +76,161 @@ const GhostAssassinForm = () => {
   };
 
   return (
-    <div style={{
-      background: '#111',
-      color: '#fff',
-      border: '2px solid #c00',
-      borderRadius: '12px',
-      padding: '2rem',
-      maxWidth: '420px',
-      margin: '2rem auto',
-      boxShadow: '0 0 16px #c00a',
-    }}>
-      <h2 style={{ color: '#c00', textAlign: 'center', marginBottom: '1.5rem', fontSize: '2rem', fontWeight: 'bold' }}>
-        القاتل الشبح
-      </h2>
-      <div style={{
-        background: '#1a1a1a',
-        border: '1px solid #c00',
-        borderRadius: '8px',
-        padding: '1rem',
-        marginBottom: '1.5rem',
-        textAlign: 'center',
-        fontSize: '1.1rem',
-        color: '#fff',
-      }}>
-        <div style={{ color: '#c00', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-          ما هو القاتل الشبح؟
+    <div className="bg-gradient-to-br from-black via-gray-900 to-black border-2 border-red-600 rounded-2xl p-8 max-w-2xl mx-auto my-8 shadow-2xl shadow-red-900/30 relative overflow-hidden">
+      {/* Background glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-red-900/10 via-transparent to-red-900/10"></div>
+      
+      {/* Header with Ghost Assassin Avatar */}
+      <div className="relative z-10 text-center mb-8">
+        <div className="mb-6">
+          <div className="relative">
+            {/* Ghost Assassin Avatar - Full Width */}
+            <div className="w-full h-48 md:h-64 rounded-2xl border-4 md:border-0 border-red-600 bg-gradient-to-br from-red-900 to-red-700 md:bg-transparent p-2 md:p-0 shadow-2xl md:shadow-none shadow-red-500/50 overflow-hidden">
+              <img
+                src="/images/ghostassasin.png"
+                alt="Ghost Assassin"
+                className="w-full h-full object-contain rounded-xl"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div className="w-full h-full bg-gradient-to-br from-red-800 to-red-600 flex items-center justify-center text-red-200 font-bold text-6xl hidden">
+                👻
+              </div>
+            </div>
+            {/* Glow effect around image */}
+            <div className="absolute inset-0 rounded-2xl bg-red-500/20 blur-xl animate-pulse md:hidden"></div>
+          </div>
         </div>
-        <div>
-          القاتل الشبح هو قاتل محترف يمكنك استئجاره مقابل <span style={{ color: '#f55', fontWeight: 'bold' }}>{GHOST_ASSASSIN_PRICE} بلاك كوين</span> لتنفيذ عملية اغتيال فورية لأي لاعب تختاره. سيتم نقل الهدف مباشرة إلى المستشفى لمدة 30 دقيقة دون قتال أو مقاومة.
+        
+        <h2 className="text-3xl font-bold text-red-500 mb-2 drop-shadow-lg">
+          القاتل الشبح
+        </h2>
+        <div className="w-24 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent mx-auto"></div>
+      </div>
+
+      {/* Description Card */}
+      <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-red-600/50 rounded-xl p-6 mb-8 backdrop-blur-sm">
+        <div className="text-center">
+          <div className="text-red-400 font-bold text-lg mb-3 flex items-center justify-center gap-2">
+            <span className="text-2xl">⚔️</span>
+            ما هو القاتل الشبح؟
+            <span className="text-2xl">⚔️</span>
+          </div>
+          <div className="text-gray-300 leading-relaxed">
+            القاتل الشبح هو قاتل محترف يمكنك استئجاره مقابل{' '}
+            <span className="text-red-400 font-bold text-lg">{GHOST_ASSASSIN_PRICE} عملة سودا</span>{' '}
+            لتنفيذ عملية اغتيال فورية لأي لاعب تختاره. سيتم نقل الهدف مباشرة إلى المستشفى لمدة 30 دقيقة دون قتال أو مقاومة.
+          </div>
         </div>
       </div>
-      <form onSubmit={handleSubmit} style={{ display: result ? 'none' : 'block' }}>
-        <label htmlFor="targetId" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-          أدخل رقم اللاعب المستهدف:
-        </label>
-        <input
-          id="targetId"
-          type="number"
-          value={targetId}
-          onChange={e => setTargetId(e.target.value)}
-          required
-          min="1"
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            borderRadius: '6px',
-            border: '1px solid #c00',
-            background: '#222',
-            color: '#fff',
-            marginBottom: '0.5rem',
-            direction: 'ltr',
-          }}
-          placeholder="مثال: 123"
-        />
-        {fetchingTarget && <div style={{ color: '#aaa', marginBottom: '0.5rem' }}>جاري البحث عن اللاعب...</div>}
-        {targetInfo && !targetError && (
-          <div style={{
-            background: '#222',
-            border: '1px solid #393',
-            borderRadius: '6px',
-            padding: '0.5rem',
-            marginBottom: '0.5rem',
-            color: '#fff',
-            textAlign: 'center',
-          }}>
-            <span style={{ color: '#0f0', fontWeight: 'bold' }}>الهدف:</span> {targetInfo.name || targetInfo.username} <span style={{ color: '#aaa' }}>(ID: {targetInfo.userId || targetInfo.id})</span>
+
+      {/* Form Section */}
+      <form onSubmit={handleSubmit} className={`relative z-10 ${result ? 'hidden' : 'block'}`}>
+        <div className="space-y-6">
+          {/* Target Input */}
+          <div>
+            <label htmlFor="targetId" className="block text-red-400 font-bold mb-3 text-lg">
+              🎯 أدخل رقم اللاعب المستهدف:
+            </label>
+            <input
+              id="targetId"
+              type="number"
+              value={targetId}
+              onChange={e => setTargetId(e.target.value)}
+              required
+              min="1"
+              className="w-full px-4 py-3 bg-gray-800 border-2 border-red-600/50 rounded-xl text-white placeholder-gray-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all duration-200 text-center text-lg"
+              placeholder="مثال: 123"
+              dir="ltr"
+            />
           </div>
-        )}
-        {targetError && <div style={{ color: '#f55', marginBottom: '0.5rem', textAlign: 'center' }}>{targetError}</div>}
-        <div style={{ marginBottom: '1rem', textAlign: 'center', color: '#f55', fontWeight: 'bold' }}>
-          السعر: {GHOST_ASSASSIN_PRICE} بلاك كوين
+
+          {/* Loading State */}
+          {fetchingTarget && (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-2 text-yellow-400">
+                <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                جاري البحث عن اللاعب...
+              </div>
+            </div>
+          )}
+
+          {/* Target Info Display */}
+          {targetInfo && !targetError && (
+            <div className="bg-gradient-to-r from-green-900/30 to-green-800/30 border-2 border-green-500/50 rounded-xl p-4 text-center">
+              <div className="text-green-400 font-bold text-lg mb-2">🎯 الهدف المحدد:</div>
+              <div className="text-white text-xl font-bold">
+                <VipName user={targetInfo} />
+              </div>
+              <div className="text-gray-400 text-sm mt-1">
+                ID: {targetInfo.userId || targetInfo.id}
+              </div>
+            </div>
+          )}
+
+          {/* Target Error */}
+          {targetError && (
+            <div className="bg-gradient-to-r from-red-900/30 to-red-800/30 border-2 border-red-500/50 rounded-xl p-4 text-center">
+              <div className="text-red-400 font-bold">❌ {targetError}</div>
+            </div>
+          )}
+
+          {/* Price Display */}
+          <div className="text-center py-4">
+            <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-900/50 to-red-800/50 border border-red-600/50 rounded-xl px-6 py-3">
+              <MoneyIcon className="w-6 h-6" />
+              <span className="text-red-400 font-bold text-xl">السعر: {GHOST_ASSASSIN_PRICE} عملة سودا</span>
+              <MoneyIcon className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading || !targetId || !!targetError || !targetInfo}
+            className={`w-full py-4 px-6 rounded-xl font-bold text-xl transition-all duration-300 transform ${
+              loading || !targetId || !!targetError || !targetInfo
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white hover:scale-105 shadow-lg shadow-red-500/30'
+            }`}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                جاري التنفيذ...
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl">👻</span>
+                استدعاء القاتل الشبح
+                <span className="text-2xl">⚔️</span>
+              </div>
+            )}
+          </button>
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-gradient-to-r from-red-900/50 to-red-800/50 border-2 border-red-500/50 rounded-xl p-4 text-center">
+              <div className="text-red-400 font-bold">❌ {error}</div>
+            </div>
+          )}
         </div>
-        <button
-          type="submit"
-          disabled={loading || !targetId || !!targetError || !targetInfo}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            background: '#c00',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: 'bold',
-            fontSize: '1.1rem',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'background 0.2s',
-            opacity: loading || !targetId || !!targetError || !targetInfo ? 0.7 : 1,
-          }}
-        >
-          {loading ? '...جاري التنفيذ' : 'استدعاء القاتل الشبح'}
-        </button>
-        {error && <div style={{ color: '#f55', marginTop: '1rem', textAlign: 'center' }}>{error}</div>}
       </form>
+
+      {/* Success Result */}
       {result && (
-        <div style={{
-          marginTop: '2rem',
-          background: '#222',
-          border: '1px solid #c00',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          color: '#fff',
-          textAlign: 'center',
-          fontSize: '1.1rem',
-        }}>
-          <span style={{ color: '#0f0', fontWeight: 'bold', fontSize: '1.3rem' }}>تم التنفيذ بنجاح!</span>
-          <hr style={{ border: 'none', borderTop: '1px solid #c00', margin: '1rem 0' }} />
-          <div style={{ whiteSpace: 'pre-line' }}>{result}</div>
+        <div className="relative z-10 bg-gradient-to-r from-green-900/30 to-green-800/30 border-2 border-green-500/50 rounded-xl p-8 text-center">
+          <div className="text-green-400 font-bold text-2xl mb-4 flex items-center justify-center gap-2">
+            <span className="text-3xl">✅</span>
+            تم التنفيذ بنجاح!
+            <span className="text-3xl">✅</span>
+          </div>
+          <div className="w-32 h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent mx-auto mb-4"></div>
+          <div className="text-white text-lg leading-relaxed whitespace-pre-line">
+            {result}
+          </div>
         </div>
       )}
     </div>

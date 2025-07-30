@@ -9,9 +9,10 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  DollarSign,
   Zap
 } from 'lucide-react';
+import MoneyIcon from '@/components/MoneyIcon';
+import BlackcoinIcon from '@/components/BlackcoinIcon';
 
 export default function WeaponManagement() {
   const queryClient = useQueryClient();
@@ -248,13 +249,14 @@ export default function WeaponManagement() {
                     <span className="text-green-400 font-bold">
                       {weapon.currency === 'blackcoin' ? (
                         <span className="flex items-center gap-1">
-                          <span className="inline-block w-4 h-4 rounded-full bg-black border border-accent-red flex items-center justify-center">
-                            <span className="text-xs text-accent-red font-bold">ع</span>
-                          </span>
-                          {weapon.price}
+                          <BlackcoinIcon />
+                          <span>{weapon.price}</span>
                         </span>
                       ) : (
-                        `$${weapon.price}`
+                        <span className="flex items-center gap-1">
+                          <MoneyIcon className="w-4 h-4" />
+                          <span>{weapon.price}</span>
+                        </span>
                       )}
                     </span>
                   </div>
@@ -266,8 +268,18 @@ export default function WeaponManagement() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-hitman-400">العملة:</span>
-                    <span className={`font-bold ${weapon.currency === 'blackcoin' ? 'text-accent-red' : 'text-green-400'}`}>
-                      {weapon.currency === 'blackcoin' ? 'عملة سوداء' : 'مال'}
+                    <span className={`font-bold flex items-center ${weapon.currency === 'blackcoin' ? 'text-accent-red' : 'text-green-400'}`}>
+                      {weapon.currency === 'blackcoin' ? (
+                        <>
+                          <BlackcoinIcon />
+                          <span className="mr-1">عملة سوداء</span>
+                        </>
+                      ) : (
+                        <>
+                          <MoneyIcon className="w-4 h-4" />
+                          <span className="mr-1">مال</span>
+                        </>
+                      )}
                     </span>
                   </div>
                 </div>

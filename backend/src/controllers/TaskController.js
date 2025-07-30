@@ -4,6 +4,7 @@ import { Op } from 'sequelize';
 import { CharacterService } from '../services/CharacterService.js';
 import { TaskService } from '../services/TaskService.js';
 import { PromotionService } from '../services/PromotionService.js';
+import { io } from '../socket.js';
 
 export class TaskController {
   // Admin: Create a new task
@@ -110,6 +111,11 @@ export class TaskController {
     // Get updated promotion status
     const promotionStatus = await PromotionService.getUserPromotionStatus(userId);
     
+    // Emit socket event to update navigation badge
+    if (io) {
+      io.to(`user:${userId}`).emit('tasks:unclaimed-count-updated');
+    }
+    
     res.json({ 
       success: true, 
       rewards: {
@@ -180,6 +186,82 @@ export class TaskController {
       const { id } = req.params;
       const result = await PromotionService.deletePromotion(id);
       res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+
+  // Player: Get daily task status
+  static async getDailyTaskStatus(req, res) {
+    try {
+      const userId = req.user.id;
+      const character = await Character.findOne({ where: { userId } });
+      
+      if (!character) {
+        return res.status(404).json({ error: 'Character not found' });
+      }
+
+      const dailyTaskStatus = await TaskService.getDailyTaskStatus(userId);
+      const expReward = TaskService.calculateDailyTaskExpReward(character);
+      
+      res.json({
+        ...dailyTaskStatus,
+        expReward,
+        blackcoinReward: 1
+      });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+
+  // Player: Claim daily task reward
+  static async claimDailyTask(req, res) {
+    try {
+      const userId = req.user.id;
+      const result = await TaskService.claimDailyTask(userId);
+      
+      // Emit socket event to update navigation badge
+      if (io) {
+        io.to(`user:${userId}`).emit('tasks:unclaimed-count-updated');
+      }
+      
+      res.json({
+        success: true,
+        rewards: {
+          exp: result.expReward,
+          blackcoins: result.blackcoinReward
+        },
+        newStats: result.newStats
+      });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+
+  // Player: Get total unclaimed tasks count
+  static async getUnclaimedCount(req, res) {
+    try {
+      const userId = req.user.id;
+      
+      // Get regular tasks
+      const tasks = await Task.findAll({ where: { isActive: true } });
+      const progresses = await UserTaskProgress.findAll({ where: { userId } });
+      const progressMap = {};
+      progresses.forEach(p => { progressMap[p.taskId] = p; });
+      
+      // Count unclaimed regular tasks
+      const unclaimedRegularTasks = tasks.filter(task => {
+        const progress = progressMap[task.id];
+        return progress?.isCompleted && !progress?.rewardCollected;
+      }).length;
+
+      // Check daily task availability
+      const dailyTaskStatus = await TaskService.getDailyTaskStatus(userId);
+      const dailyTaskAvailable = dailyTaskStatus.isAvailable ? 1 : 0;
+
+      const totalUnclaimed = unclaimedRegularTasks + dailyTaskAvailable;
+      
+      res.json({ count: totalUnclaimed });
     } catch (err) {
       res.status(400).json({ error: err.message });
     }

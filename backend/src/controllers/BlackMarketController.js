@@ -2,6 +2,7 @@ import { BlackMarketService } from '../services/BlackMarketService.js';
 import { BlackMarketListing } from '../models/BlackMarketListing.js';
 import { InventoryService } from '../services/InventoryService.js';
 import { Character } from '../models/Character.js';
+import { emitNotification } from '../socket.js';
 
 export class BlackMarketController {
   // Get all available items
@@ -39,6 +40,19 @@ export class BlackMarketController {
       }
 
       const result = await BlackMarketService.buyItem(req.user.id, itemId, quantity);
+      
+      // Create notification for purchase
+      try {
+        const notification = await BlackMarketService.createItemPurchasedNotification(
+          req.user.id,
+          result.item.name,
+          result.totalCost
+        );
+        emitNotification(req.user.id, notification);
+      } catch (notificationError) {
+        console.error('[BlackMarketController] Purchase notification error:', notificationError);
+      }
+      
       res.status(201).json(result);
     } catch (error) {
       console.error('Buy black market item error:', error);
@@ -181,8 +195,25 @@ export class BlackMarketController {
           energyBonus: item.energyBonus,
         },
       });
+
+      // Create notification for listing posted
+      try {
+        console.log(`[BlackMarketController] Creating notification for listing posted by user ${userId}`);
+        const notification = await BlackMarketService.createListingPostedNotification(
+          userId,
+          item.name,
+          price
+        );
+        console.log(`[BlackMarketController] Notification created:`, notification);
+        emitNotification(userId, notification);
+        console.log(`[BlackMarketController] Notification emitted to user ${userId}`);
+      } catch (notificationError) {
+        console.error('[BlackMarketController] Listing posted notification error:', notificationError);
+      }
+
       res.status(201).json(listing);
     } catch (err) {
+      console.error('[BlackMarketController] Post listing error:', err);
       res.status(500).json({ error: 'Failed to post listing' });
     }
   }
@@ -212,6 +243,28 @@ export class BlackMarketController {
       listing.buyerId = buyerChar.id;
       listing.soldAt = new Date();
       await listing.save();
+
+      // Create notifications for both buyer and seller
+      try {
+        // Notification for buyer
+        const buyerNotification = await BlackMarketService.createItemPurchasedNotification(
+          userId,
+          listing.name,
+          listing.price
+        );
+        emitNotification(userId, buyerNotification);
+
+        // Notification for seller
+        const sellerNotification = await BlackMarketService.createListingSoldNotification(
+          sellerChar.userId,
+          listing.name,
+          listing.price
+        );
+        emitNotification(sellerChar.userId, sellerNotification);
+      } catch (notificationError) {
+        console.error('[BlackMarketController] Buy listing notification error:', notificationError);
+      }
+
       res.json({ message: 'Item bought', listing });
     } catch (err) {
       res.status(500).json({ error: 'Failed to buy listing' });
@@ -232,6 +285,18 @@ export class BlackMarketController {
       await InventoryService.addItemToInventory(userId, listing.itemType, listing.itemId, 1);
       listing.status = 'cancelled';
       await listing.save();
+
+      // Create notification for listing cancelled
+      try {
+        const notification = await BlackMarketService.createListingCancelledNotification(
+          userId,
+          listing.name
+        );
+        emitNotification(userId, notification);
+      } catch (notificationError) {
+        console.error('[BlackMarketController] Listing cancelled notification error:', notificationError);
+      }
+
       res.json({ message: 'Listing cancelled', listing });
     } catch (err) {
       res.status(500).json({ error: 'Failed to cancel listing' });

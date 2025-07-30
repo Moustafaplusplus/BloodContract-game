@@ -1,7 +1,12 @@
 import { SpecialItem } from '../models/SpecialItem.js';
 import { InventoryItem } from '../models/Inventory.js';
 import { Character } from '../models/Character.js';
-import { io } from '../socket.js';
+import { CharacterService } from './CharacterService.js';
+import { GangMember, Gang } from '../models/Gang.js';
+import { Hospital, Jail } from '../models/Confinement.js';
+import { io, emitNotification } from '../socket.js';
+import { NotificationService } from './NotificationService.js';
+import { Op } from 'sequelize';
 
 export class SpecialItemService {
   static async getAllSpecialItems(filters = {}) {
@@ -90,31 +95,38 @@ export class SpecialItemService {
     }
   }
 
-  static async useSpecialItem(userId, itemId) {
-    const item = await SpecialItem.findByPk(itemId);
-    if (!item) {
-      throw new Error('العنصر غير موجود');
-    }
+  static async useSpecialItem(userId, itemId, additionalData = {}) {
+    try {
+      const item = await SpecialItem.findByPk(itemId);
+      if (!item) {
+        throw new Error('العنصر غير موجود');
+      }
 
-    const character = await Character.findOne({ where: { userId } });
-    if (!character) {
-      throw new Error('الشخصية غير موجودة');
-    }
+      const character = await Character.findOne({ where: { userId } });
+      if (!character) {
+        throw new Error('الشخصية غير موجودة');
+      }
 
-    // Check if user has the item
-    const inventoryItem = await InventoryItem.findOne({
-      where: { userId, itemType: 'special', itemId, equipped: false }
-    });
+      // Check level requirement for experience potions, gang bombs, and attack immunity
+      if ((item.type === 'EXPERIENCE_POTION' || item.type === 'GANG_BOMB' || item.type === 'ATTACK_IMMUNITY' || item.type === 'CD_RESET') && character.level < item.levelRequired) {
+        throw new Error(`يجب أن تكون المستوى ${item.levelRequired} على الأقل لاستخدام هذا العنصر`);
+      }
 
-    if (!inventoryItem || inventoryItem.quantity < 1) {
-      throw new Error('لا تملك هذا العنصر');
-    }
+      // Check if user has the item
+      const inventoryItem = await InventoryItem.findOne({
+        where: { userId, itemType: 'special', itemId, equipped: false }
+      });
 
+      if (!inventoryItem || inventoryItem.quantity < 1) {
+        throw new Error('لا تملك هذا العنصر');
+      }
 
-
-    // Apply effects
-    const effects = item.effect;
-    let effectApplied = false;
+      // Apply effects
+      const effects = item.effect;
+      let effectApplied = false;
+      
+      console.log('[SpecialItemService] Item effects:', effects);
+      console.log('[SpecialItemService] Item type:', item.type);
 
     if (effects.health) {
       const maxHp = character.getMaxHp();
@@ -136,6 +148,397 @@ export class SpecialItemService {
       effectApplied = true;
     }
 
+    if (effects.experience) {
+      character.exp += effects.experience;
+      effectApplied = true;
+      
+      // Trigger level-up logic
+      await CharacterService.maybeLevelUp(character);
+    }
+
+    if (effects.nameChange) {
+      // For name change items, we'll set a flag that the frontend can use
+      // The actual name change will be handled by a separate endpoint
+      effectApplied = true;
+    }
+
+    if (effects.attackImmunity) {
+      // Attack immunity effect: provides protection against various attacks
+      effectApplied = true;
+      
+      // Set immunity expiration time
+      const immunityDuration = effects.duration || 3600; // Default 1 hour in seconds
+      const immunityExpiresAt = new Date(Date.now() + immunityDuration * 1000);
+      
+      // Store immunity data in character (we'll add this field to the Character model)
+      character.attackImmunityExpiresAt = immunityExpiresAt;
+      
+      // Send notification about immunity activation
+      try {
+        const immunityNotification = await NotificationService.createNotification(
+          userId,
+          'ATTACK_IMMUNITY_ACTIVATED',
+          'تم تفعيل الحماية من الهجمات',
+          `تم تفعيل الحماية من الهجمات لمدة ${Math.floor(immunityDuration / 60)} دقيقة. أنت محمي من الهجمات المباشرة وقنابل العصابة، لكن لا تزال عرضة للغاسين الشبح.`,
+          { 
+            reason: 'attack_immunity_activated', 
+            duration: immunityDuration,
+            expiresAt: immunityExpiresAt
+          }
+        );
+        emitNotification(userId, immunityNotification);
+      } catch (notificationError) {
+        console.error('[SpecialItemService] Notification error for attack immunity:', notificationError);
+      }
+    }
+
+    if (effects.cdReset) {
+      // CD reset effect: immediately remove all cooldowns (jail, hospital, gym, crime)
+      effectApplied = true;
+      
+      console.log('[SpecialItemService] CD_RESET effect triggered');
+      console.log('[SpecialItemService] Character before reset:', {
+        crimeCooldown: character.crimeCooldown,
+        gymCooldown: character.gymCooldown,
+        userId: character.userId
+      });
+      
+      const now = Date.now();
+      let resetCount = 0;
+      let crimeReset = false;
+      let gymReset = false;
+      let jailReleased = false;
+      let hospitalReleased = false;
+      
+      // Reset crime cooldown
+      if (character.crimeCooldown && character.crimeCooldown > now) {
+        console.log('[SpecialItemService] Resetting crime cooldown from', character.crimeCooldown, 'to 0');
+        character.crimeCooldown = 0;
+        resetCount++;
+        crimeReset = true;
+      } else {
+        console.log('[SpecialItemService] Crime cooldown not reset - current:', character.crimeCooldown, 'now:', now);
+      }
+      
+      // Reset gym cooldown
+      if (character.gymCooldown && character.gymCooldown > now) {
+        console.log('[SpecialItemService] Resetting gym cooldown from', character.gymCooldown, 'to 0');
+        character.gymCooldown = 0;
+        resetCount++;
+        gymReset = true;
+      } else {
+        console.log('[SpecialItemService] Gym cooldown not reset - current:', character.gymCooldown, 'now:', now);
+      }
+      
+      // Check and release from jail
+      const { Jail } = await import('../models/Confinement.js');
+      const jailRecord = await Jail.findOne({
+        where: { 
+          userId,
+          releasedAt: { [Op.gt]: new Date() }
+        }
+      });
+      
+      if (jailRecord) {
+        await jailRecord.destroy();
+        resetCount++;
+        jailReleased = true;
+        
+        // Emit jail leave event (consistent with other jail releases)
+        if (io) {
+          io.to(`user:${userId}`).emit('jail:leave', {
+            reason: 'cd_reset_item'
+          });
+        }
+      }
+      
+      // Check and release from hospital
+      const { Hospital } = await import('../models/Confinement.js');
+      const hospitalRecord = await Hospital.findOne({
+        where: { 
+          userId,
+          releasedAt: { [Op.gt]: new Date() }
+        }
+      });
+      
+      if (hospitalRecord) {
+        await hospitalRecord.destroy();
+        resetCount++;
+        hospitalReleased = true;
+        
+        // Emit hospital leave event (consistent with other hospital releases)
+        if (io) {
+          io.to(`user:${userId}`).emit('hospital:leave', {
+            reason: 'cd_reset_item'
+          });
+        }
+      }
+      
+      // Save character changes immediately after cooldown resets
+      await character.save();
+      console.log('[SpecialItemService] Character saved after cooldown resets');
+      console.log('[SpecialItemService] Character after reset:', {
+        crimeCooldown: character.crimeCooldown,
+        gymCooldown: character.gymCooldown,
+        resetCount,
+        crimeReset,
+        gymReset,
+        jailReleased,
+        hospitalReleased
+      });
+      
+      // Send notification about CD reset
+      try {
+        let resetMessage = 'تم إعادة تعيين جميع أوقات الانتظار بنجاح!\n\n';
+        resetMessage += '✅ تم إعادة تعيين:\n';
+        
+        if (crimeReset || gymReset) {
+          resetMessage += '• أوقات الانتظار للجرائم والجيم\n';
+        }
+        if (jailReleased) {
+          resetMessage += '• تم الإفراج من السجن\n';
+        }
+        if (hospitalReleased) {
+          resetMessage += '• تم الخروج من المستشفى\n';
+        }
+        
+        resetMessage += '\n🎯 يمكنك الآن ممارسة جميع الأنشطة بدون انتظار!';
+        
+        const cdResetNotification = await NotificationService.createNotification(
+          userId,
+          'CD_RESET_ACTIVATED',
+          'تم إعادة تعيين أوقات الانتظار',
+          resetMessage,
+          { 
+            reason: 'cd_reset_activated', 
+            resetCount,
+            crimeReset,
+            gymReset,
+            jailReleased,
+            hospitalReleased
+          }
+        );
+        emitNotification(userId, cdResetNotification);
+      } catch (notificationError) {
+        console.error('[SpecialItemService] Notification error for CD reset:', notificationError);
+      }
+    }
+
+    if (effects.gangBomb) {
+      // Gang bomb effect: put all gang members in hospital for 30 minutes
+      effectApplied = true;
+      
+      // Get target gang ID from additional data
+      const targetGangId = additionalData.targetGangId;
+      if (!targetGangId) {
+        throw new Error('يجب تحديد العصابة المستهدفة لاستخدام قنبلة العصابة');
+      }
+      
+      // Get user's gang to prevent self-targeting (optional - user doesn't need to be in a gang)
+      const userGangMember = await GangMember.findOne({
+        where: { userId }
+      });
+      
+      // Prevent self-targeting (only if user is in a gang)
+      if (userGangMember && userGangMember.gangId === parseInt(targetGangId)) {
+        throw new Error('لا يمكنك استهداف عصابة الخاصة بك');
+      }
+      
+      // Get target gang info
+      const targetGang = await Gang.findByPk(targetGangId);
+      if (!targetGang) {
+        throw new Error('العصابة المستهدفة غير موجودة');
+      }
+      
+      // Get user info for notifications
+      const userCharacter = await Character.findOne({ where: { userId } });
+      const bomberName = userCharacter ? userCharacter.name : 'Unknown User';
+      
+      // Get all gang members of the target gang
+      const gangMembers = await GangMember.findAll({
+        where: { 
+          gangId: targetGangId
+        }
+      });
+      
+      if (gangMembers.length === 0) {
+        throw new Error('لا يوجد أعضاء آخرون في العصابة لاستهدافهم');
+      }
+      
+      const hospitalTime = new Date();
+      const hospitalStay = 30; // 30 minutes
+      const hpLoss = 100;
+      
+      // Check if all members are already confined before proceeding
+      let allConfinedCount = 0;
+      for (const member of gangMembers) {
+        const existingHospital = await Hospital.findOne({
+          where: { 
+            userId: member.userId,
+            releasedAt: { [Op.gt]: hospitalTime }
+          }
+        });
+        
+        const existingJail = await Jail.findOne({
+          where: { 
+            userId: member.userId,
+            releasedAt: { [Op.gt]: hospitalTime }
+          }
+        });
+        
+        if (existingHospital || existingJail) {
+          allConfinedCount++;
+        }
+      }
+      
+      // If all members are already confined, don't waste the bomb
+      if (allConfinedCount === gangMembers.length) {
+        throw new Error('جميع أعضاء العصابة المستهدفة محتجزون بالفعل (مستشفى أو سجن). حاول مرة أخرى لاحقاً عندما يكون بعض الأعضاء متاحين.');
+      }
+      
+      let hospitalizedCount = 0;
+      let excludedCount = 0;
+      
+      // Put all gang members in hospital (excluding those already confined)
+      for (const member of gangMembers) {
+        try {
+          // Check if member is already in hospital
+          const existingHospital = await Hospital.findOne({
+            where: { 
+              userId: member.userId,
+              releasedAt: { [Op.gt]: hospitalTime }
+            }
+          });
+          
+          // Check if member is already in jail
+          const existingJail = await Jail.findOne({
+            where: { 
+              userId: member.userId,
+              releasedAt: { [Op.gt]: hospitalTime }
+            }
+          });
+          
+          // Check if member has attack immunity
+          const memberCharacter = await Character.findOne({
+            where: { userId: member.userId }
+          });
+          
+          const hasAttackImmunity = memberCharacter && 
+            memberCharacter.attackImmunityExpiresAt && 
+            new Date(memberCharacter.attackImmunityExpiresAt) > hospitalTime;
+          
+          // Skip if member is already in hospital, jail, or has attack immunity
+          if (existingHospital || existingJail || hasAttackImmunity) {
+            excludedCount++;
+            
+            // Send protection notification if member has attack immunity
+            if (hasAttackImmunity) {
+              try {
+                const protectionNotification = await NotificationService.createGangBombImmunityProtectedNotification(member.userId, targetGang.name, bomberName);
+                emitNotification(member.userId, protectionNotification);
+                console.log('[SpecialItemService] Gang bomb protection notification sent to member:', member.userId);
+              } catch (notificationError) {
+                console.error('[SpecialItemService] Gang bomb protection notification error:', notificationError);
+              }
+            }
+            
+            continue;
+          }
+          
+          // Put member in hospital
+          const hospitalRecord = await Hospital.create({
+            userId: member.userId,
+            minutes: hospitalStay,
+            hpLoss: hpLoss,
+            healRate: 200, // Not used anymore but kept for compatibility
+            startedAt: hospitalTime,
+            releasedAt: new Date(hospitalTime.getTime() + hospitalStay * 60_000),
+          });
+          
+          hospitalizedCount++;
+          
+          // Emit hospital enter event
+          if (io) {
+            io.to(`user:${member.userId}`).emit('hospital:enter', {
+              releaseAt: hospitalRecord.releasedAt,
+              reason: 'gang_bomb',
+            });
+          }
+          
+                                // Send notification to the hospitalized member
+          try {
+            const notification = await NotificationService.createNotification(
+              member.userId,
+              'GANG_BOMB_HOSPITALIZED',
+              'تم إدخالك المستشفى',
+              `تم إدخالك المستشفى بواسطة قنبلة عصابة من ${bomberName}${userGangMember ? ' من عصابة أخرى' : ''}`,
+              { reason: 'gang_bomb', duration: hospitalStay, bomberName, targetGangName: targetGang.name }
+            );
+            emitNotification(member.userId, notification);
+          } catch (notificationError) {
+            console.error('[SpecialItemService] Notification error for gang bomb:', notificationError);
+          }
+        } catch (memberError) {
+          console.error(`[SpecialItemService] Error hospitalizing gang member ${member.userId}:`, memberError);
+          // Continue with other members even if one fails
+        }
+      }
+      
+      // Send notification to gang leader about the bombing
+      if (targetGang.leaderId !== userId) {
+        try {
+          const leaderNotification = await NotificationService.createNotification(
+            targetGang.leaderId,
+            'GANG_BOMBED',
+            'تم قصف العصابة',
+            `تم قصف عصابة ${targetGang.name} بواسطة ${bomberName}${userGangMember ? ' من عصابة أخرى' : ''}. تم إدخال ${hospitalizedCount} عضو المستشفى لمدة 30 دقيقة${excludedCount > 0 ? ` (تم استبعاد ${excludedCount} عضو كانوا محتجزين مسبقاً)` : ''}`,
+            { 
+              reason: 'gang_bombed', 
+              gangName: targetGang.name, 
+              bomberName, 
+              hospitalizedCount, 
+              excludedCount 
+            }
+          );
+          emitNotification(targetGang.leaderId, leaderNotification);
+        } catch (notificationError) {
+          console.error('[SpecialItemService] Notification error for gang leader:', notificationError);
+        }
+      }
+      
+      // Send detailed notification to the bomber about the results
+      try {
+        const totalMembers = gangMembers.length;
+        const successRate = totalMembers > 0 ? Math.round((hospitalizedCount / totalMembers) * 100) : 0;
+        
+        let bomberMessage = `تم استخدام قنبلة العصابة بنجاح ضد عصابة "${targetGang.name}"!\n\n`;
+        bomberMessage += `📊 النتائج:\n`;
+        bomberMessage += `• تم إدخال ${hospitalizedCount} عضو المستشفى لمدة 30 دقيقة\n`;
+        bomberMessage += `• تم استبعاد ${excludedCount} عضو كانوا محتجزين مسبقاً\n`;
+        bomberMessage += `• إجمالي الأعضاء: ${totalMembers}\n`;
+        bomberMessage += `• نسبة النجاح: ${successRate}%\n\n`;
+        bomberMessage += `🎯 العصابة المستهدفة: ${targetGang.name}`;
+        
+        const bomberNotification = await NotificationService.createNotification(
+          userId,
+          'GANG_BOMB_USED',
+          'تم استخدام قنبلة العصابة بنجاح',
+          bomberMessage,
+          { 
+            reason: 'gang_bomb_used', 
+            targetGangName: targetGang.name, 
+            hospitalizedCount, 
+            excludedCount,
+            totalMembers,
+            successRate
+          }
+        );
+        emitNotification(userId, bomberNotification);
+      } catch (notificationError) {
+        console.error('[SpecialItemService] Notification error for bomber:', notificationError);
+      }
+    }
+
     // Save character changes
     await character.save();
 
@@ -152,13 +555,16 @@ export class SpecialItemService {
     if (io) {
       io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
     }
-
     return {
       message: 'تم استخدام العنصر بنجاح',
       item: item,
       effects: effects,
       effectApplied
     };
+    } catch (error) {
+      console.error('[SpecialItemService] Error in useSpecialItem:', error);
+      throw error;
+    }
   }
 
   static async sellSpecialItem(userId, itemId) {
@@ -210,6 +616,16 @@ export class SpecialItemService {
       effect = { health: 'max', energy: 0, duration: 0 };
     } else if (itemData.type === 'ENERGY_POTION') {
       effect = { health: 0, energy: 'max', duration: 0 };
+    } else if (itemData.type === 'EXPERIENCE_POTION') {
+      effect = { health: 0, energy: 0, experience: itemData.effect.experience || 0, duration: 0 };
+    } else if (itemData.type === 'NAME_CHANGE') {
+      effect = { health: 0, energy: 0, experience: 0, nameChange: true, duration: 0 };
+    } else if (itemData.type === 'GANG_BOMB') {
+      effect = { health: 0, energy: 0, experience: 0, gangBomb: true, duration: 0 };
+    } else if (itemData.type === 'ATTACK_IMMUNITY') {
+      effect = { health: 0, energy: 0, experience: 0, attackImmunity: true, duration: itemData.effect.duration || 3600 };
+    } else if (itemData.type === 'CD_RESET') {
+      effect = { health: 0, energy: 0, experience: 0, cdReset: true, duration: 0 };
     }
 
     // Create the special item with auto-set effects

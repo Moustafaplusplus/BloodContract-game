@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 
 const CreateContract = ({ currentUserId, onContractCreated }) => {
   const [targetId, setTargetId] = useState('');
@@ -23,7 +24,8 @@ const CreateContract = ({ currentUserId, onContractCreated }) => {
       .then(res => res.json())
       .then(data => {
         if (data.username) {
-          setTargetUsername(data.username);
+          // Use character name if available, otherwise use username
+          setTargetUsername(data.character?.name || data.username);
         } else {
           setUsernameError('المستخدم غير موجود.');
         }
@@ -61,7 +63,11 @@ const CreateContract = ({ currentUserId, onContractCreated }) => {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || 'فشل إنشاء العقد.');
+        if (data.message?.includes('لا يمكن وضع عقد دم على هذا اللاعب لأنه محمي من الهجمات حالياً')) {
+          toast.error('🛡️ لا يمكن وضع عقد دم على هذا اللاعب لأنه محمي من الهجمات حالياً.');
+        } else {
+          setError(data.message || 'فشل إنشاء العقد.');
+        }
       } else {
         setSuccess('تم إنشاء العقد بنجاح!');
         setTargetId('');

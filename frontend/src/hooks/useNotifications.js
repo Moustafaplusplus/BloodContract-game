@@ -114,38 +114,65 @@ export const useNotifications = () => {
   }, [notifications]);
 
   const addNotification = useCallback((notification) => {
+
     setNotifications(prev => [notification, ...prev]);
     if (!notification.isRead) {
       setUnreadCount(prev => prev + 1);
     }
   }, []);
 
-  // Listen for socket events
+  // Listen for socket events - improved to handle connection state changes
   useEffect(() => {
-    if (!socket || !socket.connected) {
-      console.log('[Notifications] Socket not connected:', { socket: !!socket, connected: socket?.connected });
+    if (!socket) {
+  
       return;
     }
 
-    console.log('[Notifications] Setting up socket listener for notifications');
+
 
     const handleNewNotification = (notification) => {
-      console.log('[Notifications] Received notification via socket:', notification);
+      
       addNotification(notification);
       // Play notification sound
-      const audio = new Audio('/notification.mp3');
-      audio.play().catch(() => {
-        // Ignore audio play errors
-      });
+      try {
+        const audio = new Audio('/notification.mp3');
+        audio.volume = 0.5; // Set volume to 50%
+        audio.play().catch((error) => {
+  
+        });
+      } catch (error) {
+
+      }
     };
 
+    const handleConnect = () => {
+      
+      // Re-fetch unread count when socket connects
+      fetchUnreadCount();
+    };
+
+    const handleDisconnect = () => {
+      
+    };
+
+    // Always set up the notification listener, regardless of connection state
     socket.on('notification', handleNewNotification);
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
+    // If socket is already connected, fetch unread count immediately
+    if (socket.connected) {
+      
+      fetchUnreadCount();
+    }
 
     return () => {
-      console.log('[Notifications] Cleaning up socket listener');
+      
       socket.off('notification', handleNewNotification);
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
     };
-  }, [socket, addNotification]);
+  }, [socket, addNotification, fetchUnreadCount]);
 
   // Initial fetch
   useEffect(() => {

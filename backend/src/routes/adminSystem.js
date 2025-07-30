@@ -12,6 +12,8 @@ router.use(adminAuth);
 
 // User management routes
 router.post('/users/:userId/ban', AdminSystemController.toggleUserBan);
+router.post('/users/:userId/login-token', AdminSystemController.generateUserLoginToken);
+router.get('/users/:userId/inventory', AdminSystemController.getUserInventory);
 
 // IP management routes
 router.get('/users/:userId/ips', AdminSystemController.getUserIps);
@@ -67,6 +69,12 @@ router.get('/vip-packages', AdminSystemController.getAllVIPPackages);
 router.post('/vip-packages', AdminSystemController.createVIPPackage);
 router.put('/vip-packages/:id', AdminSystemController.updateVIPPackage);
 router.delete('/vip-packages/:id', AdminSystemController.deleteVIPPackage);
+
+// Money Package admin
+router.get('/money-packages', AdminSystemController.getAllMoneyPackages);
+router.post('/money-packages', AdminSystemController.createMoneyPackage);
+router.put('/money-packages/:id', AdminSystemController.updateMoneyPackage);
+router.delete('/money-packages/:id', AdminSystemController.deleteMoneyPackage);
 
 // Statistics routes
 router.get('/users/:userId/stats', AdminSystemController.getUserStats);

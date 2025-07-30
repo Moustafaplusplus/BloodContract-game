@@ -1,11 +1,103 @@
-import { Task, UserTaskProgress } from '../models/Task.js';
+import { Task, UserTaskProgress, UserDailyTask } from '../models/Task.js';
 import { PromotionService } from './PromotionService.js';
 import { Character } from '../models/Character.js';
 import { BankAccount } from '../models/Bank.js';
 import { Statistic } from '../models/Statistic.js';
+import { CharacterService } from './CharacterService.js';
 import { Op } from 'sequelize';
 
 export class TaskService {
+  // Check if daily task is available for user
+  static async isDailyTaskAvailable(userId) {
+    const dailyTask = await UserDailyTask.findOne({ where: { userId } });
+    
+    if (!dailyTask) {
+      // First time user, create daily task record
+      await UserDailyTask.create({ userId });
+      return true;
+    }
+    
+    if (!dailyTask.lastClaimDate) {
+      return true;
+    }
+    
+    // Check if 24 hours have passed since last claim
+    const now = new Date();
+    const lastClaim = new Date(dailyTask.lastClaimDate);
+    const hoursDiff = (now - lastClaim) / (1000 * 60 * 60);
+    
+    return hoursDiff >= 24;
+  }
+
+  // Calculate exp reward for daily task (1% of total required exp)
+  static calculateDailyTaskExpReward(character) {
+    // Calculate total exp required for next level using CharacterService
+    const totalExpForNextLevel = CharacterService.calculateExpNeeded(character.level);
+    return Math.floor(totalExpForNextLevel * 0.01); // 1% of required exp
+  }
+
+  // Claim daily task reward
+  static async claimDailyTask(userId) {
+    const character = await Character.findOne({ where: { userId } });
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    const isAvailable = await this.isDailyTaskAvailable(userId);
+    if (!isAvailable) {
+      throw new Error('Daily task not available yet');
+    }
+
+    // Calculate rewards
+    const expReward = this.calculateDailyTaskExpReward(character);
+    const blackcoinReward = 1;
+
+    // Grant rewards
+    character.exp += expReward;
+    character.blackcoins += blackcoinReward;
+    await character.save();
+
+    // Update daily task record
+    let dailyTask = await UserDailyTask.findOne({ where: { userId } });
+    if (!dailyTask) {
+      dailyTask = await UserDailyTask.create({ userId });
+    }
+    
+    dailyTask.lastClaimDate = new Date();
+    dailyTask.isCompleted = true;
+    await dailyTask.save();
+
+    return {
+      expReward,
+      blackcoinReward,
+      newStats: {
+        exp: character.exp,
+        blackcoins: character.blackcoins,
+        level: character.level
+      }
+    };
+  }
+
+  // Get daily task status
+  static async getDailyTaskStatus(userId) {
+    const dailyTask = await UserDailyTask.findOne({ where: { userId } });
+    const isAvailable = await this.isDailyTaskAvailable(userId);
+    
+    if (!dailyTask) {
+      return {
+        isAvailable: true,
+        lastClaimDate: null,
+        isCompleted: false
+      };
+    }
+
+    return {
+      isAvailable,
+      lastClaimDate: dailyTask.lastClaimDate,
+      isCompleted: dailyTask.isCompleted
+    };
+  }
+
   // Check and update task progress based on current character stats
   static async checkAndUpdateTaskProgress(userId) {
     const character = await Character.findOne({ where: { userId } });

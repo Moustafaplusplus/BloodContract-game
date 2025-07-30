@@ -112,13 +112,18 @@ export class NotificationService {
     );
   }
 
-  static async createBankInterestNotification(userId, amount) {
+  static async createBankInterestNotification(userId, amount, isVipBonus = false) {
+    const title = isVipBonus ? 'فائدة بنكية VIP' : 'فائدة بنكية';
+    const content = isVipBonus 
+      ? `حصلت على ${amount.toLocaleString()} فائدة بنكية (مضاعفة بفضل VIP!)`
+      : `حصلت على ${amount.toLocaleString()} فائدة بنكية`;
+    
     return await this.createNotification(
       userId,
       'BANK_INTEREST',
-      'فائدة بنكية',
-      `حصلت على ${amount.toLocaleString()} فائدة بنكية`,
-      { amount }
+      title,
+      content,
+      { amount, isVipBonus }
     );
   }
 
@@ -172,15 +177,7 @@ export class NotificationService {
     );
   }
 
-  static async createCrimeCooldownEndedNotification(userId, crimeName) {
-    return await this.createNotification(
-      userId,
-      'CRIME_COOLDOWN_ENDED',
-      'انتهى وقت الانتظار للجريمة',
-      `يمكنك الآن ارتكاب جريمة ${crimeName} مرة أخرى`,
-      { crimeName }
-    );
-  }
+
 
   static async createGymCooldownEndedNotification(userId, exerciseName) {
     return await this.createNotification(
@@ -279,6 +276,103 @@ export class NotificationService {
       'تم اغتيالك',
       `تم اغتيالك من قبل ${assassinName}`,
       { assassinName }
+    );
+  }
+
+  static async createGhostAssassinatedNotification(userId) {
+    return await this.createNotification(
+      userId,
+      'GHOST_ASSASSINATED',
+      'تم اغتيالك بواسطة القاتل الشبح',
+      'تم اغتيالك بواسطة القاتل الشبح وتم نقلك إلى المستشفى لمدة 30 دقيقة',
+      {}
+    );
+  }
+
+  static async createContractAttemptedNotification(userId, targetName, success) {
+    return await this.createNotification(
+      userId,
+      'CONTRACT_ATTEMPTED',
+      success ? 'تم محاولة تنفيذ العقد بنجاح' : 'فشلت محاولة تنفيذ العقد',
+      success 
+        ? `تم تنفيذ العقد على ${targetName} بنجاح وتم نقله إلى المستشفى`
+        : `فشلت محاولة تنفيذ العقد على ${targetName}`,
+      { targetName, success }
+    );
+  }
+
+  static async createContractExpiredNotification(userId, targetName) {
+    return await this.createNotification(
+      userId,
+      'CONTRACT_EXPIRED',
+      'انتهت صلاحية العقد',
+      `انتهت صلاحية العقد على ${targetName} وتم حذفه`,
+      { targetName }
+    );
+  }
+
+  static async createContractTargetAssassinatedNotification(userId) {
+    return await this.createNotification(
+      userId,
+      'CONTRACT_TARGET_ASSASSINATED',
+      'تم اغتيالك بواسطة عقد',
+      'تم اغتيالك بواسطة عقد وتم نقلك إلى المستشفى لمدة 30 دقيقة',
+      {}
+    );
+  }
+
+  static async createLevelUpNotification(userId, levelsGained, levelUpRewards) {
+    // Calculate total rewards across all levels
+    const totalRewards = levelUpRewards.reduce((total, reward) => ({
+      maxEnergy: total.maxEnergy + reward.maxEnergy,
+      maxHp: total.maxHp + reward.maxHp,
+      strength: total.strength + reward.strength,
+      defense: total.defense + reward.defense,
+      milestoneBonuses: total.milestoneBonuses + (reward.milestoneBonus ? 1 : 0)
+    }), {
+      maxEnergy: 0,
+      maxHp: 0,
+      strength: 0,
+      defense: 0,
+      milestoneBonuses: 0
+    });
+
+    const isMultipleLevels = levelsGained > 1;
+    const hasMilestoneBonus = totalRewards.milestoneBonuses > 0;
+
+    // Create title and content
+    let title, content;
+    
+    if (isMultipleLevels) {
+      title = `مستوى جديد! +${levelsGained}`;
+      content = `لقد ارتقيت ${levelsGained} مستويات!`;
+    } else {
+      title = 'مستوى جديد!';
+      content = `لقد وصلت إلى المستوى ${levelUpRewards[0].level}!`;
+    }
+
+    // Add rewards to content
+    content += `\n\nالمكافآت المكتسبة:\n`;
+    content += `⚡ الطاقة القصوى: +${totalRewards.maxEnergy}\n`;
+    content += `❤️ الصحة القصوى: +${totalRewards.maxHp}\n`;
+    content += `⚔️ القوة: +${totalRewards.strength}\n`;
+    content += `🛡️ الدفاع: +${totalRewards.defense}`;
+
+    if (hasMilestoneBonus) {
+      content += `\n\n⭐ مكافآت إضافية للمستويات الخامسة!`;
+    }
+
+    return await this.createNotification(
+      userId,
+      'LEVEL_UP',
+      title,
+      content,
+      { 
+        levelsGained, 
+        levelUpRewards, 
+        totalRewards,
+        hasMilestoneBonus 
+      }
     );
   }
 }

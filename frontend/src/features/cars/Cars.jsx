@@ -40,7 +40,7 @@ const rarityIcons = {
   legend: '⭐⭐⭐⭐⭐'
 };
 
-function CarCard({ car, isOwned = false, isActive = false, onBuy, onActivate, onSell, buying, activating, selling }) {
+function CarCard({ car, isOwned = false, isActive = false, onBuy, onEquip, onUnequip, onSell, buying, equipping, unequipping, selling }) {
   const rarity = car.rarity?.toLowerCase() || 'common';
   
   return (
@@ -93,12 +93,6 @@ function CarCard({ car, isOwned = false, isActive = false, onBuy, onActivate, on
               <span>دفاع: +{car.defenseBonus}</span>
             </div>
           )}
-          {car.energyRegen > 0 && (
-            <div className="flex items-center text-yellow-400">
-              <Zap className="w-3 h-3 mr-1" />
-              <span>طاقة: +{car.energyRegen}</span>
-            </div>
-          )}
         </div>
 
         {/* Price */}
@@ -130,21 +124,29 @@ function CarCard({ car, isOwned = false, isActive = false, onBuy, onActivate, on
           </button>
         ) : (
           <div className="flex space-x-2 rtl:space-x-reverse">
-            {!isActive && (
+            {isActive ? (
               <button
-                onClick={() => onActivate(car.id)}
-                disabled={activating === car.id}
+                onClick={() => onUnequip()}
+                disabled={unequipping}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
+              >
+                <Settings className="w-3 h-3 mr-1" />
+                {unequipping ? '...جاري الإلغاء' : 'إلغاء التفعيل'}
+              </button>
+            ) : (
+              <button
+                onClick={() => onEquip(car.id)}
+                disabled={equipping === car.id}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
               >
                 <Settings className="w-3 h-3 mr-1" />
-                {activating === car.id ? '...جاري التفعيل' : 'تفعيل'}
+                {equipping === car.id ? '...جاري التفعيل' : 'تفعيل'}
               </button>
             )}
             <button
               onClick={() => onSell(car.id)}
-              disabled={selling === car.id || isActive}
+              disabled={selling === car.id}
               className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center border border-accent-red disabled:opacity-60"
-              title={isActive ? 'لا يمكنك بيع السيارة الحالية' : ''}
             >
               <Trash2 className="w-3 h-3 mr-1" />
               {selling === car.id ? '...جاري البيع' : 'بيع'}
@@ -162,6 +164,7 @@ export default function Cars() {
   const [activating, setActivating] = useState(null);
   const [selling, setSelling] = useState(null);
   const [buying, setBuying] = useState(null);
+  const [unequipping, setUnequipping] = useState(null);
 
   // Fetch all available cars (market) - only regular money cars
   const {
@@ -170,7 +173,7 @@ export default function Cars() {
     error: carsError
   } = useQuery({
     queryKey: ['cars'],
-    queryFn: () => axios.get('/api/cars').then(res => res.data.filter(car => car.currency === 'money')),
+    queryFn: () => axios.get('/api/cars').then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -196,7 +199,7 @@ export default function Cars() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Activate car mutation
+  // Activate car mutation (equip)
   const activateMutation = useMutation({
     mutationFn: (carId) => axios.post(`/api/cars/${carId}/activate`).then(res => res.data),
     onMutate: (carId) => setActivating(carId),
@@ -209,13 +212,27 @@ export default function Cars() {
     onError: (error) => toast.error(extractErrorMessage(error)),
   });
 
+  // Deactivate car mutation (unequip)
+  const deactivateMutation = useMutation({
+    mutationFn: () => axios.post('/api/cars/deactivate').then(res => res.data),
+    onMutate: () => setUnequipping(true),
+    onSettled: () => setUnequipping(null),
+    onSuccess: () => {
+      toast.success('تم إلغاء تفعيل السيارة!');
+      queryClient.invalidateQueries(['character']);
+      queryClient.invalidateQueries(['owned-cars']);
+    },
+    onError: (error) => toast.error(extractErrorMessage(error)),
+  });
+
   // Sell car mutation
   const sellMutation = useMutation({
     mutationFn: (carId) => axios.delete(`/api/cars/${carId}/sell`).then(res => res.data),
     onMutate: (carId) => setSelling(carId),
     onSettled: () => setSelling(null),
     onSuccess: (data) => {
-      toast.success(`تم بيع السيارة! حصلت على ${data.refund} نقود`);
+      const currencyText = data.currency === 'blackcoin' ? 'عملة سوداء' : 'نقود';
+      toast.success(`تم بيع السيارة! حصلت على ${data.refund} ${currencyText}`);
       queryClient.invalidateQueries(['owned-cars']);
       queryClient.invalidateQueries(['character']);
     },
@@ -316,9 +333,11 @@ export default function Cars() {
                     car={carData}
                     isOwned={true}
                     isActive={carIsActive}
-                    onActivate={activateMutation.mutate}
+                    onEquip={activateMutation.mutate}
+                    onUnequip={deactivateMutation.mutate}
                     onSell={sellMutation.mutate}
-                    activating={activating}
+                    equipping={activating}
+                    unequipping={unequipping}
                     selling={selling}
                   />
                 ))}
@@ -338,7 +357,9 @@ export default function Cars() {
                   isOwned={isOwned(car.id)}
                   isActive={isActive(car.id)}
                   onBuy={buyMutation.mutate}
+                  onUnequip={deactivateMutation.mutate}
                   buying={buying}
+                  unequipping={unequipping}
                 />
               ))}
             </div>

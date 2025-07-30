@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sword, User, Clock, AlertTriangle } from 'lucide-react';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+import VipName from '../profile/VipName.jsx';
 
 const API = import.meta.env.VITE_API_URL;
 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
@@ -154,12 +155,17 @@ export default function ActivePlayers() {
                       />
                     ) : null}
                     {/* Fallback icon when no avatar or image fails to load */}
-                    <div className={`absolute inset-0 w-14 h-14 rounded-full border-4 border-accent-red bg-hitman-800 flex items-center justify-center ${getAvatarUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
-                      <User className="w-6 h-6 text-accent-red" />
+                    <div className={`absolute inset-0 w-14 h-14 rounded-full border-4 border-accent-red bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getAvatarUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
+                      <span className="text-lg font-bold text-accent-red">
+                        {(user.name || user.username || "?")[0]}
+                      </span>
                     </div>
                   </div>
                   <div>
-                    <div className="font-bold text-lg text-white">{user.username}</div>
+                    <div className="font-bold text-lg text-white flex items-center gap-2">
+                      <VipName user={user} />
+                      <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded font-bold">ID: {user.userId}</span>
+                    </div>
                     <div className="text-accent-red font-bold">المستوى {user.level}</div>
                     <div className="text-xs text-hitman-400 flex items-center gap-1"><Clock className="w-4 h-4 inline" /> آخر ظهور: {formatLastSeen(user.lastActive)}</div>
                     {xpWarning && (

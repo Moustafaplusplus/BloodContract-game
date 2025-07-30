@@ -20,6 +20,7 @@ export const Crime = sequelize.define("crime", {
   failOutcome:     { type: DataTypes.ENUM("jail", "hospital", "both"), defaultValue: "both" },
   jailMinutes:     { type: DataTypes.INTEGER, defaultValue: 3 },
   hospitalMinutes: { type: DataTypes.INTEGER, defaultValue: 2 },
+  hpLoss:          { type: DataTypes.INTEGER, defaultValue: 50 },
 });
 
 export const CrimeLog = sequelize.define("CrimeLog", {

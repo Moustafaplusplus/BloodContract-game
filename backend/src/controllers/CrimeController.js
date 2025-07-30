@@ -48,9 +48,11 @@ export class CrimeController {
         return res.status(400).json({ error: "crimeId required" });
       }
 
+      console.log(`[CrimeController] Executing crime ${crimeId} for user ${req.user.id}`);
       const result = await CrimeService.executeCrime(req.user.id, crimeId);
       res.json(result);
     } catch (error) {
+      console.error(`[CrimeController] Error executing crime:`, error);
       const status = error.status || 500;
       res.status(status).json({ 
         error: error.msg || "Server error", 

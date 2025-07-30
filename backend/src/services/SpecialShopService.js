@@ -3,6 +3,7 @@ import { Character } from '../models/Character.js';
 import { InventoryItem } from '../models/Inventory.js';
 import { User } from '../models/User.js';
 import { BlackcoinPackage, BlackcoinTransaction } from '../models/Blackcoin.js';
+import { MoneyPackage } from '../models/MoneyPackage.js';
 import { SpecialItem } from '../models/SpecialItem.js';
 import { sequelize } from '../config/db.js';
 
@@ -16,6 +17,84 @@ export class SpecialShopService {
   
   static async getAllSpecialItems(filter = {}) {
     return await SpecialItem.findAll({ where: { ...filter, isAvailable: true } });
+  }
+
+  // Purchase weapon from special shop (blackcoin only)
+  static async purchaseWeapon(userId, weaponId, quantity = 1) {
+    const weapon = await Weapon.findByPk(weaponId);
+    if (!weapon || weapon.currency !== 'blackcoin') {
+      throw new Error('السلاح غير موجود');
+    }
+    
+    const char = await Character.findOne({ where: { userId } });
+    if (!char) {
+      throw new Error('الشخصية غير موجودة');
+    }
+    
+    const totalPrice = weapon.price * quantity;
+    if (char.blackcoins < totalPrice) {
+      throw new Error('لا تملك عملة سوداء كافية');
+    }
+    
+    // Deduct blackcoins
+    char.blackcoins -= totalPrice;
+    await char.save();
+    
+    // Add to inventory
+    const item = await InventoryItem.findOne({ 
+      where: { userId, itemType: 'weapon', itemId: weapon.id } 
+    });
+    if (item) {
+      await item.update({ quantity: item.quantity + quantity });
+    } else {
+      await InventoryItem.create({ userId, itemType: 'weapon', itemId: weapon.id, quantity });
+    }
+    
+    return { 
+      message: 'تم شراء السلاح', 
+      itemId: weapon.id, 
+      quantity, 
+      remainingBlackcoins: char.blackcoins 
+    };
+  }
+
+  // Purchase armor from special shop (blackcoin only)
+  static async purchaseArmor(userId, armorId, quantity = 1) {
+    const armor = await Armor.findByPk(armorId);
+    if (!armor || armor.currency !== 'blackcoin') {
+      throw new Error('الدرع غير موجود');
+    }
+    
+    const char = await Character.findOne({ where: { userId } });
+    if (!char) {
+      throw new Error('الشخصية غير موجودة');
+    }
+    
+    const totalPrice = armor.price * quantity;
+    if (char.blackcoins < totalPrice) {
+      throw new Error('لا تملك عملة سوداء كافية');
+    }
+    
+    // Deduct blackcoins
+    char.blackcoins -= totalPrice;
+    await char.save();
+    
+    // Add to inventory
+    const item = await InventoryItem.findOne({ 
+      where: { userId, itemType: 'armor', itemId: armor.id } 
+    });
+    if (item) {
+      await item.update({ quantity: item.quantity + quantity });
+    } else {
+      await InventoryItem.create({ userId, itemType: 'armor', itemId: armor.id, quantity });
+    }
+    
+    return { 
+      message: 'تم شراء الدرع', 
+      itemId: armor.id, 
+      quantity, 
+      remainingBlackcoins: char.blackcoins 
+    };
   }
   static async purchaseVIP(userId, packageId) {
     const user = await User.findByPk(userId);
@@ -44,6 +123,39 @@ export class SpecialShopService {
       where: { isActive: true },
       order: [['usdPrice', 'ASC']]
     });
+  }
+
+  static async getMoneyPackages() {
+    return await MoneyPackage.findAll({
+      where: { isActive: true },
+      order: [['blackcoinCost', 'ASC']]
+    });
+  }
+
+  static async purchaseMoney(userId, packageId) {
+    const char = await Character.findOne({ where: { userId } });
+    if (!char) throw new Error('الشخصية غير موجودة');
+    
+    const pkg = await MoneyPackage.findByPk(packageId);
+    if (!pkg || !pkg.isActive) throw new Error('باقة المال غير متاحة');
+    
+    if (char.blackcoins < pkg.blackcoinCost) throw new Error('لا تملك عملة سوداء كافية');
+    
+    const totalMoney = pkg.moneyAmount + (pkg.bonus || 0);
+    
+    char.blackcoins -= pkg.blackcoinCost;
+    char.money += totalMoney;
+    
+    await char.save();
+    
+    return { 
+      message: 'تم شراء المال بنجاح', 
+      package: pkg,
+      moneyGranted: totalMoney,
+      blackcoinsSpent: pkg.blackcoinCost,
+      newMoneyBalance: char.money,
+      newBlackcoinBalance: char.blackcoins 
+    };
   }
   static async purchaseBlackcoin(userId, packageId) {
     const t = await sequelize.transaction();
@@ -87,8 +199,18 @@ export class SpecialShopService {
     }
   }
   static async purchaseSpecialItem(userId, itemId, quantity = 1) {
+    // First check if it's a special item
+    const specialItem = await SpecialItem.findByPk(itemId);
+    if (specialItem && specialItem.currency === 'blackcoin') {
+      // Use the SpecialItemService for special items
+      const { SpecialItemService } = await import('./SpecialItemService.js');
+      return await SpecialItemService.purchaseSpecialItem(userId, itemId, quantity);
+    }
+    
+    // If not a special item, check if it's a weapon or armor
     const char = await Character.findOne({ where: { userId } });
     if (!char) throw new Error('المستخدم غير موجود');
+    
     let item = await Weapon.findOne({ where: { id: itemId, currency: 'blackcoin' } });
     let slot = 'weapon';
     if (!item) {
@@ -96,16 +218,20 @@ export class SpecialShopService {
       slot = 'armor';
     }
     if (!item) throw new Error('العنصر غير موجود');
+    
     const totalPrice = item.price * quantity;
     if (char.blackcoins < totalPrice) throw new Error('لا تملك عملة سوداء كافية');
+    
     char.blackcoins -= totalPrice;
     await char.save();
+    
     const invItem = await InventoryItem.findOne({ where: { userId, itemType: slot, itemId } });
     if (invItem) {
       await invItem.update({ quantity: invItem.quantity + quantity });
     } else {
       await InventoryItem.create({ userId, itemType: slot, itemId, quantity });
     }
+    
     return { message: 'تم شراء العنصر الخاص', itemId, quantity, remainingBlackcoins: char.blackcoins };
   }
 } 

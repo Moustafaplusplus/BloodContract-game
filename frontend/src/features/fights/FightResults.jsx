@@ -169,11 +169,9 @@ export default function FightResults() {
                 <div className="flex-1 text-center">
                   <div className="text-2xl font-bold text-accent-red mb-2">الفائز</div>
                   <div className="text-3xl font-bouya mb-1">
-                    <VipName isVIP={winner?.isVIP} className="compact">
-                      {winner?.name || "؟"}
-                    </VipName>
+                    <VipName user={winner} />
                   </div>
-                  <div className="text-hitman-300 text-lg">@{winner?.username}</div>
+                  <div className="text-hitman-300 text-lg">@{winner?.name || winner?.username}</div>
                 </div>
                 <div className="flex-1 text-center">
                   <div className="text-2xl font-bold text-accent-yellow mb-2">الجولات</div>

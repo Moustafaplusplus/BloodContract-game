@@ -7,7 +7,7 @@ import { Statistic } from '../models/Statistic.js';
 // Centralized character attributes for reuse
 const CHARACTER_ATTRIBUTES = [
   'id', 'userId', 'name', 'level', 'exp', 'money', 'strength', 'defense', 'energy', 'maxEnergy', 'hp', 'maxHp',
-  'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote'
+  'equippedHouseId', 'gangId', 'daysInGame', 'avatarUrl', 'killCount', 'lastActive', 'buffs', 'quote', 'attackImmunityExpiresAt', 'vipExpiresAt'
 ];
 
 // Helper to get fightsLost and fame
@@ -32,18 +32,55 @@ async function enrichCharacter(character) {
   }
 }
 
+// Helper to sanitize user data for public display
+function sanitizeUserData(userObj) {
+  const sanitized = { ...userObj };
+  // Remove sensitive fields
+  delete sanitized.email;
+  delete sanitized.age;
+  delete sanitized.gender;
+  delete sanitized.bio;
+  delete sanitized.password;
+  delete sanitized.googleId;
+  delete sanitized.isBanned;
+  delete sanitized.banReason;
+  delete sanitized.bannedAt;
+  delete sanitized.isIpBanned;
+  delete sanitized.ipBanReason;
+  delete sanitized.ipBannedAt;
+  delete sanitized.lastIpAddress;
+  delete sanitized.chatMutedUntil;
+  delete sanitized.chatBannedUntil;
+  // Keep safe fields: username, avatarUrl, isAdmin, isVip, money, blackcoins
+  return sanitized;
+}
+
 export class ProfileService {
-  // Get user profile by ID
   // Get user profile by ID
   static async getUserProfile(userId) {
     try {
       const user = await User.findByPk(userId, {
         include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
       });
-      if (!user || !user.Character) throw new Error('User or Character not found');
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      // If user exists but character doesn't, create one
+      if (!user.Character) {
+        console.log(`[ProfileService] Character not found for user ${userId}, creating one...`);
+        const character = await Character.create({
+          userId: user.id,
+          name: user.username
+        });
+        user.Character = character;
+      }
+      
       const userObj = user.toJSON();
-      delete userObj.email;
+      const sanitizedUser = sanitizeUserData(userObj);
       const { fightsLost, fame } = await enrichCharacter(user.Character);
+      
       // Fetch assassinations stat
       let assassinations = 0;
       try {
@@ -53,18 +90,45 @@ export class ProfileService {
         console.error('[ProfileService] Error fetching statistics:', statError);
         assassinations = 0;
       }
+      
       if (!userObj.Character) {
-        return { ...userObj, fame, fightsLost, assassinations, isVIP: false };
+        return { ...sanitizedUser, fame, fightsLost, assassinations, isVIP: false };
       }
-      const rest = { ...userObj };
+      
+      const rest = { ...sanitizedUser };
       delete rest.Character;
-      // Only spread plain character data, not Sequelize instance
-      const characterData = typeof userObj.Character.toJSON === 'function'
-        ? userObj.Character.toJSON()
-        : userObj.Character;
+      
+      // Clean character data - only include the actual character fields, not Sequelize metadata
+      const characterData = {
+        id: userObj.Character.id,
+        userId: userObj.Character.userId,
+        name: userObj.Character.name,
+        level: userObj.Character.level,
+        exp: userObj.Character.exp,
+        money: userObj.Character.money,
+        strength: userObj.Character.strength,
+        defense: userObj.Character.defense,
+        energy: userObj.Character.energy,
+        maxEnergy: userObj.Character.maxEnergy,
+        hp: userObj.Character.hp,
+        maxHp: userObj.Character.maxHp,
+        equippedHouseId: userObj.Character.equippedHouseId,
+        gangId: userObj.Character.gangId,
+        daysInGame: userObj.Character.daysInGame,
+        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl,
+        killCount: userObj.Character.killCount,
+        lastActive: userObj.Character.lastActive,
+        buffs: userObj.Character.buffs,
+        quote: userObj.Character.quote,
+        vipExpiresAt: userObj.Character.vipExpiresAt,
+        attackImmunityExpiresAt: userObj.Character.attackImmunityExpiresAt
+      };
+      
       return {
         ...rest,
         ...characterData,
+        // Prioritize character name over username for display
+        displayName: characterData.name || sanitizedUser.username,
         isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
         fame,
         fightsLost,
@@ -85,7 +149,7 @@ export class ProfileService {
       });
       if (!user || !user.Character) throw new Error('User or Character not found');
       const userObj = user.toJSON();
-      delete userObj.email;
+      const sanitizedUser = sanitizeUserData(userObj);
       const { fightsLost, fame } = await enrichCharacter(user.Character);
       // Fetch assassinations stat
       let assassinations = 0;
@@ -97,17 +161,40 @@ export class ProfileService {
         assassinations = 0;
       }
       if (!userObj.Character) {
-        return { ...userObj, fame, fightsLost, assassinations, isVIP: false };
+        return { ...sanitizedUser, fame, fightsLost, assassinations, isVIP: false };
       }
-      const rest = { ...userObj };
+      const rest = { ...sanitizedUser };
       delete rest.Character;
-      // Only spread plain character data, not Sequelize instance
-      const characterData = typeof userObj.Character.toJSON === 'function'
-        ? userObj.Character.toJSON()
-        : userObj.Character;
+      // Clean character data - only include the actual character fields, not Sequelize metadata
+      const characterData = {
+        id: userObj.Character.id,
+        userId: userObj.Character.userId,
+        name: userObj.Character.name,
+        level: userObj.Character.level,
+        exp: userObj.Character.exp,
+        money: userObj.Character.money,
+        strength: userObj.Character.strength,
+        defense: userObj.Character.defense,
+        energy: userObj.Character.energy,
+        maxEnergy: userObj.Character.maxEnergy,
+        hp: userObj.Character.hp,
+        maxHp: userObj.Character.maxHp,
+        equippedHouseId: userObj.Character.equippedHouseId,
+        gangId: userObj.Character.gangId,
+        daysInGame: userObj.Character.daysInGame,
+        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl,
+        killCount: userObj.Character.killCount,
+        lastActive: userObj.Character.lastActive,
+        buffs: userObj.Character.buffs,
+        quote: userObj.Character.quote,
+        vipExpiresAt: userObj.Character.vipExpiresAt,
+        attackImmunityExpiresAt: userObj.Character.attackImmunityExpiresAt
+      };
       return {
         ...rest,
         ...characterData,
+        // Prioritize character name over username for display
+        displayName: characterData.name || sanitizedUser.username,
         isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
         fame,
         fightsLost,
@@ -145,7 +232,7 @@ export class ProfileService {
   }
 
   // Search users by criteria
-  static async searchUsers({ sort = 'level', limit = 50, ...filters } = {}) {
+  static async searchUsers({ sort = 'level', limit = 50, query, ...filters } = {}) {
     // Build query options
     const queryOptions = {
       include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }],
@@ -153,26 +240,150 @@ export class ProfileService {
       limit: Number(limit) || 50,
       where: {}
     };
-    // Add filters to query if needed
-    for (const key in filters) {
-      if (filters[key] !== undefined) queryOptions.where[key] = filters[key];
+    
+    // Handle search query - search by both username and character name
+    if (query && query.trim()) {
+      const searchQuery = query.trim();
+      queryOptions.where = {
+        [Op.or]: [
+          { username: { [Op.like]: `%${searchQuery}%` } },
+          { '$Character.name$': { [Op.like]: `%${searchQuery}%` } }
+        ]
+      };
     }
+    
+    // Add other filters to query if needed
+    for (const key in filters) {
+      if (filters[key] !== undefined) {
+        if (queryOptions.where[Op.or]) {
+          // If we already have an OR condition, add the new filter to it
+          queryOptions.where[Op.and] = [
+            queryOptions.where,
+            { [key]: filters[key] }
+          ];
+          delete queryOptions.where[Op.or];
+        } else {
+          queryOptions.where[key] = filters[key];
+        }
+      }
+    }
+    
     const users = await User.findAll(queryOptions);
     // Remove email and enrich character
     return Promise.all(users.map(async user => {
       const userObj = user.toJSON();
-      delete userObj.email;
+      const sanitizedUser = sanitizeUserData(userObj);
       const { fightsLost, fame } = await enrichCharacter(user.Character);
-      if (!userObj.Character) return { ...userObj, fame, fightsLost, isVIP: false };
-      const { Character, ...rest } = userObj;
+      
+      if (!userObj.Character) {
+        return { 
+          ...sanitizedUser, 
+          fame, 
+          fightsLost, 
+          isVIP: false 
+        };
+      }
+      
+      // Clean character data - only include the actual character fields, not Sequelize metadata
+      const characterData = {
+        id: userObj.Character.id,
+        userId: userObj.Character.userId,
+        name: userObj.Character.name,
+        level: userObj.Character.level,
+        exp: userObj.Character.exp,
+        money: userObj.Character.money,
+        strength: userObj.Character.strength,
+        defense: userObj.Character.defense,
+        energy: userObj.Character.energy,
+        maxEnergy: userObj.Character.maxEnergy,
+        hp: userObj.Character.hp,
+        maxHp: userObj.Character.maxHp,
+        equippedHouseId: userObj.Character.equippedHouseId,
+        gangId: userObj.Character.gangId,
+        daysInGame: userObj.Character.daysInGame,
+        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl,
+        killCount: userObj.Character.killCount,
+        lastActive: userObj.Character.lastActive,
+        buffs: userObj.Character.buffs,
+        quote: userObj.Character.quote,
+        vipExpiresAt: userObj.Character.vipExpiresAt
+      };
+      
       return {
-        ...rest,
-        ...Character,
-        isVIP: Character.vipExpiresAt && new Date(Character.vipExpiresAt) > new Date(),
+        ...sanitizedUser,
+        ...characterData,
+        // Prioritize character name over username for display
+        displayName: characterData.name || sanitizedUser.username,
+        isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
+        fame,
+        fightsLost,
+      };
+    }));
+  }
+
+  // Get top players by metric
+  static async getTopPlayers(metric = 'level', limit = 50) {
+    const validMetrics = ['level', 'money', 'strength', 'defense', 'killCount', 'crimesCommitted'];
+    if (!validMetrics.includes(metric)) {
+      throw new Error('Invalid metric');
+    }
+
+    const queryOptions = {
+      include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }],
+      order: [[{ model: Character }, metric, 'DESC']],
+      limit: Number(limit) || 50,
+    };
+
+    const users = await User.findAll(queryOptions);
+    
+    return Promise.all(users.map(async user => {
+      const userObj = user.toJSON();
+      const sanitizedUser = sanitizeUserData(userObj);
+      const { fightsLost, fame } = await enrichCharacter(user.Character);
+      
+      if (!userObj.Character) {
+        return { 
+          ...sanitizedUser, 
+          fame, 
+          fightsLost, 
+          isVIP: false 
+        };
+      }
+      
+      // Clean character data - only include the actual character fields, not Sequelize metadata
+      const characterData = {
+        id: userObj.Character.id,
+        userId: userObj.Character.userId,
+        name: userObj.Character.name,
+        level: userObj.Character.level,
+        exp: userObj.Character.exp,
+        money: userObj.Character.money,
+        strength: userObj.Character.strength,
+        defense: userObj.Character.defense,
+        energy: userObj.Character.energy,
+        maxEnergy: userObj.Character.maxEnergy,
+        hp: userObj.Character.hp,
+        maxHp: userObj.Character.maxHp,
+        equippedHouseId: userObj.Character.equippedHouseId,
+        gangId: userObj.Character.gangId,
+        daysInGame: userObj.Character.daysInGame,
+        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl,
+        killCount: userObj.Character.killCount,
+        lastActive: userObj.Character.lastActive,
+        buffs: userObj.Character.buffs,
+        quote: userObj.Character.quote,
+        vipExpiresAt: userObj.Character.vipExpiresAt
+      };
+      
+      return {
+        ...sanitizedUser,
+        ...characterData,
+        // Prioritize character name over username for display
+        displayName: characterData.name || sanitizedUser.username,
+        isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
         fame,
         fightsLost,
       };
     }));
   }
 }
-// ...existing code...

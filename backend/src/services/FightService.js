@@ -343,6 +343,23 @@ export class FightService {
           if (!atkChar || !defChar) {
             throw new Error("الشخصية غير موجودة");
           }
+          
+          // Check if defender has attack immunity
+          if (defChar.attackImmunityExpiresAt && new Date(defChar.attackImmunityExpiresAt) > now) {
+            // Get attacker's name for notification
+            const attackerName = atkChar?.name || 'Unknown';
+            
+            // Send notification to the protected player
+            try {
+              const protectionNotification = await NotificationService.createAttackImmunityProtectedNotification(defChar.userId, 'direct_attack', attackerName);
+              emitNotification(defChar.userId, protectionNotification);
+              console.log('[FightService] Protection notification sent to defender:', defChar.userId);
+            } catch (notificationError) {
+              console.error('[FightService] Protection notification error:', notificationError);
+            }
+            throw new Error("لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً");
+          }
+          
           // Fetch usernames and fame
           [atkUser, defUser] = await Promise.all([
             User.findByPk(attackerId, { attributes: ["username"], transaction: t }),
@@ -381,6 +398,7 @@ export class FightService {
             winnerChar = defChar;
             loserChar = atkChar;
           }
+          console.log('[FightService] Winner:', winnerChar.userId, 'Loser:', loserChar.userId);
           const stealPercent = 0.3 + Math.random() * 0.1; // 30-40%
           const amountStolen = Math.floor(loserChar.money * stealPercent);
           if (amountStolen > 0) {
@@ -409,9 +427,11 @@ export class FightService {
             result,
             isAttackerWinner
           );
+          // Update XP and killCount for both players
           if (result.winner.userId === atkChar.userId) {
             atkChar.exp = Math.floor(atkChar.exp + xpGain);
-            atkChar.killCount = Math.floor((atkChar.killCount || 0) + 1);
+            atkChar.killCount = Math.floor((atkChar.killCount || 0) + 1); // Winner gets kill
+            console.log('[FightService] Attacker won - killCount updated to:', atkChar.killCount);
             // Handle level up separately to avoid transaction issues
             try {
               await CharacterService.maybeLevelUp(atkChar);
@@ -422,7 +442,8 @@ export class FightService {
             await TaskService.updateProgress(atkChar.userId, 'kill_count', 1, t);
           } else {
             defChar.exp = Math.floor(defChar.exp + xpGain);
-            defChar.killCount = Math.floor((defChar.killCount || 0) + 1);
+            defChar.killCount = Math.floor((defChar.killCount || 0) + 1); // Winner gets kill
+            console.log('[FightService] Defender won - killCount updated to:', defChar.killCount);
             // Handle level up separately to avoid transaction issues
             try {
               await CharacterService.maybeLevelUp(defChar);
@@ -441,6 +462,7 @@ export class FightService {
           winnerChar.killCount = Math.floor(winnerChar.killCount || 0);
           loserChar.killCount = Math.floor(loserChar.killCount || 0);
           
+          // Save winner and loser characters
           await winnerChar.save({ transaction: t });
           await loserChar.save({ transaction: t });
           // Add additional data to result for frontend
@@ -448,13 +470,73 @@ export class FightService {
           result.narrative = narrative;
           result.xpGain = xpGain;
 
+          // Hospital logic: send to hospital if final HP is 0 or negative (fixed 20 minutes)
+          const hospitalTime = new Date();
+          try {
+            console.log('[FightService] Hospital check - Attacker final HP:', result.attackerFinalHp, 'Defender final HP:', result.defenderFinalHp);
+            
+            if (result.attackerFinalHp <= 0) {
+              console.log('[FightService] Sending attacker to hospital');
+              // Fixed hospital stay: 20 minutes
+              const hospitalStay = 20;
+              const hpLoss = 100; // Fixed HP loss
+              
+              const hospitalRecord = await Hospital.create({
+                userId: atkChar.userId,
+                minutes: hospitalStay,
+                hpLoss: hpLoss,
+                healRate: 200, // Not used anymore but kept for compatibility
+                startedAt: hospitalTime,
+                releasedAt: new Date(hospitalTime.getTime() + hospitalStay * 60_000),
+              }, { transaction: t });
+              if (io) {
+                io.to(`user:${atkChar.userId}`).emit('hospital:enter', {
+                  releaseAt: hospitalRecord.releasedAt,
+                  reason: 'fight',
+                });
+              }
+            }
+            if (result.defenderFinalHp <= 0) {
+              console.log('[FightService] Sending defender to hospital');
+              // Fixed hospital stay: 20 minutes
+              const hospitalStay = 20;
+              const hpLoss = 100; // Fixed HP loss
+              
+              const hospitalRecord = await Hospital.create({
+                userId: defChar.userId,
+                minutes: hospitalStay,
+                hpLoss: hpLoss,
+                healRate: 200, // Not used anymore but kept for compatibility
+                startedAt: hospitalTime,
+                releasedAt: new Date(hospitalTime.getTime() + hospitalStay * 60_000),
+              }, { transaction: t });
+              if (io) {
+                io.to(`user:${defChar.userId}`).emit('hospital:enter', {
+                  releaseAt: hospitalRecord.releasedAt,
+                  reason: 'fight',
+                });
+              }
+            }
+          } catch (hospitalError) {
+            console.error('[FightService] Hospital creation error:', hospitalError);
+            // Continue with the fight even if hospital creation fails
+          }
+
           // Persist new HP values (can't go below 0)
           atkChar.hp = Math.floor(Math.max(result.attackerFinalHp, 0));
           defChar.hp = Math.floor(Math.max(result.defenderFinalHp, 0));
           
-          // Ensure HP values are integers
+          // Ensure HP values are integers and properly rounded
           atkChar.hp = Math.floor(atkChar.hp);
           defChar.hp = Math.floor(defChar.hp);
+          
+          // Debug logging for HP values
+          console.log('[FightService] Final HP values:', {
+            attackerId: atkChar.userId,
+            attackerHp: atkChar.hp,
+            defenderId: defChar.userId,
+            defenderHp: defChar.hp
+          });
           
           await Promise.all([
             atkChar.save({ transaction: t }), 
@@ -502,58 +584,6 @@ export class FightService {
           console.log('[FightService] Task updates completed');
           // --- END TASKS ---
 
-          // Hospital logic: send to hospital if HP is 0
-          const hospitalTime = new Date();
-          try {
-            if (atkChar.hp === 0) {
-              // Dynamic hospital stay based on level
-              const levelMultiplier = Math.max(0.5, Math.min(2.0, atkChar.level / 10));
-              const hospitalStay = Math.round(3 * levelMultiplier); // Base 3 minutes
-              const hpLoss = Math.round(20 * levelMultiplier);
-              const healRate = Math.round(3 * levelMultiplier);
-              
-              const hospitalRecord = await Hospital.create({
-                userId: atkChar.userId,
-                minutes: hospitalStay,
-                hpLoss: hpLoss,
-                healRate: healRate,
-                startedAt: hospitalTime,
-                releasedAt: new Date(hospitalTime.getTime() + hospitalStay * 60_000),
-              }, { transaction: t });
-              if (io) {
-                io.to(`user:${atkChar.userId}`).emit('hospital:enter', {
-                  releaseAt: hospitalRecord.releasedAt,
-                  reason: 'fight',
-                });
-              }
-            }
-            if (defChar.hp === 0) {
-              // Dynamic hospital stay based on level
-              const levelMultiplier = Math.max(0.5, Math.min(2.0, defChar.level / 10));
-              const hospitalStay = Math.round(3 * levelMultiplier); // Base 3 minutes
-              const hpLoss = Math.round(20 * levelMultiplier);
-              const healRate = Math.round(3 * levelMultiplier);
-              
-              const hospitalRecord = await Hospital.create({
-                userId: defChar.userId,
-                minutes: hospitalStay,
-                hpLoss: hpLoss,
-                healRate: healRate,
-                startedAt: hospitalTime,
-                releasedAt: new Date(hospitalTime.getTime() + hospitalStay * 60_000),
-              }, { transaction: t });
-              if (io) {
-                io.to(`user:${defChar.userId}`).emit('hospital:enter', {
-                  releaseAt: hospitalRecord.releasedAt,
-                  reason: 'fight',
-                });
-              }
-            }
-          } catch (hospitalError) {
-            console.error('[FightService] Hospital creation error:', hospitalError);
-            // Continue with the fight even if hospital creation fails
-          }
-
           try {
             await CharacterService.addStat(attackerId, "fights", 1, t);
 
@@ -590,40 +620,34 @@ export class FightService {
             io.to(`user:${defenderId}`).emit("fightResult", result);
           }
 
-          // Create notifications for both players
+          // Create notification only for the person who was attacked (loser)
           try {
             const winnerId = result.winner.userId;
             const loserId = (winnerId === attackerId) ? defenderId : attackerId;
             
-            // Notification for the winner
-            const winnerNotification = await NotificationService.createNotification(
-              winnerId,
+            // Notify the person who was attacked with dynamic result
+            const attackedUserId = defenderId; // The person who was attacked
+            const isAttackedPersonWinner = result.winner.userId === defenderId;
+            const attackerName = atkUser.username;
+            const damageReceived = Math.floor(isAttackedPersonWinner ? result.attackerDamage : result.defenderDamage);
+            
+            const attackedNotification = await NotificationService.createNotification(
+              attackedUserId,
               'ATTACKED',
-              'فزت في المعركة',
-              `فزت في المعركة ضد ${result.winner.userId === attackerId ? defUser.username : atkUser.username} وحصلت على ${Math.floor(xpGain)} خبرة`,
+              isAttackedPersonWinner ? 'فزت في الدفاع' : 'خسرت في الدفاع',
+              isAttackedPersonWinner 
+                ? `تم الهجوم عليك من قبل ${attackerName} ولكنك فزت وتلقيت ${damageReceived} ضرر فقط`
+                : `تم الهجوم عليك من قبل ${attackerName} وتلقيت ${damageReceived} ضرر`,
               { 
-                opponentName: result.winner.userId === attackerId ? defUser.username : atkUser.username,
-                xpGained: Math.floor(xpGain),
-                damageDealt: Math.floor(result.winner.userId === attackerId ? result.attackerDamage : result.defenderDamage)
+                attackerName: attackerName,
+                damageReceived: damageReceived,
+                isWinner: isAttackedPersonWinner
               }
             );
-            emitNotification(winnerId, winnerNotification);
-
-            // Notification for the loser
-            const loserNotification = await NotificationService.createNotification(
-              loserId,
-              'ATTACKED',
-              'خسرت في المعركة',
-              `خسرت في المعركة ضد ${result.winner.userId === attackerId ? atkUser.username : defUser.username} وتلقيت ${Math.floor(result.winner.userId === attackerId ? result.defenderDamage : result.attackerDamage)} ضرر`,
-              { 
-                opponentName: result.winner.userId === attackerId ? atkUser.username : defUser.username,
-                damageReceived: Math.floor(result.winner.userId === attackerId ? result.defenderDamage : result.attackerDamage)
-              }
-            );
-            emitNotification(loserId, loserNotification);
+            emitNotification(attackedUserId, attackedNotification);
 
             // Hospital notifications if players were hospitalized
-            if (atkChar.hp === 0) {
+            if (result.attackerFinalHp <= 0) {
               const hospitalNotification = await NotificationService.createHospitalizedNotification(
                 atkChar.userId,
                 'تم إدخالك المستشفى بعد المعركة'
@@ -631,7 +655,7 @@ export class FightService {
               emitNotification(atkChar.userId, hospitalNotification);
             }
             
-            if (defChar.hp === 0) {
+            if (result.defenderFinalHp <= 0) {
               const hospitalNotification = await NotificationService.createHospitalizedNotification(
                 defChar.userId,
                 'تم إدخالك المستشفى بعد المعركة'
@@ -821,15 +845,16 @@ export class FightService {
             result,
             isAttackerWinner
           );
+          // Update XP and killCount for both players
           if (result.winner.userId === atkChar.userId) {
-            atkChar.exp += xpGain;
+            atkChar.exp = Math.floor(atkChar.exp + xpGain);
+            atkChar.killCount = Math.floor((atkChar.killCount || 0) + 1); // Winner gets kill
             await CharacterService.maybeLevelUp(atkChar);
-            atkChar.killCount = (atkChar.killCount || 0) + 1;
             await TaskService.updateProgress(atkChar.userId, 'kill_count', 1, t);
           } else {
-            defChar.exp += xpGain;
+            defChar.exp = Math.floor(defChar.exp + xpGain);
+            defChar.killCount = Math.floor((defChar.killCount || 0) + 1); // Winner gets kill
             await CharacterService.maybeLevelUp(defChar);
-            defChar.killCount = (defChar.killCount || 0) + 1;
             await TaskService.updateProgress(defChar.userId, 'kill_count', 1, t);
           }
           await winnerChar.save({ transaction: t });
@@ -839,51 +864,57 @@ export class FightService {
           result.narrative = narrative;
           result.xpGain = xpGain;
           // Persist new HP values (can't go below 0)
-          atkChar.hp = Math.round(Math.max(result.attackerFinalHp, 0));
-          defChar.hp = Math.round(Math.max(result.defenderFinalHp, 0));
+          atkChar.hp = Math.floor(Math.max(result.attackerFinalHp, 0));
+          defChar.hp = Math.floor(Math.max(result.defenderFinalHp, 0));
+          
+          // Debug logging for HP values
+          console.log('[FightService] Contract fight final HP values:', {
+            attackerId: atkChar.userId,
+            attackerHp: atkChar.hp,
+            defenderId: defChar.userId,
+            defenderHp: defChar.hp
+          });
           await Promise.all([
             atkChar.save({ transaction: t }), 
             defChar.save({ transaction: t })
           ]);
-          // Hospital logic: send to hospital if HP is 0
+          // Contract fight confinement logic
           const now2 = new Date();
-          if (atkChar.hp === 0) {
-            const levelMultiplier = Math.max(0.5, Math.min(2.0, atkChar.level / 10));
-            const hospitalStay = Math.round(3 * levelMultiplier);
-            const hpLoss = Math.round(20 * levelMultiplier);
-            const healRate = Math.round(3 * levelMultiplier);
-            const hospitalRecord = await Hospital.create({
+          
+          // If attacker loses (defender wins), attacker goes to jail for 30 minutes
+          if (result.winner.userId === defChar.userId) {
+            const jailMinutes = 30;
+            const jailRecord = await Jail.create({
               userId: atkChar.userId,
-              minutes: hospitalStay,
-              hpLoss: hpLoss,
-              healRate: healRate,
+              minutes: jailMinutes,
+              bailRate: 200, // Not used anymore but kept for compatibility
               startedAt: now2,
-              releasedAt: new Date(now2.getTime() + hospitalStay * 60_000),
+              releasedAt: new Date(now2.getTime() + jailMinutes * 60_000),
             }, { transaction: t });
             if (io) {
-              io.to(`user:${atkChar.userId}`).emit('hospital:enter', {
-                releaseAt: hospitalRecord.releasedAt,
-                reason: 'fight',
+              io.to(`user:${atkChar.userId}`).emit('jail:enter', {
+                releaseAt: jailRecord.releasedAt,
+                reason: 'contract_failure',
               });
             }
           }
-          if (defChar.hp === 0) {
-            const levelMultiplier = Math.max(0.5, Math.min(2.0, defChar.level / 10));
-            const hospitalStay = Math.round(3 * levelMultiplier);
-            const hpLoss = Math.round(20 * levelMultiplier);
-            const healRate = Math.round(3 * levelMultiplier);
+          
+          // If defender loses (attacker wins), defender goes to hospital for 30 minutes
+          if (result.winner.userId === atkChar.userId) {
+            const hospitalMinutes = 30;
+            const hpLoss = 100;
             const hospitalRecord = await Hospital.create({
               userId: defChar.userId,
-              minutes: hospitalStay,
+              minutes: hospitalMinutes,
               hpLoss: hpLoss,
-              healRate: healRate,
+              healRate: 200, // Not used anymore but kept for compatibility
               startedAt: now2,
-              releasedAt: new Date(now2.getTime() + hospitalStay * 60_000),
+              releasedAt: new Date(now2.getTime() + hospitalMinutes * 60_000),
             }, { transaction: t });
             if (io) {
               io.to(`user:${defChar.userId}`).emit('hospital:enter', {
                 releaseAt: hospitalRecord.releasedAt,
-                reason: 'fight',
+                reason: 'contract_success',
               });
             }
           }
@@ -913,6 +944,17 @@ export class FightService {
             narrative: narrative,
             log: result.log,
           }, { transaction: t });
+
+          // Update statistics for contract fights
+          try {
+            await CharacterService.addStat(attackerId, "fights", 1, t);
+            const winnerId = result.winner.userId;
+            const loserId = (winnerId === attackerId) ? defenderId : attackerId;
+            await CharacterService.addFightResult(winnerId, loserId, t);
+          } catch (statError) {
+            console.error('[FightService] Contract fight statistics update error:', statError);
+            // Continue with the fight even if statistics updates fail
+          }
 
           await t.commit();
 

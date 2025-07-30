@@ -1,5 +1,6 @@
 import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
+import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 
 const MessageController = {
@@ -138,7 +139,6 @@ const MessageController = {
 
   async inbox(req, res) {
     try {
-      console.log('[INBOX] Called for user:', req.user.id);
       const myId = req.user.id;
       const messages = await Message.findAll({
         where: {
@@ -149,11 +149,15 @@ const MessageController = {
         },
         attributes: ['senderId', 'receiverId'],
       });
-      console.log('[INBOX] Found messages:', messages.length);
       const userIds = Array.from(new Set(messages.flatMap(m => [m.senderId, m.receiverId]).filter(id => id !== myId)));
-      console.log('[INBOX] userIds:', userIds);
-      const users = await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ['id', 'username'] });
-      console.log('[INBOX] users:', users.map(u => u.id));
+      const users = await User.findAll({ 
+        where: { id: { [Op.in]: userIds } }, 
+        attributes: ['id', 'username'],
+        include: [{
+          model: Character,
+          attributes: ['name', 'vipExpiresAt']
+        }]
+      });
       
       // Check for unread messages for each conversation
       const result = await Promise.all(users.map(async (user) => {
@@ -169,6 +173,8 @@ const MessageController = {
         return {
           userId: user.id,
           username: user.username,
+          displayName: user.Character?.name || user.username,
+          vipExpiresAt: user.Character?.vipExpiresAt,
           hasUnreadMessages: unreadCount > 0,
           unreadCount: unreadCount
         };

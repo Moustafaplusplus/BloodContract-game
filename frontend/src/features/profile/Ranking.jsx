@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import VipName from './VipName.jsx';
+import MoneyIcon from '@/components/MoneyIcon';
 import './vipSparkle.css';
 
 const METRICS = [
@@ -127,18 +128,15 @@ export default function Ranking() {
                           href={player.username ? `/dashboard/profile/${player.username}` : '/dashboard/profile'}
                           className={nameClass + ' hover:underline'}
                         >
-                          {player.isVIP ? (
-                            <VipName isVIP={true} className="compact">
-                              {player.username || player.name}
-                            </VipName>
-                          ) : (
-                            player.username || player.name
-                          )}
+                          <VipName user={player} disableLink={true} />
                         </a>
                       </td>
                       <td className="py-2 px-2">{player.level ?? '-'}</td>
                       <td className="py-2 px-2">{player.fame ?? '-'}</td>
-                      <td className="py-2 px-2">{player.money ? player.money.toLocaleString() : '-'}</td>
+                      <td className="py-2 px-2 flex items-center justify-center gap-1">
+                        <MoneyIcon className="w-4 h-4" />
+                        {player.money ? player.money.toLocaleString() : '-'}
+                      </td>
                       <td className="py-2 px-2">{player.crimesCommitted ?? '-'}</td>
                       <td className="py-2 px-2">{player.killCount ?? '-'}</td>
                     </tr>

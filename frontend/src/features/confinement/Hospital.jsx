@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
-import { Heart, Clock, DollarSign, AlertTriangle, CheckCircle, Activity, RefreshCw, Users } from "lucide-react";
+import { Heart, Clock, AlertTriangle, CheckCircle, Activity, RefreshCw, Users } from "lucide-react";
+import MoneyIcon from "@/components/MoneyIcon";
 import axios from "axios";
 import { useSocket } from "@/hooks/useSocket";
 
@@ -39,16 +40,24 @@ export default function Hospital() {
       const data = response.data;
               // Hospital status fetched successfully
       setHospitalStatus(data);
-      if (data.inHospital && data.releaseAt && data.startedAt) {
-        const releaseAt = new Date(data.releaseAt).getTime();
-        const startedAt = new Date(data.startedAt).getTime();
-        const now = Date.now();
-        const total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
+      if (data.inHospital && data.remainingSeconds) {
+        // Use the remainingSeconds directly from backend (most accurate)
+        const remaining = data.remainingSeconds;
+        
+        // Calculate total time from startedAt and releasedAt for progress bar
+        let total = remaining;
+        if (data.releaseAt && data.startedAt) {
+          const releaseAt = new Date(data.releaseAt).getTime();
+          const startedAt = new Date(data.startedAt).getTime();
+          total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
+        }
+        
         setTotalTime(total);
-        setRemainingTime(Math.max(0, Math.round((releaseAt - now) / 1000)));
-      } else if (data.inHospital && data.remainingSeconds) {
-        setTotalTime(data.remainingSeconds);
-        setRemainingTime(data.remainingSeconds);
+        setRemainingTime(remaining);
+      } else {
+        // Not in hospital, reset everything
+        setTotalTime(null);
+        setRemainingTime(0);
       }
     } catch (error) {
       console.error("Hospital fetch error:", error);
@@ -133,7 +142,7 @@ export default function Hospital() {
       setHospitalStatus({ inHospital: false });
       setRemainingTime(0);
       invalidateHud?.();
-      toast.success(`تم الشفاء بنجاح! المال المتبقي: $${result.newCash?.toLocaleString() || 0}`);
+              toast.success(`تم الشفاء بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful healing
       navigate("/dashboard");
     } catch (err) {
@@ -249,8 +258,9 @@ export default function Hospital() {
                   يمكنك دفع مبلغ للشفاء الفوري والخروج من المستشفى
                 </p>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-accent-green mb-2">
-                    ${hospitalStatus.cost?.toLocaleString() || 0}
+                  <div className="text-3xl font-bold text-accent-green mb-2 flex items-center justify-center gap-2">
+                    <MoneyIcon className="w-10 h-10" />
+                    {hospitalStatus.cost?.toLocaleString() || 0}
                   </div>
                   <p className="text-hitman-300 text-sm mb-4">تكلفة الشفاء السريع</p>
                   <button
@@ -308,7 +318,7 @@ export default function Hospital() {
 
             <div className="bg-hitman-800/30 rounded-xl p-4">
               <h4 className="font-bold text-accent-red mb-2 flex items-center">
-                <DollarSign className="w-5 h-5 mr-2" />
+                <MoneyIcon className="w-5 h-5 mr-2" />
                 تكلفة الشفاء السريع
               </h4>
               <p className="text-hitman-300 text-sm">

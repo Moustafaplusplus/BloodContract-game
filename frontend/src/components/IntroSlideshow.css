@@ -1,0 +1,250 @@
+.intro-slideshow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.slideshow-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.slide-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.7);
+}
+
+.slide-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 2rem;
+  padding-bottom: 4rem;
+}
+
+.text-container {
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  direction: rtl;
+  position: absolute;
+  bottom: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.slide-text {
+  font-family: 'Arial', sans-serif;
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 2;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  direction: rtl;
+  text-align: center;
+  unicode-bidi: bidi-override;
+  font-feature-settings: "liga" 1;
+}
+
+.text-line {
+  margin-bottom: 1rem;
+  min-height: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  direction: rtl;
+  text-align: center;
+  unicode-bidi: bidi-override;
+  white-space: pre-wrap;
+}
+
+.black-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 3;
+}
+
+.final-message {
+  text-align: center;
+  color: #fff;
+  z-index: 3;
+}
+
+.final-message h1 {
+  font-size: 4rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  color: #ff4444;
+}
+
+.final-message p {
+  font-size: 1.5rem;
+  opacity: 0.9;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Fade animations */
+.fade-in {
+  animation: fadeIn 1s ease-in-out;
+}
+
+.fade-out {
+  animation: fadeOut 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .text-container {
+    padding: 1rem;
+    margin: 1rem;
+    margin-bottom: 3rem;
+    bottom: 2rem;
+    max-width: 90%;
+  }
+  
+  .slide-text {
+    font-size: 1.2rem;
+    line-height: 1.8;
+  }
+  
+  .final-message h1 {
+    font-size: 2.5rem;
+  }
+  
+  .final-message p {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .text-container {
+    padding: 0.5rem;
+    margin-bottom: 2rem;
+    bottom: 1rem;
+    max-width: 95%;
+  }
+  
+  .slide-text {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  .final-message h1 {
+    font-size: 2rem;
+  }
+  
+  .final-message p {
+    font-size: 1rem;
+  }
+}
+
+/* Skip button */
+.skip-button {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.skip-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+/* Loading animation */
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 1.2rem;
+  z-index: 5;
+}
+
+/* Audio controls */
+.audio-controls {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 10;
+}
+
+.audio-controls button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+}
+
+.audio-controls button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+} 

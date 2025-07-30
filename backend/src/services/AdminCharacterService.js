@@ -18,7 +18,7 @@ export class AdminCharacterService {
       where: whereClause,
       include: [{
         model: User,
-        attributes: ['username', 'email', 'isAdmin', 'avatarUrl', 'isBanned', 'banReason', 'lastIpAddress']
+        attributes: ['id', 'username', 'email', 'isAdmin', 'avatarUrl', 'isBanned', 'banReason', 'lastIpAddress']
       }],
       order: [['level', 'DESC'], ['createdAt', 'DESC']],
       limit,

@@ -17,10 +17,6 @@ House.init({
     type: DataTypes.INTEGER,
     allowNull: false
   },
-  energyRegen: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
   defenseBonus: {
     type: DataTypes.INTEGER,
     allowNull: false

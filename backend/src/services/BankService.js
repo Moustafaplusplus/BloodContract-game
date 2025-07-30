@@ -134,7 +134,19 @@ export class BankService {
         const diffDays = (now - new Date(acc.lastInterestAt).getTime()) / 86_400_000; // ms → days
 
         if (diffDays >= 1) {
-          const interest = Math.floor(acc.balance * INTEREST_RATE);
+          // Get character to check VIP status
+          const character = await Character.findOne({ 
+            where: { userId: acc.userId },
+            transaction: t 
+          });
+          
+          // Calculate interest rate - VIP users get double interest
+          let effectiveInterestRate = INTEREST_RATE;
+          if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
+            effectiveInterestRate = INTEREST_RATE * 2; // Double interest for VIP users
+          }
+          
+          const interest = Math.floor(acc.balance * effectiveInterestRate);
           acc.balance += interest;
           acc.lastInterestAt = new Date();
           await acc.save({ transaction: t });
@@ -147,7 +159,9 @@ export class BankService {
 
           // Create notification for interest received
           if (interest > 0) {
-            const notification = await NotificationService.createBankInterestNotification(acc.userId, interest);
+            // Check if this was VIP bonus interest
+            const isVipBonus = character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date();
+            const notification = await NotificationService.createBankInterestNotification(acc.userId, interest, isVipBonus);
             emitNotification(acc.userId, notification);
           }
         }

@@ -21,8 +21,10 @@ import {
   UserX
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import VipName from '../profile/VipName.jsx';
+import '../profile/vipSparkle.css';
 
-export default function GangDetails({ gang }) {
+export default function GangDetails({ gang, onRefresh }) {
   const { isAuthed, tokenLoaded } = useAuth();
   const [board, setBoard] = useState(gang.board);
   const [editingBoard, setEditingBoard] = useState(false);
@@ -51,7 +53,7 @@ export default function GangDetails({ gang }) {
 
     const getCurrentUser = async () => {
       try {
-        const response = await axios.get('/api/character');
+        const response = await axios.get('/api/profile');
         const userData = response.data;
         
               // Check membership by both userId and User.id to be safe
@@ -119,7 +121,9 @@ export default function GangDetails({ gang }) {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.patch(`/api/gangs/${gang.id}/board`, { board });
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.patch(`/api/gangs/${gang.id}/board`, { board }, { headers });
       setBoard(res.data.board);
       setEditingBoard(false);
     } catch (err) {
@@ -134,7 +138,9 @@ export default function GangDetails({ gang }) {
     setLoading(true);
     setError('');
     try {
-      await axios.post(`/api/gangs/leave`);
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/leave`, {}, { headers });
       navigate('/dashboard/gangs');
     } catch (err) {
       setError(err.response?.data?.error || 'فشل مغادرة العصابة');
@@ -150,7 +156,9 @@ export default function GangDetails({ gang }) {
     try {
       const amount = parseInt(donateAmount, 10);
       if (!amount || amount <= 0) throw new Error('أدخل مبلغًا صحيحًا');
-      const res = await axios.post(`/api/gangs/${gang.id}/contribute`, { amount });
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.post(`/api/gangs/${gang.id}/contribute`, { amount }, { headers });
       setVault(res.data.gangMoney);
       setDonateAmount('');
     } catch (err) {
@@ -168,7 +176,9 @@ export default function GangDetails({ gang }) {
       const amount = parseInt(transferAmount, 10);
       if (!amount || amount <= 0) throw new Error('أدخل مبلغًا صحيحًا');
       if (!transferTarget) throw new Error('اختر عضوًا');
-      const res = await axios.post(`/api/gangs/${gang.id}/transfer-money`, { memberId: transferTarget, amount });
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.post(`/api/gangs/${gang.id}/transfer-money`, { memberId: transferTarget, amount }, { headers });
       setVault(res.data.gangMoney);
       setTransferAmount('');
       setTransferTarget('');
@@ -183,7 +193,9 @@ export default function GangDetails({ gang }) {
     setDeleting(true);
     setError('');
     try {
-      await axios.delete(`/api/gangs/${gang.id}`);
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.delete(`/api/gangs/${gang.id}`, { headers });
       navigate('/dashboard/gangs');
     } catch (err) {
       setError(err.response?.data?.error || 'فشل حذف العصابة');
@@ -198,8 +210,10 @@ export default function GangDetails({ gang }) {
     setKickingMember(targetUserId);
     setError('');
     try {
-      await axios.post(`/api/gangs/${gang.id}/kick`, { targetUserId });
-      window.location.reload();
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/${gang.id}/kick`, { targetUserId }, { headers });
+      if (onRefresh) onRefresh();
     } catch (err) {
       setError(err.response?.data?.error || 'فشل طرد العضو');
     } finally {
@@ -212,8 +226,10 @@ export default function GangDetails({ gang }) {
     setPromotingMember(targetUserId);
     setError('');
     try {
-      await axios.post(`/api/gangs/${gang.id}/promote`, { targetUserId });
-      window.location.reload();
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/${gang.id}/promote`, { targetUserId }, { headers });
+      if (onRefresh) onRefresh();
     } catch (err) {
       setError(err.response?.data?.error || 'فشل ترقية العضو');
     } finally {
@@ -226,8 +242,10 @@ export default function GangDetails({ gang }) {
     setPromotingMember(targetUserId);
     setError('');
     try {
-      await axios.post(`/api/gangs/${gang.id}/demote`, { targetUserId });
-      window.location.reload();
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/${gang.id}/demote`, { targetUserId }, { headers });
+      if (onRefresh) onRefresh();
     } catch (err) {
       setError(err.response?.data?.error || 'فشل إلغاء رتبة الضابط');
     } finally {
@@ -239,7 +257,9 @@ export default function GangDetails({ gang }) {
   const loadJoinRequests = async () => {
     if (!isAdmin) return;
     try {
-      const response = await axios.get(`/api/gangs/${gang.id}/join-requests`);
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get(`/api/gangs/${gang.id}/join-requests`, { headers });
       setJoinRequests(response.data);
     } catch (err) {
       console.error('Failed to load join requests:', err);
@@ -251,9 +271,11 @@ export default function GangDetails({ gang }) {
     if (!window.confirm('هل أنت متأكد من قبول هذا الطلب؟')) return;
     setError('');
     try {
-      await axios.post(`/api/gangs/${gang.id}/join-requests/accept`, { requestId });
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/${gang.id}/join-requests/accept`, { requestId }, { headers });
       await loadJoinRequests(); // Reload requests
-      window.location.reload(); // Reload page to show new member
+      if (onRefresh) onRefresh(); // Refresh gang data to show new member
     } catch (err) {
       setError(err.response?.data?.error || 'فشل قبول الطلب');
     }
@@ -264,7 +286,9 @@ export default function GangDetails({ gang }) {
     if (!window.confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
     setError('');
     try {
-      await axios.post(`/api/gangs/${gang.id}/join-requests/reject`, { requestId });
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/${gang.id}/join-requests/reject`, { requestId }, { headers });
       await loadJoinRequests(); // Reload requests
     } catch (err) {
       setError(err.response?.data?.error || 'فشل رفض الطلب');
@@ -395,7 +419,7 @@ export default function GangDetails({ gang }) {
                   {member.User?.username?.[0] || '?'}
                 </div>
                 <div className="flex-1">
-                  <div className="font-bold text-white">{member.User?.username}</div>
+                  <VipName user={member.User} />
                   <div className="text-sm text-hitman-400 flex items-center gap-1">
                     {member.role === 'LEADER' && <Crown className="w-3 h-3 text-accent-yellow" />}
                     {member.role === 'OFFICER' && <Star className="w-3 h-3 text-accent-blue" />}
@@ -472,7 +496,7 @@ export default function GangDetails({ gang }) {
                       {request.User?.username?.[0] || '?'}
                     </div>
                     <div>
-                      <div className="font-bold text-white">{request.User?.username}</div>
+                      <VipName user={request.User} />
                       <div className="text-sm text-hitman-400">
                         {request.message || 'لا توجد رسالة'}
                       </div>

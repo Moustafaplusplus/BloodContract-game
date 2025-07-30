@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
 import { Banknote, ArrowDownToLine, ArrowUpToLine, TrendingUp } from "lucide-react";
+import MoneyIcon from "@/components/MoneyIcon";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -142,11 +143,14 @@ export default function Bank() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-hitman-900/70 border border-hitman-700 rounded-xl p-4 sm:p-6 flex flex-col items-center text-center shadow-lg">
               <span className="text-accent-red text-xl sm:text-2xl font-bold">رصيد البنك</span>
-              <span className="text-2xl sm:text-3xl font-mono text-accent-red mt-1">{balance !== null ? `${balance}$` : "..."}</span>
+              <span className="text-2xl sm:text-3xl font-mono text-accent-red mt-1">{balance !== null ? `${balance}` : "..."}</span>
             </div>
             <div className="bg-hitman-900/70 border border-hitman-700 rounded-xl p-4 sm:p-6 flex flex-col items-center text-center shadow-lg">
-              <span className="text-accent-green text-xl sm:text-2xl font-bold">النقود</span>
-              <span className="text-2xl sm:text-3xl font-mono text-accent-green mt-1">{stats ? `${stats.money}$` : "..."}</span>
+              <div className="flex items-center gap-2 mb-2">
+                <MoneyIcon className="w-10 h-10" />
+                <span className="text-accent-green text-xl sm:text-2xl font-bold">النقود</span>
+              </div>
+              <span className="text-2xl sm:text-3xl font-mono text-accent-green mt-1">{stats ? `${stats.money}` : "..."}</span>
             </div>
           </div>
 
@@ -217,7 +221,7 @@ export default function Bank() {
                           day: "numeric",
                         })}
                       </td>
-                      <td className="py-2 px-4 rounded-l-xl text-left text-accent-green font-bold font-mono">+{amount}$</td>
+                      <td className="py-2 px-4 rounded-l-xl text-left text-accent-green font-bold font-mono">+{amount}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -3,7 +3,8 @@ import { toast } from 'react-toastify';
 import { useAuth } from '@/hooks/useAuth';
 import { useHud } from '@/hooks/useHud';
 import { useSocket } from "@/hooks/useSocket";
-import { Star, ImageIcon, ShoppingCart, Shield, Sword, Home, Car, Dog, Gift, Coins, Zap, Heart, Package, DollarSign, Clock } from 'lucide-react';
+import MoneyIcon from '@/components/MoneyIcon';
+import { Star, ImageIcon, ShoppingCart, Shield, Sword, Home, Car, Dog, Gift, Coins, Zap, Heart, Package, DollarSign, Clock, Bomb } from 'lucide-react';
 import { handleImageError, getImageUrl } from '@/utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
@@ -113,6 +114,42 @@ function ItemCard({ item, onBuy, type }) {
                   <span className="text-xs">طاقة: {item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`}</span>
                 </div>
               )}
+              {item.effect.experience && (
+                <div className="flex items-center text-blue-400">
+                  <Sword className="w-3 h-3 mr-1" />
+                  <span className="text-xs">خبرة: +{item.effect.experience}</span>
+                </div>
+              )}
+              {item.effect.nameChange && (
+                <div className="flex items-center text-purple-400">
+                  <Package className="w-3 h-3 mr-1" />
+                  <span className="text-xs">تغيير الاسم</span>
+                </div>
+              )}
+              {item.effect.gangBomb && (
+                <div className="flex items-center text-red-400">
+                  <Bomb className="w-3 h-3 mr-1" />
+                  <span className="text-xs">قنبلة عصابة - إدخال جميع الأعضاء المستشفى</span>
+                </div>
+              )}
+              {item.effect.attackImmunity && (
+                <div className="flex items-center text-blue-400">
+                  <Shield className="w-3 h-3 mr-1" />
+                  <span className="text-xs">حماية من الهجمات - منع الهجمات المباشرة وقنابل العصابة</span>
+                </div>
+              )}
+              {item.effect.cdReset && (
+                <div className="flex items-center text-green-400">
+                  <Clock className="w-3 h-3 mr-1" />
+                  <span className="text-xs">إعادة تعيين أوقات الانتظار - إزالة جميع أوقات الانتظار فوراً</span>
+                </div>
+              )}
+              {(item.type === 'EXPERIENCE_POTION' || item.type === 'GANG_BOMB' || item.type === 'ATTACK_IMMUNITY' || item.type === 'CD_RESET') && item.levelRequired && (
+                <div className="flex items-center text-purple-400">
+                  <Shield className="w-3 h-3 mr-1" />
+                  <span>المستوى المطلوب: {item.levelRequired}</span>
+                </div>
+              )}
               {item.effect.duration > 0 && (
                 <div className="flex items-center text-purple-400">
                   <Package className="w-3 h-3 mr-1" />
@@ -186,12 +223,6 @@ function CarCard({ car, onBuy }) {
               <span>دفاع: +{car.defenseBonus}</span>
             </div>
           )}
-          {car.energyRegen > 0 && (
-            <div className="flex items-center text-yellow-400">
-              <Zap className="w-3 h-3 mr-1" />
-              <span>طاقة: +{car.energyRegen}</span>
-            </div>
-          )}
         </div>
 
         {/* Price and Buy Button */}
@@ -255,12 +286,6 @@ function HouseCard({ house, onBuy }) {
             <div className="flex items-center text-green-400">
               <Heart className="w-3 h-3 mr-1" />
               <span>صحة: +{house.hpBonus}</span>
-            </div>
-          )}
-          {house.energyRegen > 0 && (
-            <div className="flex items-center text-yellow-400">
-              <Zap className="w-3 h-3 mr-1" />
-              <span>طاقة: +{house.energyRegen}</span>
             </div>
           )}
         </div>
@@ -343,9 +368,85 @@ function DogCard({ dog, onBuy }) {
   );
 }
 
+// MoneyPackageCard component for money packages
+function MoneyPackageCard({ pkg, onBuy, stats }) {
+  return (
+    <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl overflow-hidden group hover:border-green-500/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-green-500/20">
+      {/* Money Image Container */}
+      <div className="relative h-32 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
+        <img 
+          src="/images/money.png" 
+          alt="Money Package"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'flex';
+          }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center hidden">
+          <DollarSign className="w-12 h-12 text-green-400" />
+        </div>
+        {/* Money Badge */}
+        <div className="absolute top-3 left-3">
+          <div className="px-3 py-1 rounded-full text-xs font-bold bg-black/60 backdrop-blur-sm text-green-400 border border-green-400/30">
+            مال
+          </div>
+        </div>
+      </div>
+
+      {/* Money Details */}
+      <div className="p-4">
+        <h3 className="font-bold text-lg mb-2 text-white group-hover:text-green-400 transition-colors">
+          {pkg.name}
+        </h3>
+        
+        {pkg.description && (
+          <p className="text-sm text-hitman-400 mb-3">{pkg.description}</p>
+        )}
+
+        {/* Money Amount */}
+        <div className="flex items-center mb-3">
+          <MoneyIcon className="w-4 h-4 mr-2" />
+          <span className="text-sm text-green-400 font-bold">
+            {(pkg.moneyAmount + (pkg.bonus || 0)).toLocaleString()}
+          </span>
+        </div>
+
+        {/* Price */}
+        <div className="flex items-center justify-between mb-4 bg-hitman-800/30 rounded-lg p-3">
+          <div className="flex items-center">
+            <BlackcoinIcon />
+            <span className="text-accent-red font-bold text-lg">{pkg.blackcoinCost}</span>
+          </div>
+          <span className="text-xs text-hitman-400">عملة سوداء</span>
+        </div>
+
+        {/* Bonus */}
+        {pkg.bonus > 0 && (
+          <div className="flex items-center mb-4 bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+            <Gift className="w-4 h-4 text-green-400 mr-2" />
+            <span className="text-sm text-green-400 font-bold">+{pkg.bonus.toLocaleString()} مكافأة</span>
+          </div>
+        )}
+
+        {/* Buy Button */}
+        <button
+          onClick={() => onBuy(pkg.id)}
+          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={stats?.blackcoins < pkg.blackcoinCost}
+        >
+          <DollarSign className="w-4 h-4" />
+          شراء المال
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { key: 'vip', label: 'متجر VIP', icon: <Star className="w-5 h-5 text-yellow-400" /> },
   { key: 'blackcoins', label: 'متجر العملة السوداء', icon: <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-5 h-5 object-contain" /> },
+  { key: 'money', label: 'شراء المال', icon: <MoneyIcon className="w-5 h-5" /> },
   { key: 'special', label: 'عناصر خاصة', icon: <Package className="w-5 h-5 text-purple-400" /> },
   { key: 'weapons', label: 'الأسلحة والدروع', icon: <Sword className="w-5 h-5 text-white" /> },
   { key: 'cars', label: 'السيارات', icon: <Car className="w-5 h-5 text-white" /> },
@@ -363,6 +464,7 @@ export default function SpecialShop() {
   const [specialItems, setSpecialItems] = useState([]);
   const [blackcoinPackages, setBlackcoinPackages] = useState([]);
   const [vipPackages, setVipPackages] = useState([]);
+  const [moneyPackages, setMoneyPackages] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- Weapons & Armors ---
@@ -388,37 +490,39 @@ export default function SpecialShop() {
     Promise.all([
       fetch(`${API}/api/special-items?currency=blackcoin`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${API}/api/special-shop/blackcoin-packages`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${token}` } })
-    ]).then(async ([specialRes, packagesRes, vipRes]) => {
-      if (specialRes.status === 401 || packagesRes.status === 401 || vipRes.status === 401) {
+      fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${API}/api/special-shop/money-packages`, { headers: { Authorization: `Bearer ${token}` } })
+    ]).then(async ([specialRes, packagesRes, vipRes, moneyRes]) => {
+      if (specialRes.status === 401 || packagesRes.status === 401 || vipRes.status === 401 || moneyRes.status === 401) {
         toast.error('يجب تسجيل الدخول للوصول إلى سوق العملة السوداء');
-        setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setLoading(false); return;
+        setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setMoneyPackages([]); setLoading(false); return;
       }
       const specialData = await specialRes.json();
-      console.log('Special items data:', specialData);
+  
       setSpecialItems(Array.isArray(specialData) ? specialData : []);
       setBlackcoinPackages(await packagesRes.json());
       setVipPackages(await vipRes.json());
+      setMoneyPackages(await moneyRes.json());
       setLoading(false);
     }).catch(() => {
       toast.error('فشل في تحميل عناصر سوق العملة السوداء');
-      setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setLoading(false);
+      setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setMoneyPackages([]); setLoading(false);
     });
   }, [token]);
 
   useEffect(() => {
     if (activeTab === 'weapons') {
       setLoadingWeapons(true);
-      Promise.all([
-        fetch(`${API}/api/shop/weapons`),
-        fetch(`${API}/api/shop/armors`)
-      ]).then(async ([wRes, aRes]) => {
-        setWeapons(await wRes.json());
-        setArmors(await aRes.json());
-        setLoadingWeapons(false);
-      }).catch(() => { setWeapons([]); setArmors([]); setLoadingWeapons(false); });
+      fetch(`${API}/api/special-shop/special`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => {
+          setWeapons(data.weapons || []);
+          setArmors(data.armors || []);
+          setLoadingWeapons(false);
+        })
+        .catch(() => { setWeapons([]); setArmors([]); setLoadingWeapons(false); });
     }
-  }, [activeTab]);
+  }, [activeTab, token]);
 
   useEffect(() => {
     if (activeTab === 'cars') {
@@ -489,6 +593,20 @@ export default function SpecialShop() {
       invalidateHud?.();
     } catch (err) { toast.error(err.message || 'فشل شراء العملة السوداء'); }
   };
+
+  const buyMoney = async (packageId) => {
+    try {
+      const res = await fetch(`${API}/api/special-shop/buy/money`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packageId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast.success('تم شراء المال بنجاح!');
+      invalidateHud?.();
+    } catch (err) { toast.error(err.message || 'فشل شراء المال'); }
+  };
   const buySpecial = async (item) => {
     try {
       let quantity = 1;
@@ -507,6 +625,46 @@ export default function SpecialShop() {
       toast.success('تم الشراء بنجاح!');
       invalidateHud?.();
     } catch (err) { toast.error(err.message || 'فشل في الشراء'); }
+  };
+
+  const buyWeapon = async (weapon) => {
+    try {
+      let quantity = 1;
+      const input = window.prompt('كمية الشراء؟', '1');
+      if (input !== null) {
+        const parsed = parseInt(input);
+        if (!isNaN(parsed) && parsed > 0) quantity = parsed;
+      }
+      const res = await fetch(`${API}/api/special-shop/buy/weapon/${weapon.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast.success('تم شراء السلاح بنجاح!');
+      invalidateHud?.();
+    } catch (err) { toast.error(err.message || 'فشل في شراء السلاح'); }
+  };
+
+  const buyArmor = async (armor) => {
+    try {
+      let quantity = 1;
+      const input = window.prompt('كمية الشراء؟', '1');
+      if (input !== null) {
+        const parsed = parseInt(input);
+        if (!isNaN(parsed) && parsed > 0) quantity = parsed;
+      }
+      const res = await fetch(`${API}/api/special-shop/buy/armor/${armor.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      toast.success('تم شراء الدرع بنجاح!');
+      invalidateHud?.();
+    } catch (err) { toast.error(err.message || 'فشل في شراء الدرع'); }
   };
 
   const buyCar = async (car) => {
@@ -698,8 +856,32 @@ export default function SpecialShop() {
         </div>
       );
     }
+    if (activeTab === 'money') {
+      return (
+        <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
+          <h2 className="text-2xl font-bouya text-green-400 mb-4 flex items-center gap-2">
+            <DollarSign className="w-6 h-6 text-green-400" />
+            اشترِ المال بالعملة السوداء
+          </h2>
+          <p className="text-hitman-300 mb-6">احصل على المال في اللعبة مقابل العملة السوداء</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {moneyPackages.length === 0 && (
+              <div className="text-center text-hitman-400 col-span-full">لا توجد باقات مال متاحة حالياً.</div>
+            )}
+            {moneyPackages.map(pkg => (
+              <MoneyPackageCard
+                key={`money-${pkg.id}`}
+                pkg={pkg}
+                onBuy={buyMoney}
+                stats={stats}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
     if (activeTab === 'special') {
-      console.log('Rendering special tab, items:', specialItems);
+  
       if (loading) return <div className="text-center py-8">جاري تحميل العناصر الخاصة...</div>;
       return (
         <div className="max-w-4xl mx-auto mb-8 bg-gradient-to-br from-hitman-800/60 to-hitman-900/60 border border-accent-red rounded-2xl p-6 shadow-lg animate-fade-in">
@@ -740,7 +922,7 @@ export default function SpecialShop() {
               <ItemCard
                 key={`weapon-${item.id}`}
                 item={item}
-                onBuy={buySpecial}
+                onBuy={buyWeapon}
                 type="special"
               />
             ))}
@@ -748,7 +930,7 @@ export default function SpecialShop() {
               <ItemCard
                 key={`armor-${item.id}`}
                 item={item}
-                onBuy={buySpecial}
+                onBuy={buyArmor}
                 type="special"
               />
             ))}
@@ -845,17 +1027,15 @@ export default function SpecialShop() {
           <span>رصيد العملة السوداء:</span>
           <span className="text-accent-red font-mono text-xl">{stats?.blackcoins ?? 0}</span>
         </div>
-        <div className="flex items-center gap-2 text-lg font-bold">
-          <Star className="w-5 h-5 text-yellow-400 mr-1" />
-          <span>VIP:</span>
-          {stats?.vipExpiresAt && new Date(stats.vipExpiresAt) > new Date() ? (
-            <span className="text-accent-yellow font-mono text-base">
-              فعال حتى {new Date(stats.vipExpiresAt).toLocaleDateString('ar-EG')}
-            </span>
-          ) : (
-            <span className="text-hitman-400">غير مفعل</span>
-          )}
-        </div>
+        {/* VIP Status */}
+        {stats?.vipExpiresAt && new Date(stats.vipExpiresAt) > new Date() ? (
+          <div className="bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border border-yellow-600/30 rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-center gap-2 text-yellow-400">
+              <Star className="w-5 h-5" />
+              <span className="font-bold">VIP نشط</span>
+            </div>
+          </div>
+        ) : null}
       </div>
       {/* Tabs */}
       <div className="max-w-5xl mx-auto mb-8 flex flex-wrap gap-2 justify-center animate-fade-in">

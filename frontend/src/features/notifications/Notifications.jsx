@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import { useNotificationContext } from '@/contexts/NotificationContext';
+import { useSocket } from '@/hooks/useSocket';
+import { toast } from 'react-toastify';
+import MoneyIcon from '@/components/MoneyIcon';
 
 const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -49,7 +52,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
       ATTACKED: '⚔️',
       HOSPITALIZED: '🏥',
       JAILED: '🔒',
-      BANK_INTEREST: '💰',
+      BANK_INTEREST: <MoneyIcon className="w-6 h-6" />,
       JOB_SALARY: '💼',
       BLACK_MARKET_SOLD: '🛒',
       MESSAGE_RECEIVED: '💬',
@@ -66,6 +69,13 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
       GANG_JOIN_REQUEST: '👥',
       GANG_MEMBER_LEFT: '👥',
       ASSASSINATED: '💀',
+      GHOST_ASSASSINATED: '👻',
+      CONTRACT_ATTEMPTED: '🎯',
+      CONTRACT_EXPIRED: '⏰',
+      CONTRACT_TARGET_ASSASSINATED: '💀',
+      ATTACK_IMMUNITY_ACTIVATED: '🛡️',
+      ATTACK_IMMUNITY_PROTECTED: '🛡️',
+      GANG_BOMB_IMMUNITY_PROTECTED: '🛡️',
       SYSTEM: '🔔'
     };
     return icons[type] || '🔔';
@@ -93,6 +103,13 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
       GANG_JOIN_REQUEST: 'border-cyan-500 bg-cyan-900/20',
       GANG_MEMBER_LEFT: 'border-orange-500 bg-orange-900/20',
       ASSASSINATED: 'border-red-500 bg-red-900/20',
+      GHOST_ASSASSINATED: 'border-purple-500 bg-purple-900/20',
+      CONTRACT_ATTEMPTED: 'border-orange-500 bg-orange-900/20',
+      CONTRACT_EXPIRED: 'border-gray-500 bg-gray-900/20',
+      CONTRACT_TARGET_ASSASSINATED: 'border-red-500 bg-red-900/20',
+      ATTACK_IMMUNITY_ACTIVATED: 'border-blue-500 bg-blue-900/20',
+      ATTACK_IMMUNITY_PROTECTED: 'border-blue-500 bg-blue-900/20',
+      GANG_BOMB_IMMUNITY_PROTECTED: 'border-blue-500 bg-blue-900/20',
       SYSTEM: 'border-gray-500 bg-gray-900/20'
     };
     return colors[type] || 'border-gray-500 bg-gray-900/20';
@@ -162,7 +179,8 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 };
 
 const Notifications = () => {
-  const { fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationContext();
+  const { fetchNotifications, markAsRead, markAllAsRead, deleteNotification, notifications: contextNotifications, unreadCount } = useNotificationContext();
+  const { socket } = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -223,9 +241,46 @@ const Notifications = () => {
     }
   };
 
+  // Load notifications on mount
   useEffect(() => {
     loadNotifications();
   }, []);
+
+  // Socket test response handler
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleTestResponse = (data) => {
+      
+      toast.success('تم اختبار الاتصال بنجاح!', {
+        position: "bottom-center",
+        autoClose: 2000,
+      });
+    };
+
+    socket.on('test_response', handleTestResponse);
+
+    return () => {
+      socket.off('test_response', handleTestResponse);
+    };
+  }, [socket]);
+
+  // Update local notifications when context notifications change (real-time updates)
+  useEffect(() => {
+    if (contextNotifications.length > 0 && notifications.length === 0) {
+      // If we have context notifications but no local notifications, use context ones
+      setNotifications(contextNotifications);
+    } else if (contextNotifications.length > 0 && notifications.length > 0) {
+      // If we have both, merge them and remove duplicates
+      const merged = [...contextNotifications];
+      notifications.forEach(notification => {
+        if (!merged.find(n => n.id === notification.id)) {
+          merged.push(notification);
+        }
+      });
+      setNotifications(merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+    }
+  }, [contextNotifications, notifications.length]);
 
   const handleMarkAsRead = async (notificationId) => {
     await markAsRead(notificationId);
@@ -332,7 +387,7 @@ const Notifications = () => {
                   const response = await axios.post('/api/notifications/test', {}, {
                     headers: { Authorization: `Bearer ${token}` }
                   });
-                  console.log('Test notification response:', response.data);
+          
                 } catch (error) {
                   console.error('Test notification error:', error);
                 }
@@ -341,6 +396,30 @@ const Notifications = () => {
             >
               اختبار الإشعارات
             </button>
+
+            {/* Debug Panel */}
+            <details className="px-4 py-2 bg-gray-800 rounded-lg text-sm">
+              <summary className="cursor-pointer text-gray-300">معلومات التصحيح</summary>
+              <div className="mt-2 space-y-1 text-xs text-gray-400">
+                <div>عدد الإشعارات غير المقروءة: {unreadCount}</div>
+                <div>عدد الإشعارات المحلية: {notifications.length}</div>
+                <div>عدد الإشعارات في السياق: {contextNotifications.length}</div>
+                <div>حالة التحميل: {loading ? 'جاري التحميل' : 'مكتمل'}</div>
+                <div>هل يوجد المزيد: {hasMore ? 'نعم' : 'لا'}</div>
+                <div>حالة الاتصال بالسيرفر: {socket?.connected ? 'متصل' : 'غير متصل'}</div>
+                <button
+                  onClick={() => {
+                    if (socket?.connected) {
+                      // Emit a test event to verify socket is working
+                      socket.emit('test', { message: 'Socket test from frontend' });
+                    }
+                  }}
+                  className="mt-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
+                >
+                  اختبار الاتصال
+                </button>
+              </div>
+            </details>
           </div>
         </div>
 

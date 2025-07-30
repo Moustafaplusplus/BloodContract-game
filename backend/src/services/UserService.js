@@ -24,18 +24,29 @@ export class UserService {
       throw new Error('اسم المستخدم مستخدم مسبقاً');
     }
 
-    // Create user and character
-    const user = await User.create({ username, email, password, age, gender });
+    // Create user
+    const user = await User.create({ 
+      username, 
+      email, 
+      password, 
+      age, 
+      gender
+    });
+    
+    // Create character
     const character = await Character.create({ userId: user.id, name: user.username });
-
-    // Generate JWT token
+    
+    // Generate full access token
     const token = jwt.sign(
       { id: user.id, characterId: character.id }, 
       this.SECRET, 
       { expiresIn: '7d' }
     );
     
-    return { token };
+    return { 
+      token,
+      message: 'تم إنشاء الحساب بنجاح'
+    };
   }
 
   // Link existing account to Google
@@ -94,11 +105,7 @@ export class UserService {
       where: { userId: user.id }, 
       defaults: { name: user.username, userId: user.id } 
     });
-    // Ensure character name is always in sync with username
-    if (character.name !== user.username) {
-      character.name = user.username;
-      await character.save();
-    }
+    // Note: We no longer auto-sync character name with username to allow name changes
     
     // Generate JWT token
     const token = jwt.sign(
@@ -157,7 +164,7 @@ export class UserService {
         attributes: ['username', 'avatarUrl'],
       }],
       order: [['level', 'DESC']],
-      attributes: ['userId', 'name', 'level', 'avatarUrl', 'lastActive'],
+      attributes: ['userId', 'name', 'level', 'avatarUrl', 'lastActive', 'vipExpiresAt'],
     });
     return characters.map(c => ({
       userId: c.userId,
@@ -166,6 +173,7 @@ export class UserService {
       level: c.level,
       lastActive: c.lastActive,
       name: c.name,
+      vipExpiresAt: c.vipExpiresAt,
     }));
   }
 } 

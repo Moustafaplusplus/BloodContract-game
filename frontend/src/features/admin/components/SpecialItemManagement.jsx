@@ -12,7 +12,8 @@ import {
   Sword,
   Shield,
   DollarSign,
-  Gem
+  Gem,
+  Bomb
 } from 'lucide-react';
 import { getImageUrl } from '@/utils/imageUtils';
 
@@ -28,12 +29,14 @@ export default function SpecialItemManagement() {
     effect: {
       health: 0,
       energy: 0,
+      experience: 0,
       duration: 0
     },
     price: 100,
     currency: 'money',
     imageUrl: '',
-    isAvailable: true
+    isAvailable: true,
+    levelRequired: 1
   });
   const [itemEditingId, setItemEditingId] = useState(null);
   const [itemImageUploading, setItemImageUploading] = useState(false);
@@ -93,12 +96,14 @@ export default function SpecialItemManagement() {
       effect: {
         health: 0,
         energy: 0,
+        experience: 0,
         duration: 0
       },
       price: 100,
       currency: 'money',
       imageUrl: '',
-      isAvailable: true
+      isAvailable: true,
+      levelRequired: 1
     });
     setItemImagePreview('');
     setItemEditingId(null);
@@ -171,7 +176,8 @@ export default function SpecialItemManagement() {
       price: item.price,
       currency: item.currency,
       imageUrl: item.imageUrl,
-      isAvailable: item.isAvailable
+      isAvailable: item.isAvailable,
+      levelRequired: item.levelRequired
     });
     setItemImagePreview(item.imageUrl ? item.imageUrl : '');
     setItemEditingId(item.id);
@@ -200,6 +206,11 @@ export default function SpecialItemManagement() {
   const itemTypeLabels = {
     HEALTH_POTION: 'جرعة صحة',
     ENERGY_POTION: 'جرعة طاقة',
+    EXPERIENCE_POTION: 'جرعة خبرة',
+    NAME_CHANGE: 'تغيير الاسم',
+    GANG_BOMB: 'قنبلة عصابة',
+    ATTACK_IMMUNITY: 'حماية من الهجمات',
+    CD_RESET: 'إعادة تعيين أوقات الانتظار',
     OTHER: 'أخرى'
   };
 
@@ -277,6 +288,12 @@ export default function SpecialItemManagement() {
                       {item.currency === 'blackcoin' ? 'عملة سوداء' : 'مال'}
                     </span>
                   </div>
+                  {(item.type === 'EXPERIENCE_POTION' || item.type === 'GANG_BOMB' || item.type === 'ATTACK_IMMUNITY' || item.type === 'CD_RESET') && (
+                    <div className="flex justify-between">
+                      <span className="text-hitman-400">المستوى المطلوب:</span>
+                      <span className="text-blue-400 font-bold">المستوى {item.levelRequired}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Effects */}
@@ -293,6 +310,40 @@ export default function SpecialItemManagement() {
                       <div className="flex items-center text-yellow-400">
                         <Zap className="w-3 h-3 mr-1" />
                         <span>طاقة: {item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`}</span>
+                      </div>
+                    )}
+                    {item.effect.experience && (
+                      <div className="flex items-center text-blue-400">
+                        <Sword className="w-3 h-3 mr-1" />
+                        <span>خبرة: {item.effect.experience === 'max' ? '100%' : `+${item.effect.experience}`}</span>
+                      </div>
+                    )}
+
+                    {item.effect.nameChange && (
+                      <div className="flex items-center text-purple-400">
+                        <Package className="w-3 h-3 mr-1" />
+                        <span>تغيير الاسم</span>
+                      </div>
+                    )}
+
+                    {item.effect.gangBomb && (
+                      <div className="flex items-center text-red-400">
+                        <Bomb className="w-3 h-3 mr-1" />
+                        <span>قنبلة عصابة - إدخال جميع الأعضاء المستشفى لمدة 30 دقيقة</span>
+                      </div>
+                    )}
+
+                    {item.effect.attackImmunity && (
+                      <div className="flex items-center text-blue-400">
+                        <Shield className="w-3 h-3 mr-1" />
+                        <span>حماية من الهجمات - منع الهجمات المباشرة وقنابل العصابة لمدة {Math.floor(item.effect.duration / 60)} دقيقة</span>
+                      </div>
+                    )}
+
+                    {item.effect.cdReset && (
+                      <div className="flex items-center text-green-400">
+                        <Package className="w-3 h-3 mr-1" />
+                        <span>إعادة تعيين أوقات الانتظار - إزالة جميع أوقات الانتظار فوراً (سجن، مستشفى، جيم، جرائم)</span>
                       </div>
                     )}
 
@@ -386,6 +437,11 @@ export default function SpecialItemManagement() {
                 >
                   <option value="HEALTH_POTION">جرعة صحة</option>
                   <option value="ENERGY_POTION">جرعة طاقة</option>
+                  <option value="EXPERIENCE_POTION">جرعة خبرة</option>
+                  <option value="NAME_CHANGE">تغيير الاسم</option>
+                  <option value="GANG_BOMB">قنبلة عصابة</option>
+                  <option value="ATTACK_IMMUNITY">حماية من الهجمات</option>
+                  <option value="CD_RESET">إعادة تعيين أوقات الانتظار</option>
                   <option value="OTHER">أخرى</option>
                 </select>
               </div>
@@ -416,8 +472,21 @@ export default function SpecialItemManagement() {
                   <option value="blackcoin">عملة سوداء</option>
                 </select>
               </div>
-              
 
+              {(itemForm.type === 'EXPERIENCE_POTION' || itemForm.type === 'GANG_BOMB' || itemForm.type === 'ATTACK_IMMUNITY' || itemForm.type === 'CD_RESET') && (
+                <div>
+                  <label className="block mb-1 text-sm text-hitman-300">المستوى المطلوب <span className="text-red-400">*</span></label>
+                  <input 
+                    name="levelRequired" 
+                    type="number" 
+                    min="1" 
+                    value={itemForm.levelRequired} 
+                    onChange={handleItemChange} 
+                    required 
+                    className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
+                  />
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="flex items-center gap-2 text-sm text-hitman-300">
@@ -436,6 +505,19 @@ export default function SpecialItemManagement() {
               <div className="md:col-span-2">
                 <h3 className="text-lg font-bold text-white mb-4">التأثيرات</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-hitman-800/50 rounded-lg">
+                  {itemForm.type === 'EXPERIENCE_POTION' && (
+                    <div className="md:col-span-2">
+                      <label className="block mb-1 text-sm text-hitman-300">الخبرة المضافة</label>
+                      <input 
+                        name="experience" 
+                        type="number" 
+                        min="0" 
+                        value={itemForm.effect.experience} 
+                        onChange={handleEffectChange} 
+                        className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
+                      />
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <label className="block mb-1 text-sm text-hitman-300">المدة (ثانية)</label>
                     <input 

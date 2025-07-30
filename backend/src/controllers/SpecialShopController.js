@@ -91,6 +91,40 @@ export class SpecialShopController {
     }
   }
 
+  static async buyWeapon(req, res) {
+    try {
+      const quantity = parseInt(req.body.quantity) || 1;
+      const result = await SpecialShopService.purchaseWeapon(req.user.id, req.params.id, quantity);
+      res.json(result);
+    } catch (error) {
+      console.error('Buy weapon error:', error);
+      if (error.message === 'السلاح غير موجود') {
+        return res.status(404).json({ message: error.message });
+      }
+      if (error.message === 'لا تملك عملة سوداء كافية') {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: 'فشل شراء السلاح' });
+    }
+  }
+
+  static async buyArmor(req, res) {
+    try {
+      const quantity = parseInt(req.body.quantity) || 1;
+      const result = await SpecialShopService.purchaseArmor(req.user.id, req.params.id, quantity);
+      res.json(result);
+    } catch (error) {
+      console.error('Buy armor error:', error);
+      if (error.message === 'الدرع غير موجود') {
+        return res.status(404).json({ message: error.message });
+      }
+      if (error.message === 'لا تملك عملة سوداء كافية') {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: 'فشل شراء الدرع' });
+    }
+  }
+
   static async getSpecialCars(req, res) {
     try {
       const cars = await CarService.getAllCars({ currency: 'blackcoin' });
@@ -118,6 +152,30 @@ export class SpecialShopController {
     } catch (error) {
       console.error('Special shop dogs error:', error);
       res.sendStatus(500);
+    }
+  }
+
+  static async getMoneyPackages(req, res) {
+    try {
+      const packages = await SpecialShopService.getMoneyPackages();
+      res.json(packages);
+    } catch (error) {
+      console.error('Get money packages error:', error);
+      res.status(500).json({ message: 'فشل تحميل باقات المال' });
+    }
+  }
+
+  static async buyMoney(req, res) {
+    try {
+      const { packageId } = req.body;
+      if (!packageId) {
+        return res.status(400).json({ message: 'معرف الباقة مطلوب' });
+      }
+      const result = await SpecialShopService.purchaseMoney(req.user.id, packageId);
+      res.json(result);
+    } catch (error) {
+      console.error('Buy money error:', error);
+      res.status(400).json({ message: error.message || 'فشل شراء المال' });
     }
   }
 } 

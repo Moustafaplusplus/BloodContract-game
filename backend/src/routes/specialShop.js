@@ -18,11 +18,21 @@ router.get('/special', SpecialShopController.getSpecialItems);
 // POST /api/special-shop/buy/special/:id
 router.post('/buy/special/:id', auth, SpecialShopController.buySpecialItem);
 
+// POST /api/special-shop/buy/weapon/:id
+router.post('/buy/weapon/:id', auth, SpecialShopController.buyWeapon);
+// POST /api/special-shop/buy/armor/:id
+router.post('/buy/armor/:id', auth, SpecialShopController.buyArmor);
+
 // GET /api/special-shop/cars
 router.get('/cars', SpecialShopController.getSpecialCars);
 // GET /api/special-shop/houses
 router.get('/houses', SpecialShopController.getSpecialHouses);
 // GET /api/special-shop/dogs
 router.get('/dogs', SpecialShopController.getSpecialDogs);
+
+// GET /api/special-shop/money-packages
+router.get('/money-packages', SpecialShopController.getMoneyPackages);
+// POST /api/special-shop/buy/money
+router.post('/buy/money', auth, SpecialShopController.buyMoney);
 
 export default router; 

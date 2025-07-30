@@ -14,7 +14,10 @@ router.get('/', CharacterController.getCharacter);
 // GET /api/character/stats - Get character statistics
 router.get('/stats', CharacterController.getStats);
 
-// POST /api/character/clear-level-up-rewards - Clear level-up rewards
-router.post('/clear-level-up-rewards', CharacterController.clearLevelUpRewards);
+// POST /api/character/fix-max-hp - Fix maxHp to match level calculation
+router.post('/fix-max-hp', CharacterController.fixMaxHp);
+
+// POST /api/character/change-name - Change character name
+router.post('/change-name', validate('changeCharacterName'), CharacterController.changeName);
 
 export default router; 

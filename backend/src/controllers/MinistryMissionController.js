@@ -139,4 +139,114 @@ export class MinistryMissionController {
       });
     }
   }
+
+  // Admin: Get all missions for management
+  static async getAdminMissionsList(req, res) {
+    try {
+      const missions = await MinistryMissionService.getAdminMissionsList();
+
+      res.json({
+        success: true,
+        data: missions
+      });
+    } catch (error) {
+      console.error('Error in getAdminMissionsList:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  // Admin: Create new mission
+  static async createMission(req, res) {
+    try {
+      const missionData = req.body;
+
+      if (!missionData.missionId || !missionData.title || !missionData.missionData) {
+        return res.status(400).json({
+          success: false,
+          message: 'Mission ID, title, and mission data are required'
+        });
+      }
+
+      const mission = await MinistryMissionService.createMission(missionData);
+
+      res.json({
+        success: true,
+        data: mission
+      });
+    } catch (error) {
+      console.error('Error in createMission:', error);
+      
+      if (error.message === 'Mission ID already exists') {
+        return res.status(400).json({
+          success: false,
+          message: 'Mission ID already exists'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  // Admin: Update mission
+  static async updateMission(req, res) {
+    try {
+      const { id } = req.params;
+      const missionData = req.body;
+
+      const mission = await MinistryMissionService.updateMission(id, missionData);
+
+      res.json({
+        success: true,
+        data: mission
+      });
+    } catch (error) {
+      console.error('Error in updateMission:', error);
+      
+      if (error.message === 'Mission not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Mission not found'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  // Admin: Delete mission
+  static async deleteMission(req, res) {
+    try {
+      const { id } = req.params;
+
+      await MinistryMissionService.deleteMission(id);
+
+      res.json({
+        success: true,
+        message: 'Mission deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error in deleteMission:', error);
+      
+      if (error.message === 'Mission not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Mission not found'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
 } 

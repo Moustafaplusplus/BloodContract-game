@@ -65,7 +65,7 @@ export default function PlayerSearch() {
         <div className="flex flex-wrap gap-4 mb-8 items-center justify-center flex-col sm:flex-row">
           <input
             className="bg-hitman-800 border border-accent-red/40 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent-red transition w-full sm:w-64 text-center placeholder:text-hitman-400"
-            placeholder="ابحث باسم المستخدم أو الشخصية..."
+            placeholder="ابحث باسم المستخدم أو اسم الشخصية..."
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
@@ -113,8 +113,10 @@ export default function PlayerSearch() {
                       />
                     ) : null}
                     {/* Fallback icon when no avatar or image fails to load */}
-                    <div className={`w-20 h-20 rounded-full border-4 border-accent-red shadow-md group-hover:scale-105 transition-transform bg-hitman-800 flex items-center justify-center ${avatarUrl ? 'hidden' : 'flex'}`}>
-                      <User className="w-8 h-8 text-accent-red" />
+                    <div className={`w-20 h-20 rounded-full border-4 border-accent-red shadow-md group-hover:scale-105 transition-transform bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${avatarUrl ? 'hidden' : 'flex'}`}>
+                      <span className="text-3xl font-bold text-accent-red">
+                        {(player.displayName || player.name || player.username || "?")[0]}
+                      </span>
                     </div>
                     {isVIP && (
                       <span className="absolute -bottom-2 -right-2 bg-accent-yellow text-black rounded-full px-2 py-1 text-xs font-bold shadow-lg border-2 border-hitman-900">VIP</span>
@@ -123,12 +125,9 @@ export default function PlayerSearch() {
                   {/* Info */}
                   <div className="flex-1 min-w-0 w-full sm:w-auto text-center sm:text-right flex flex-col gap-2">
                     <div className="flex items-center gap-2 justify-center sm:justify-start">
-                      <VipName isVIP={isVIP} className="compact">
-                        {player.username}
-                      </VipName>
-                      {player.name && (
-                        <span className="text-xs text-hitman-400 font-bold">({player.name})</span>
-                      )}
+                      <VipName user={player} />
+                      {/* Show user ID */}
+                      <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded font-bold">ID: {player.userId || player.id}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-1">
                       <StatBadge icon={Star} label="المستوى" value={level ?? '--'} color="accent-yellow" />

@@ -46,6 +46,16 @@ export class HouseController {
     }
   }
 
+  static async unequipHouse(req, res) {
+    try {
+      const result = await HouseService.unequipHouse(req.user.id);
+      res.json({ message: 'House unequipped', ...result });
+    } catch (error) {
+      console.error('Unequip house error:', error);
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   static async buyHouse(req, res) {
     try {
       const { houseId } = req.body;

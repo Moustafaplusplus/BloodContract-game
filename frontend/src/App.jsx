@@ -15,6 +15,7 @@ import { ModalProvider } from "@/contexts/ModalContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import HUD from "@/components/HUD";
+import AdminReturnButton from "@/components/AdminReturnButton";
 import PlayerSearch from "./features/profile/PlayerSearch.jsx";
 import FightResults from './features/fights/FightResults';
 import { ToastContainer } from 'react-toastify';
@@ -22,6 +23,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import GangDetailsWrapper from './features/gangs/GangDetailsWrapper';
 import AdminPanel from "@/features/admin/AdminPanel";
 import { SocketProvider } from "@/contexts/SocketContext";
+import { FamePopupProvider } from "@/contexts/FamePopupContext";
 import { jwtDecode } from "jwt-decode";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
@@ -59,6 +61,9 @@ const BloodContracts = lazy(() => import("@/features/bloodContracts"));
 const Tasks = lazy(() => import("@/features/tasks/Tasks"));
 const Notifications = lazy(() => import("@/features/notifications/Notifications"));
 const GoogleCallback = lazy(() => import("@/features/auth/GoogleCallback"));
+const LoginGift = lazy(() => import("@/features/loginGift/LoginGift"));
+const IntroSlideshow = lazy(() => import("@/components/IntroSlideshow"));
+const IntroDemo = lazy(() => import("@/pages/IntroDemo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,7 +108,7 @@ function HUDWrapper() {
     if (token) {
       try {
         const { id } = jwtDecode(token);
-        console.log('[App] User changed, clearing all caches for user:', id);
+
         // Clear all character-related queries to ensure fresh data
         queryClient.removeQueries(["character"]);
         queryClient.removeQueries(["hospitalStatus"]);
@@ -116,7 +121,7 @@ function HUDWrapper() {
         console.error('[App] Error decoding token:', error);
       }
     } else {
-      console.log('[App] No token, clearing all caches');
+      
       queryClient.clear();
     }
   }, [token, queryClient]);
@@ -147,8 +152,9 @@ export default function App() {
         <AuthProvider>
           <ModalProvider>
             <SocketProvider>
-              <NotificationProvider>
-              <Suspense
+                              <FamePopupProvider>
+                  <NotificationProvider>
+                  <Suspense
                 fallback={
                   <div className="h-screen flex items-center justify-center bg-black">
                     <div className="text-center">
@@ -168,6 +174,9 @@ export default function App() {
                   {/* Privacy Policy and Terms pages (bare) */}
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsAndConditions />} />
+                  {/* Intro Slideshow routes */}
+                  <Route path="/intro" element={<IntroSlideshow onComplete={() => window.location.href = '/dashboard'} />} />
+                  <Route path="/intro-demo" element={<IntroDemo />} />
                   {/* All other pages use main layout and HUD */}
                   <Route
                     path="*"
@@ -175,6 +184,7 @@ export default function App() {
                       <>
                         <HUDWrapper />
                         <DashboardLayout>
+                          <AdminReturnButton />
                           <Routes>
                             <Route path="/players" element={<PlayerSearch />} />
                             <Route path="/hospital" element={<Navigate to="/dashboard/hospital" replace />} />
@@ -214,6 +224,7 @@ export default function App() {
                                   <Route path="profile/:username" element={<Profile />} />
                                   <Route path="jobs" element={<Jobs />} />
                                   <Route path="tasks" element={<Tasks />} />
+                                  <Route path="login-gift" element={<LoginGift />} />
                                   <Route path="ranking" element={<Ranking />} />
                                   <Route path="*" element={<NotFound />} />
                                 </Routes>
@@ -242,6 +253,7 @@ export default function App() {
                 bodyClassName="Toastify__toast-body"
               />
                           </NotificationProvider>
+                </FamePopupProvider>
             </SocketProvider>
           </ModalProvider>
         </AuthProvider>

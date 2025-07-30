@@ -47,18 +47,18 @@ export default function GlobalChat() {
   const [mentionOptions, setMentionOptions] = useState([]);
   const [mentionIndex, setMentionIndex] = useState(0);
   useEffect(() => {
-    // Fetch user info from /api/character for optimistic messages
+    // Fetch user info from /api/profile for optimistic messages (safer than /api/character)
     const fetchUserInfo = async () => {
       try {
-        const res = await axios.get('/api/character');
+        const res = await axios.get('/api/profile');
         setUserInfo({
-          username: res.data?.User?.username || res.data?.username || '',
-          avatarUrl: res.data?.User?.avatarUrl || res.data?.avatarUrl || '/avatars/default.png',
-          isAdmin: res.data?.User?.isAdmin || res.data?.isAdmin || false,
-          isVip: res.data?.User?.isVip || res.data?.isVip || false,
+          username: res.data?.username || '',
+          avatarUrl: res.data?.avatarUrl || '',
+          isAdmin: res.data?.isAdmin || false,
+          isVip: res.data?.isVip || false,
         });
       } catch {
-        setUserInfo({ username: '', avatarUrl: '/avatars/default.png', isAdmin: false, isVip: false });
+        setUserInfo({ username: '', avatarUrl: '', isAdmin: false, isVip: false });
       }
     };
     if (userId) fetchUserInfo();
@@ -86,14 +86,11 @@ export default function GlobalChat() {
     if (!socket) return;
 
     // --- Logging socket state on mount ---
-    console.log('[GlobalChat] useEffect: socket', socket);
-    console.log('[GlobalChat] socket.connected:', socket.connected);
+
 
     // --- Handler for connect event ---
     const handleConnect = () => {
-      console.log('[GlobalChat] Socket connected:', socket.id);
       socket.emit('join_global_chat');
-      console.log('[GlobalChat] join_global_chat emitted');
     };
     // --- Handler for disconnect event ---
     const handleDisconnect = (reason) => {
@@ -103,7 +100,6 @@ export default function GlobalChat() {
 
     // --- Message/event handlers ---
     const handleGlobalMessage = (message) => {
-      console.log('[GlobalChat] Received global_message:', message);
       setMessages(prev => {
         const idx = prev.findIndex(m => m.id === message.id);
         if (idx !== -1) {
@@ -125,32 +121,26 @@ export default function GlobalChat() {
       }
     };
     const handleGlobalMessageError = (error) => {
-      console.log('[GlobalChat] Received global_message_error:', error);
       toast.error(error.error || 'فشل في إرسال الرسالة');
       setSending(false);
     };
     const handleGlobalMessageDeleted = ({ messageId }) => {
-      console.log('[GlobalChat] Received global_message_deleted:', messageId);
       setMessages(prev => prev.filter(m => m.id !== messageId));
     };
     const handleMuted = ({ until }) => {
-      console.log('[GlobalChat] Received muted event:', until);
       setIsMuted(true);
       toast.error(`تم كتمك في الدردشة حتى ${new Date(until).toLocaleTimeString('ar-SA')}`);
     };
     const handleBanned = ({ until }) => {
-      console.log('[GlobalChat] Received banned event:', until);
       setIsMuted(true);
       toast.error(`تم حظرك من الدردشة حتى ${new Date(until).toLocaleTimeString('ar-SA')}`);
     };
     const handleKicked = () => {
-      console.log('[GlobalChat] Received kicked event');
       toast.error('تم طردك من الدردشة العامة');
       setTimeout(() => window.location.reload(), 1500);
     };
     // Handle chat cleared event
     const handleGlobalChatCleared = () => {
-      console.log('[GlobalChat] Received global_chat_cleared event');
       setMessages([]);
       toast.info('تم مسح جميع رسائل الدردشة العامة');
     };
@@ -173,7 +163,6 @@ export default function GlobalChat() {
 
     // --- Cleanup listeners on unmount or socket change ---
     return () => {
-      console.log('[GlobalChat] Cleaning up global chat listeners');
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('global_message', handleGlobalMessage);
@@ -536,7 +525,7 @@ export default function GlobalChat() {
             // Get user info for avatar and badges
             const user = message.User || message;
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-            let avatarUrl = user.avatarUrl || '/avatars/default.png';
+            let avatarUrl = user.avatarUrl || '';
             if (avatarUrl.startsWith('/avatars/')) {
               avatarUrl = backendUrl + avatarUrl;
             }
@@ -556,23 +545,35 @@ export default function GlobalChat() {
               <div key={message.id} className="flex w-full items-end gap-2" style={{ direction: 'rtl', justifyContent: isSelf ? 'flex-end' : 'flex-start' }}>
                 {/* Avatar (left for others, right for self) */}
                 {!isSelf && (
-                  <img
-                    src={avatarUrl}
-                    alt={user.username}
-                    className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2"
-                    title={user.username}
-                  />
+                  <>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={user.username}
+                        className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2"
+                        title={user.username}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    {/* Fallback icon when no avatar or image fails to load */}
+                    <div className={`w-8 h-8 rounded-full border-2 border-zinc-800 bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center shadow order-2 ${avatarUrl ? 'hidden' : 'flex'}`}>
+                      <span className="text-xs font-bold text-accent-red">
+                        {(user.username || "?")[0]}
+                      </span>
+                    </div>
+                  </>
                 )}
                 <div className={getMessageStyle(message) + ' text-xs sm:text-sm inline-block align-bottom'} style={{ wordBreak: 'break-word', maxWidth: '75vw' }}>
                   <div className="flex flex-row items-center flex-wrap gap-2">
                     {/* Username and badges (for others) */}
                     {!isSelf && (
                       <span className="font-semibold text-accent-red flex items-center gap-1 cursor-pointer hover:underline"
-                        onClick={e => setUserMenu({ open: true, anchor: e.target, user: { userId: message.userId, username: user.username, isVip: user.isVip, isAdmin: user.isAdmin } })}
+                        onClick={e => setUserMenu({ open: true, anchor: e.target, user: { userId: message.userId, username: message.username, displayName: message.displayName, isVip: message.isVip, isAdmin: message.isAdmin } })}
                       >
-                        <VipName isVIP={isVip} className="compact">
-                          {user.username}
-                        </VipName>
+                        <VipName user={{ username: message.username, displayName: message.displayName, vipExpiresAt: message.vipExpiresAt }} className="compact" disableLink={true} />
                         {isAdmin && <Shield className="w-4 h-4 text-accent-red" title="مشرف" />}
                       </span>
                     )}
@@ -738,12 +739,26 @@ export default function GlobalChat() {
                 </div>
                 {/* Avatar (right for self) */}
                 {isSelf && (
-                  <img
-                    src={avatarUrl}
-                    alt={user.username}
-                    className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2"
-                    title={user.username}
-                  />
+                  <>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={user.username}
+                        className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2"
+                        title={user.username}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    {/* Fallback icon when no avatar or image fails to load */}
+                    <div className={`w-8 h-8 rounded-full border-2 border-zinc-800 bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center shadow order-2 ${avatarUrl ? 'hidden' : 'flex'}`}>
+                      <span className="text-xs font-bold text-accent-red">
+                        {(user.username || "?")[0]}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             );

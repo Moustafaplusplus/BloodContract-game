@@ -41,20 +41,34 @@ export function AuthProvider({ children }) {
   // Update axios interceptor when token changes
   useEffect(() => {
     const id = axios.interceptors.request.use((config) => {
-      if (token) config.headers.Authorization = `Bearer ${token}`;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
       return config;
     });
 
-    // Add response interceptor to handle blocked users
+    // Add response interceptor to handle blocked users and email verification
     const responseId = axios.interceptors.response.use(
       (response) => response,
       (error) => {
+        // Handle 401 errors by clearing invalid token
+        if (error.response?.status === 401) {
+          // Clear invalid token
+          localStorage.removeItem("jwt");
+          setTokenState(null);
+          setIsAuthed(false);
+          setIsAdmin(false);
+          // Dispatch custom event for SocketContext to react to auth changes
+          window.dispatchEvent(new CustomEvent('auth-change'));
+        }
+        
         if (error.response?.status === 403 && error.response?.data?.message?.includes('blocked')) {
           // User is blocked, show message and logout
           const reason = error.response.data.reason || 'No reason provided';
           alert(`تم حظر حسابك: ${reason}`);
           logout();
         }
+        
         return Promise.reject(error);
       }
     );
@@ -67,25 +81,40 @@ export function AuthProvider({ children }) {
 
   // Check admin status after token is set and axios interceptor is configured
   useEffect(() => {
-    if (token && isAuthed) {
-      const checkAdminStatus = async () => {
+    if (token && isAuthed && tokenLoaded) {
+      const checkAdminStatus = async (retryCount = 0) => {
         try {
-          const response = await axios.get('/api/character');
-          if (response.data?.User?.isAdmin) {
+          const response = await axios.get('/api/profile');
+          if (response.data?.isAdmin) {
             setIsAdmin(true);
           } else {
             setIsAdmin(false);
           }
-        } catch {
+        } catch (error) {
+          // Only log non-401 errors to avoid spam
+          if (error.response?.status !== 401) {
+            console.error('Failed to check admin status:', error);
+          }
+          
+          // Retry once after a short delay if it's a 401 error (token might not be ready yet)
+          if (error.response?.status === 401 && retryCount < 1) {
+            setTimeout(() => checkAdminStatus(retryCount + 1), 200);
+            return;
+          }
+          
           setIsAdmin(false);
         }
       };
       checkAdminStatus();
     }
-  }, [token, isAuthed]);
+  }, [token, isAuthed, tokenLoaded]);
 
   const setToken = useCallback(async (jwt) => {
-    console.log('[Auth] Setting new token for user change');
+    if (!jwt) {
+      console.warn('Attempted to set null/undefined token');
+      return;
+    }
+    
     localStorage.setItem("jwt", jwt);
     setTokenState(jwt);
     setIsAuthed(true);
@@ -93,19 +122,25 @@ export function AuthProvider({ children }) {
     // Dispatch custom event for SocketContext to react to auth changes
     window.dispatchEvent(new CustomEvent('auth-change'));
     
-    // Check if user is admin
-    try {
-      const response = await axios.get('/api/character');
-      if (response.data?.User?.isAdmin) {
-        setIsAdmin(true);
+    // Add a small delay to ensure axios interceptor is properly configured
+    setTimeout(async () => {
+      // Check if user is admin - only after token is properly set
+      try {
+        const response = await axios.get('/api/profile');
+        if (response.data?.isAdmin) {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        // Only log non-401 errors to avoid spam
+        if (error.response?.status !== 401) {
+          console.error('Failed to check admin status during login:', error);
+        }
+        // Don't set admin status on error
       }
-    } catch {
-      // Silently handle admin check errors
-    }
+    }, 100); // 100ms delay to ensure interceptor is set
   }, []);
 
   const logout = useCallback(() => {
-    console.log('[Auth] Logging out user');
     localStorage.removeItem("jwt");
     setTokenState(null);
     setIsAuthed(false);

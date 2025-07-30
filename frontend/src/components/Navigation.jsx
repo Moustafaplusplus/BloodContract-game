@@ -2,6 +2,9 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useUnclaimedTasks } from "@/hooks/useUnclaimedTasks";
+import { useFeatureUnlock } from "@/hooks/useFeatureUnlock";
+import { Lock } from "lucide-react";
 
 // Shape-based Icons (no emojis)
 const MenuIcon = () => (
@@ -177,6 +180,12 @@ const TasksIcon = () => (
   </svg>
 );
 
+const GiftIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg
     className="w-5 h-5"
@@ -210,42 +219,46 @@ export default function Navigation({ isOpen, setIsOpen }) {
   const navigate = useNavigate();
   const { pendingCount } = useFriendRequests();
   const { unreadCount } = useUnreadMessages();
+  const { unclaimedCount } = useUnclaimedTasks();
+  const { isFeatureUnlocked } = useFeatureUnlock();
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  // All navigation items in a flat list
+  // All navigation items with feature unlock requirements
   const navItems = [
-    { to: "/dashboard", label: "الرئيسية", icon: HomeIcon },
-    { to: "/dashboard/character", label: "الشخصية", icon: UserIcon },
-    { to: "/dashboard/crimes", label: "الجرائم", icon: SkullIcon },
-    { to: "/dashboard/blood-contracts", label: "عقود الدم", icon: SkullIcon },
-    { to: "/dashboard/gym", label: "النادي الرياضي", icon: DumbbellIcon },
-    { to: "/dashboard/active-users", label: "اللاعبون النشطون", icon: UserIcon },
-    { to: "/dashboard/hospital", label: "المستشفى", icon: HospitalIcon },
-    { to: "/dashboard/jail", label: "السجن", icon: JailIcon },
-    { to: "/dashboard/bank", label: "البنك", icon: BankIcon },
-    { to: "/dashboard/shop", label: "المتجر", icon: ShoppingIcon },
-    { to: "/dashboard/special-shop", label: "سوق العملة السوداء", icon: ShoppingIcon, className: "glow-red-nav" },
-    { to: "/dashboard/black-market", label: "السوق السوداء", icon: MarketIcon },
-    { to: "/dashboard/jobs", label: "الوظائف", icon: WorkIcon },
-    { to: "/dashboard/inventory", label: "الحقيبة", icon: BackpackIcon },
-    { to: "/dashboard/houses", label: "المنازل", icon: HouseIcon },
-    { to: "/dashboard/cars", label: "السيارات", icon: CarIcon },
-    { to: "/dashboard/dogs", label: "الكلاب", icon: TrophyIcon },
-    { to: "/dashboard/gangs", label: "العصابات", icon: GroupIcon },
-    { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus, hasNotification: pendingCount > 0, notificationCount: pendingCount },
-    { to: "/dashboard/messages", label: "الرسائل", icon: ChatIcon, hasNotification: unreadCount > 0, notificationCount: unreadCount },
-    { to: "/dashboard/global-chat", label: "الدردشة العامة", icon: ChatIcon },
-    { to: "/dashboard/tasks", label: "المهام", icon: TasksIcon },
-    { to: "/dashboard/ministry-mission", label: "مهام الوزارة", icon: MissionIcon },
-    { to: "/dashboard/suggestions", label: "الاقتراحات", icon: SearchIcon },
+    { to: "/dashboard", label: "الرئيسية", icon: HomeIcon, feature: "dashboard" },
+    { to: "/dashboard/character", label: "الشخصية", icon: UserIcon, feature: "character" },
+    { to: "/dashboard/crimes", label: "الجرائم", icon: SkullIcon, feature: "crimes" },
+    { to: "/dashboard/blood-contracts", label: "عقود الدم", icon: SkullIcon, feature: "bloodContracts" },
+    { to: "/dashboard/gym", label: "النادي الرياضي", icon: DumbbellIcon, feature: "gym" },
+    { to: "/dashboard/active-users", label: "اللاعبون النشطون", icon: UserIcon, feature: "fights" },
+    { to: "/dashboard/hospital", label: "المستشفى", icon: HospitalIcon, feature: "hospital" },
+    { to: "/dashboard/jail", label: "السجن", icon: JailIcon, feature: "jail" },
+    { to: "/dashboard/bank", label: "البنك", icon: BankIcon, feature: "bank" },
+    { to: "/dashboard/shop", label: "المتجر", icon: ShoppingIcon, feature: "shop" },
+    { to: "/dashboard/special-shop", label: "سوق العملة السوداء", icon: ShoppingIcon, className: "glow-red-nav", feature: "specialShop" },
+    { to: "/dashboard/black-market", label: "السوق السوداء", icon: MarketIcon, feature: "blackMarket" },
+    { to: "/dashboard/jobs", label: "الوظائف", icon: WorkIcon, feature: "jobs" },
+    { to: "/dashboard/inventory", label: "الحقيبة", icon: BackpackIcon, feature: "inventory" },
+    { to: "/dashboard/houses", label: "المنازل", icon: HouseIcon, feature: "houses" },
+    { to: "/dashboard/cars", label: "السيارات", icon: CarIcon, feature: "cars" },
+    { to: "/dashboard/dogs", label: "الكلاب", icon: TrophyIcon, feature: "dogs" },
+    { to: "/dashboard/gangs", label: "العصابات", icon: GroupIcon, feature: "gangs" },
+    { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus, hasNotification: pendingCount > 0, notificationCount: pendingCount, feature: "friends" },
+    { to: "/dashboard/messages", label: "الرسائل", icon: ChatIcon, hasNotification: unreadCount > 0, notificationCount: unreadCount, feature: "messages" },
+    { to: "/dashboard/global-chat", label: "الدردشة العامة", icon: ChatIcon, feature: "chat" },
+    { to: "/dashboard/tasks", label: "المهام", icon: TasksIcon, hasNotification: unclaimedCount > 0, notificationCount: unclaimedCount, feature: "tasks" },
+    { to: "/dashboard/login-gift", label: "مكافآت الدخول", icon: GiftIcon, hasNotification: true, notificationCount: 1, feature: "loginGift" },
+    { to: "/dashboard/ministry-mission", label: "مهام الوزارة", icon: MissionIcon, feature: "ministryMissions" },
+    { to: "/dashboard/suggestions", label: "الاقتراحات", icon: SearchIcon, feature: "suggestions" },
     {
       label: "تصنيف اللاعبين",
       to: "/dashboard/ranking",
       icon: TrophyIcon,
+      feature: "ranking",
     },
   ];
 
@@ -282,28 +295,48 @@ export default function Navigation({ isOpen, setIsOpen }) {
           {/* Navigation items */}
           <nav className="flex-1 p-4 overflow-y-auto overflow-x-hidden">
             <div className="space-y-1">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setIsOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-white hover:bg-red-900/30 border-r-4 group relative ${
-                      isActive
-                        ? "bg-red-900/50 border-red-500 text-red-300 font-bold shadow-lg shadow-red-900/20"
-                        : "border-transparent hover:border-red-600"
-                    }`
-                  }
-                >
-                  <item.icon className="flex-shrink-0 group-hover:text-red-400" />
-                  <span className={`text-sm${item.className ? ` ${item.className}` : ''}`}>{item.label}</span>
-                  {item.hasNotification && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
-                      {item.notificationCount > 99 ? '99+' : item.notificationCount}
-                    </span>
-                  )}
-                </NavLink>
-              ))}
+              {navItems.map((item) => {
+                const isUnlocked = isFeatureUnlocked(item.feature);
+                
+                return (
+                  <div key={item.to} className="relative">
+                    <NavLink
+                      to={item.to}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-r-4 group relative ${
+                          isUnlocked
+                            ? isActive
+                              ? "bg-red-900/50 border-red-500 text-red-300 font-bold shadow-lg shadow-red-900/20"
+                              : "text-white hover:bg-red-900/30 border-transparent hover:border-red-600"
+                            : "text-gray-500 cursor-not-allowed opacity-60"
+                        }`
+                      }
+                      onClick={(e) => {
+                        if (!isUnlocked) {
+                          e.preventDefault();
+                          // You can add a toast notification here
+                          alert(`هذه الميزة تتطلب المستوى ${item.feature === 'bloodContracts' ? 6 : item.feature === 'fights' ? 6 : item.feature === 'friends' ? 1 : item.feature === 'messages' ? 1 : item.feature === 'gangs' ? 10 : item.feature === 'ministryMissions' ? 5 : item.feature === 'bank' ? 11 : item.feature === 'specialShop' ? 1 : item.feature === 'houses' ? 16 : item.feature === 'cars' ? 18 : item.feature === 'blackMarket' ? 20 : item.feature === 'dogs' ? 21 : item.feature === 'tasks' ? 23 : item.feature === 'suggestions' ? 1 : item.feature === 'ranking' ? 30 : 1}`);
+                        } else {
+                          setIsOpen(false);
+                        }
+                      }}
+                    >
+                      <item.icon className={`flex-shrink-0 ${isUnlocked ? 'group-hover:text-red-400' : 'text-gray-500'}`} />
+                      <span className={`text-sm${item.className ? ` ${item.className}` : ''}`}>{item.label}</span>
+                      
+                      {!isUnlocked && (
+                        <Lock className="w-4 h-4 text-gray-500 ml-auto" />
+                      )}
+                      
+                      {item.hasNotification && isUnlocked && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
+                          {item.notificationCount > 99 ? '99+' : item.notificationCount}
+                        </span>
+                      )}
+                    </NavLink>
+                  </div>
+                );
+              })}
             </div>
           </nav>
 

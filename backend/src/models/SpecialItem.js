@@ -17,7 +17,7 @@ SpecialItem.init({
     allowNull: false
   },
   type: {
-    type: DataTypes.ENUM('HEALTH_POTION', 'ENERGY_POTION', 'OTHER'),
+    type: DataTypes.ENUM('HEALTH_POTION', 'ENERGY_POTION', 'EXPERIENCE_POTION', 'NAME_CHANGE', 'GANG_BOMB', 'ATTACK_IMMUNITY', 'CD_RESET', 'OTHER'),
     allowNull: false
   },
   effect: {
@@ -39,6 +39,11 @@ SpecialItem.init({
   isAvailable: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  levelRequired: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 1
   }
 }, { 
   sequelize, 

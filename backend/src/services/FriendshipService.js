@@ -29,8 +29,7 @@ export class FriendshipService {
       addresseeId,
       status: 'PENDING'
     });
-    // Create notification
-    await FriendshipService.createNotification(addresseeId, 'FRIEND_REQUEST', 'Friend Request', `${requesterId} sent you a friend request`, { requesterId });
+    // Friend request notifications removed as requested
     return friendship;
   }
   static async acceptFriendRequest(friendshipId, userId) {
@@ -45,8 +44,7 @@ export class FriendshipService {
       throw new Error('Friend request is not pending');
     }
     await friendship.update({ status: 'ACCEPTED' });
-    // Create notification for requester
-    await FriendshipService.createNotification(friendship.requesterId, 'FRIEND_REQUEST', 'Friend Request Accepted', `${userId} accepted your friend request`, { userId });
+    // Friend request acceptance notifications removed as requested
     return friendship;
   }
   static async rejectFriendRequest(friendshipId, userId) {
@@ -95,22 +93,16 @@ export class FriendshipService {
         {
           model: Character,
           as: 'Requester',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         },
         {
           model: Character,
           as: 'Addressee',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         }
-      ],
-      order: [['createdAt', 'DESC']]
+      ]
     });
-    return friendships.map(f => ({
-      id: f.id,
-      status: f.status,
-      Requester: f.Requester ? { id: f.Requester.id, name: f.Requester.name, level: f.Requester.level } : null,
-      Addressee: f.Addressee ? { id: f.Addressee.id, name: f.Addressee.name, level: f.Addressee.level } : null
-    }));
+    return friendships;
   }
   static async getFriends(userId) {
     const friendships = await Friendship.findAll({
@@ -125,12 +117,12 @@ export class FriendshipService {
         {
           model: Character,
           as: 'Requester',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         },
         {
           model: Character,
           as: 'Addressee',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         }
       ]
     });
@@ -141,7 +133,12 @@ export class FriendshipService {
       } else if (friendship.Addressee && friendship.Addressee.id !== userId) {
         friend = friendship.Addressee;
       }
-      return friend ? { id: friend.id, name: friend.name, level: friend.level } : null;
+      return friend ? { 
+        id: friend.id, 
+        name: friend.name, 
+        level: friend.level,
+        vipExpiresAt: friend.vipExpiresAt
+      } : null;
     }).filter(Boolean);
   }
   static async searchUsers(query, userId, limit = 10) {
@@ -150,7 +147,7 @@ export class FriendshipService {
         id: { [Op.ne]: userId },
         name: { [Op.iLike]: `%${query}%` }
       },
-      attributes: ['id', 'name', 'level'],
+      attributes: ['id', 'name', 'level', 'vipExpiresAt'],
       limit
     });
     const results = await Promise.all(
@@ -244,22 +241,16 @@ export class FriendshipService {
         {
           model: Character,
           as: 'Requester',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         },
         {
           model: Character,
           as: 'Addressee',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         }
-      ],
-      order: [['createdAt', 'DESC']]
+      ]
     });
-    return friendships.map(f => ({
-      id: f.id,
-      status: f.status,
-      Requester: f.Requester ? { id: f.Requester.id, name: f.Requester.name, level: f.Requester.level } : null,
-      Addressee: f.Addressee ? { id: f.Addressee.id, name: f.Addressee.name, level: f.Addressee.level } : null
-    }));
+    return friendships;
   }
 
   static async getFriends(userId) {
@@ -275,12 +266,12 @@ export class FriendshipService {
         {
           model: Character,
           as: 'Requester',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         },
         {
           model: Character,
           as: 'Addressee',
-          attributes: ['id', 'name', 'level']
+          attributes: ['id', 'name', 'level', 'vipExpiresAt']
         }
       ]
     });
@@ -291,7 +282,12 @@ export class FriendshipService {
       } else if (friendship.Addressee && friendship.Addressee.id !== userId) {
         friend = friendship.Addressee;
       }
-      return friend ? { id: friend.id, name: friend.name, level: friend.level } : null;
+      return friend ? { 
+        id: friend.id, 
+        name: friend.name, 
+        level: friend.level,
+        vipExpiresAt: friend.vipExpiresAt
+      } : null;
     }).filter(Boolean);
   }
 }

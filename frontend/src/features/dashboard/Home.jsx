@@ -22,9 +22,11 @@ import {
   Building2,
   Lock,
   Dumbbell,
+  TrendingUp,
+  Users,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import Modal from "@/components/Modal"
+import { FeatureProgressCard, FeatureUnlockList } from "@/components/FeatureUnlockNotification";
 
 // Helper function to format time
 const formatTime = (seconds) => {
@@ -51,13 +53,10 @@ export default function Home() {
       })()
     : null
 
-  console.log("[Home] Current userId:", userId, "token:", token ? "Present" : "Not found")
-
   // Reset all state when user changes
   const [key, setKey] = React.useState(0)
   React.useEffect(() => {
     if (userId) {
-      console.log("[Home] User changed, resetting component for user:", userId)
       setKey((prev) => prev + 1)
       // Clear all character-related queries
       queryClient.removeQueries(["character"])
@@ -78,32 +77,131 @@ export default function Home() {
     enabled: !!userId, // Only run query when we have a userId
   })
 
-  console.log("[Home] Character data received:", {
-    username: character?.username || "No username",
-    level: character?.level || "No level",
-    userId: character?.userId || "No userId",
-    hospitalStatus: character?.hospitalStatus,
-    jailStatus: character?.jailStatus,
-    crimeCooldown: character?.crimeCooldown,
-    gymCooldown: character?.gymCooldown,
+  // Fetch game news
+  const { data: gameNews } = useQuery({
+    queryKey: ["game-news"],
+    queryFn: () => axios.get("/api/game-news/news").then((res) => res.data),
+    staleTime: 60000, // Cache for 1 minute
   })
 
-  const [showWelcomeModal, setShowWelcomeModal] = React.useState(false)
-  const [welcomeExp, setWelcomeExp] = React.useState(0)
+  // Real-time countdown states
+  const [hospitalRemaining, setHospitalRemaining] = React.useState(0)
+  const [jailRemaining, setJailRemaining] = React.useState(0)
+  const [crimeCooldownRemaining, setCrimeCooldownRemaining] = React.useState(0)
+  const [gymCooldownRemaining, setGymCooldownRemaining] = React.useState(0)
+  const [attackImmunityRemaining, setAttackImmunityRemaining] = React.useState(0)
 
+  // Daily login gift logic removed
+
+  // Hospital countdown timer
   React.useEffect(() => {
-    if (character?.gaveDailyLogin && character?.dailyLoginReward) {
-      setWelcomeExp(character.dailyLoginReward)
-      setShowWelcomeModal(true)
+    if (character?.hospitalStatus?.inHospital && character?.hospitalStatus?.remainingSeconds > 0) {
+      const updateTimer = () => {
+        setHospitalRemaining((prev) => {
+          if (prev <= 0) return 0
+          return prev - 1
+        })
+      }
+
+      // Set initial value
+      setHospitalRemaining(character.hospitalStatus.remainingSeconds)
+      
+      const interval = setInterval(updateTimer, 1000)
+      return () => clearInterval(interval)
+    } else {
+      setHospitalRemaining(0)
     }
-  }, [character])
+  }, [character?.hospitalStatus?.inHospital, character?.hospitalStatus?.remainingSeconds])
+
+  // Jail countdown timer
+  React.useEffect(() => {
+    if (character?.jailStatus?.inJail && character?.jailStatus?.remainingSeconds > 0) {
+      const updateTimer = () => {
+        setJailRemaining((prev) => {
+          if (prev <= 0) return 0
+          return prev - 1
+        })
+      }
+
+      // Set initial value
+      setJailRemaining(character.jailStatus.remainingSeconds)
+      
+      const interval = setInterval(updateTimer, 1000)
+      return () => clearInterval(interval)
+    } else {
+      setJailRemaining(0)
+    }
+  }, [character?.jailStatus?.inJail, character?.jailStatus?.remainingSeconds])
+
+  // Crime cooldown timer
+  React.useEffect(() => {
+    if (character?.crimeCooldown > 0) {
+      const updateTimer = () => {
+        setCrimeCooldownRemaining((prev) => {
+          if (prev <= 0) return 0
+          return prev - 1
+        })
+      }
+
+      // Set initial value
+      setCrimeCooldownRemaining(character.crimeCooldown)
+      
+      const interval = setInterval(updateTimer, 1000)
+      return () => clearInterval(interval)
+    } else {
+      setCrimeCooldownRemaining(0)
+    }
+  }, [character?.crimeCooldown])
+
+  // Gym cooldown timer
+  React.useEffect(() => {
+    if (character?.gymCooldown > 0) {
+      const updateTimer = () => {
+        setGymCooldownRemaining((prev) => {
+          if (prev <= 0) return 0
+          return prev - 1
+        })
+      }
+
+      // Set initial value
+      setGymCooldownRemaining(character.gymCooldown)
+      
+      const interval = setInterval(updateTimer, 1000)
+      return () => clearInterval(interval)
+    } else {
+      setGymCooldownRemaining(0)
+    }
+  }, [character?.gymCooldown])
+
+  // Attack immunity countdown timer
+  React.useEffect(() => {
+    if (character?.attackImmunityExpiresAt) {
+      const updateTimer = () => {
+        const now = new Date()
+        const expiresAt = new Date(character.attackImmunityExpiresAt)
+        const remainingMs = expiresAt.getTime() - now.getTime()
+        
+        if (remainingMs > 0) {
+          setAttackImmunityRemaining(remainingMs)
+        } else {
+          setAttackImmunityRemaining(0)
+        }
+      }
+
+      updateTimer() // Initial update
+      const interval = setInterval(updateTimer, 1000) // Update every second
+
+      return () => clearInterval(interval)
+    } else {
+      setAttackImmunityRemaining(0)
+    }
+  }, [character?.attackImmunityExpiresAt])
 
   // Real-time updates for dashboard stats
   React.useEffect(() => {
     if (!socket) return
 
     const refetchCharacter = () => {
-      console.log("[Home] Socket HUD update received, invalidating character query")
       queryClient.invalidateQueries(["character", userId])
     }
 
@@ -158,11 +256,17 @@ export default function Home() {
     fame: fame ?? 0,
   }
 
-  // Extract status data
-  const hospitalStatus = displayCharacter.hospitalStatus || { inHospital: false, remainingSeconds: 0 }
-  const jailStatus = displayCharacter.jailStatus || { inJail: false, remainingSeconds: 0 }
-  const crimeCooldown = displayCharacter.crimeCooldown || 0
-  const gymCooldown = displayCharacter.gymCooldown || 0
+  // Extract status data with real-time values
+  const hospitalStatus = {
+    inHospital: displayCharacter.hospitalStatus?.inHospital || false,
+    remainingSeconds: hospitalRemaining
+  }
+  const jailStatus = {
+    inJail: displayCharacter.jailStatus?.inJail || false,
+    remainingSeconds: jailRemaining
+  }
+  const crimeCooldown = crimeCooldownRemaining
+  const gymCooldown = gymCooldownRemaining
 
   const quickActions = [
     {
@@ -205,6 +309,12 @@ export default function Home() {
       href: "/houses",
       color: "bg-gradient-to-r from-yellow-700 to-yellow-800 hover:from-yellow-600 hover:to-yellow-700",
     },
+    {
+      icon: Star,
+      label: "شاهد القصة",
+      href: "/intro",
+      color: "bg-gradient-to-r from-pink-700 to-pink-800 hover:from-pink-600 hover:to-pink-700",
+    },
   ]
 
   // Unified stat extraction from backend fields
@@ -228,6 +338,18 @@ export default function Home() {
       label: "الجرائم المرتكبة",
       value: displayCharacter.crimesCommitted ?? 0,
       color: "text-red-400",
+    },
+    {
+      icon: Shield,
+      label: "الدفاع",
+      value: displayCharacter.defense ?? 0,
+      color: "text-blue-400",
+    },
+    {
+      icon: Zap,
+      label: "القوة",
+      value: displayCharacter.strength ?? 0,
+      color: "text-orange-400",
     },
     {
       icon: Shield,
@@ -257,21 +379,14 @@ export default function Home() {
 
   return (
     <>
-      <Modal
-        isOpen={showWelcomeModal}
-        onClose={() => setShowWelcomeModal(false)}
-        title="مرحباً بعودتك!"
-        message={`لقد حصلت على مكافأة تسجيل الدخول اليومي: +${welcomeExp} خبرة!`}
-        type="success"
-        confirmText="شكرًا!"
-      />
+      {/* Daily login gift modal removed */}
 
       <div className="min-h-screen bg-black text-white p-4 pt-20" dir="rtl">
         <div className="max-w-7xl mx-auto">
           {/* Welcome Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent">
-              مرحباً، {displayCharacter.username}
+              مرحباً، {displayCharacter.name}
             </h1>
             <p className="text-zinc-400 text-lg">جاهز لبدء يوم جديد في عالم الجريمة؟</p>
           </div>
@@ -349,6 +464,26 @@ export default function Home() {
                 {formatTime(gymCooldown)}
               </p>
             </div>
+
+            {/* Attack Immunity Status */}
+            {displayCharacter.attackImmunityExpiresAt && new Date(displayCharacter.attackImmunityExpiresAt) > new Date() && (
+              <div className="bg-gradient-to-br from-zinc-950 to-black backdrop-blur-sm border border-blue-600/50 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Shield className="w-8 h-8 text-blue-400" />
+                  <span className="text-2xl font-bold text-blue-400">
+                    محمي
+                  </span>
+                </div>
+                <h3 className="text-zinc-300 mb-2">الحماية</h3>
+                <p className="text-sm font-mono text-blue-400">
+                  {attackImmunityRemaining > 0 ? (() => {
+                    const remainingMinutes = Math.floor(attackImmunityRemaining / (1000 * 60));
+                    const remainingSeconds = Math.floor((attackImmunityRemaining % (1000 * 60)) / 1000);
+                    return `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                  })() : "منتهي"}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -383,6 +518,11 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Feature Progress Section */}
+          <div className="mb-8">
+            <FeatureProgressCard />
+          </div>
+
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Game News */}
@@ -392,14 +532,45 @@ export default function Home() {
                 أخبار اللعبة
               </h3>
               <div className="space-y-3">
-                <div className="p-3 bg-black/40 border border-zinc-800/30 rounded-lg">
-                  <h4 className="font-medium text-yellow-400">تحديث جديد!</h4>
-                  <p className="text-sm text-zinc-400">إضافة ميزات جديدة للعصابات</p>
-                </div>
-                <div className="p-3 bg-black/40 border border-zinc-800/30 rounded-lg">
-                  <h4 className="font-medium text-green-400">حدث خاص</h4>
-                  <p className="text-sm text-zinc-400">مضاعفة الخبرة هذا الأسبوع</p>
-                </div>
+                {gameNews && gameNews.length > 0 ? (
+                  gameNews.slice(0, 3).map((news, index) => (
+                    <div key={news.id} className="p-3 bg-black/40 border border-zinc-800/30 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className={`font-medium text-${news.color || 'yellow'}-400`}>{news.title}</h4>
+                        <span className="text-xs text-zinc-500">
+                          {(() => {
+                            const newsDate = new Date(news.createdAt);
+                            const today = new Date();
+                            const yesterday = new Date(today);
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            
+                            // Reset time to compare only dates
+                            const newsDateOnly = new Date(newsDate.getFullYear(), newsDate.getMonth(), newsDate.getDate());
+                            const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                            const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+                            
+                            if (newsDateOnly.getTime() === todayOnly.getTime()) {
+                              return 'اليوم';
+                            } else if (newsDateOnly.getTime() === yesterdayOnly.getTime()) {
+                              return 'أمس';
+                            } else {
+                              return newsDate.toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              });
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-zinc-400 line-clamp-2">{news.content}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 bg-black/40 border border-zinc-800/30 rounded-lg">
+                    <p className="text-sm text-zinc-500 text-center">لا توجد أخبار حالياً</p>
+                  </div>
+                )}
               </div>
             </div>
 

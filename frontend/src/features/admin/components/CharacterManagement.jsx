@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import MoneyIcon from '@/components/MoneyIcon';
 import { 
   Users, 
   Search,
@@ -12,8 +13,10 @@ import {
   DollarSign,
   Coins,
   Ban,
-  Globe
+  Globe,
+  Package
 } from 'lucide-react';
+import InventoryTooltip from '@/components/InventoryTooltip';
 
 export default function CharacterManagement() {
   const queryClient = useQueryClient();
@@ -22,6 +25,13 @@ export default function CharacterManagement() {
   const [editValue, setEditValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [inventoryTooltip, setInventoryTooltip] = useState({
+    isVisible: false,
+    position: { x: 0, y: 0 },
+    userId: null
+  });
+  const [inventoryData, setInventoryData] = useState(null);
+  const [inventoryCounts, setInventoryCounts] = useState({});
 
   // Debounce search term to prevent excessive API calls
   useEffect(() => {
@@ -43,6 +53,40 @@ export default function CharacterManagement() {
     },
     staleTime: 30 * 1000,
   });
+
+  // Fetch inventory counts for all users
+  const fetchInventoryCounts = async () => {
+    try {
+      const token = localStorage.getItem('jwt');
+      const counts = {};
+      
+      // Fetch counts for each character
+      for (const character of charactersData?.characters || []) {
+        if (character.User?.id) {
+          try {
+            const response = await axios.get(`/api/admin/users/${character.User.id}/inventory`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            counts[character.User.id] = response.data.totalItems || 0;
+          } catch (error) {
+            console.error(`Error fetching inventory count for user ${character.User.id}:`, error);
+            counts[character.User.id] = 0;
+          }
+        }
+      }
+      
+      setInventoryCounts(counts);
+    } catch (error) {
+      console.error('Error fetching inventory counts:', error);
+    }
+  };
+
+  // Fetch inventory counts when characters data is loaded
+  useEffect(() => {
+    if (charactersData?.characters) {
+      fetchInventoryCounts();
+    }
+  }, [charactersData]);
 
   // Update character mutation
   const updateCharacterMutation = useMutation({
@@ -111,6 +155,59 @@ export default function CharacterManagement() {
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'فشل في تغيير المستوى');
+    },
+  });
+
+  // Login as user mutation
+  const loginAsUserMutation = useMutation({
+    mutationFn: ({ userId }) => {
+      console.log('Login as user - userId:', userId); // Debug log
+      const token = localStorage.getItem('jwt');
+      return axios.post(`/api/admin/users/${userId}/login-token`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
+    onSuccess: (data) => {
+      // Store the original admin token
+      const adminToken = localStorage.getItem('jwt');
+      localStorage.setItem('adminOriginalToken', adminToken);
+      
+      // Store the user token
+      localStorage.setItem('jwt', data.data.token);
+      
+      // Store user info for easy return
+      localStorage.setItem('adminLoggedAsUser', JSON.stringify({
+        userId: data.data.user.id,
+        username: data.data.user.username,
+        characterName: data.data.character.name
+      }));
+      
+      toast.success(`تم تسجيل الدخول كـ ${data.data.user.username}`);
+      
+      // Reload the page to switch to user context
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error('Login as user error:', error); // Debug log
+      toast.error(error.response?.data?.error || 'فشل في تسجيل الدخول كالمستخدم');
+    },
+  });
+
+  // Get user inventory mutation
+  const getUserInventoryMutation = useMutation({
+    mutationFn: ({ userId }) => {
+      const token = localStorage.getItem('jwt');
+      return axios.get(`/api/admin/users/${userId}/inventory`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
+    onSuccess: (data) => {
+      console.log('Inventory data received:', data.data); // Debug log
+      setInventoryData(data.data);
+    },
+    onError: (error) => {
+      console.error('Inventory fetch error:', error); // Debug log
+      toast.error(error.response?.data?.error || 'فشل في جلب مخزون المستخدم');
     },
   });
 
@@ -221,6 +318,38 @@ export default function CharacterManagement() {
     getUserIpsMutation.mutate({ userId });
   };
 
+  const handleLoginAsUser = (userId, username) => {
+    if (!userId) {
+      toast.error('معرف المستخدم غير متوفر');
+      return;
+    }
+    
+    if (confirm(`هل أنت متأكد من تسجيل الدخول كـ ${username}؟`)) {
+      loginAsUserMutation.mutate({ userId });
+    }
+  };
+
+  const handleShowInventory = (event, userId) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setInventoryTooltip({
+      isVisible: true,
+      position: { x: rect.left, y: rect.top },
+      userId
+    });
+    
+    // Fetch inventory data
+    getUserInventoryMutation.mutate({ userId });
+  };
+
+  const handleHideInventory = () => {
+    setInventoryTooltip({
+      isVisible: false,
+      position: { x: 0, y: 0 },
+      userId: null
+    });
+    setInventoryData(null);
+  };
+
   if (charactersLoading) {
     return (
       <div className="text-center py-12">
@@ -272,7 +401,7 @@ export default function CharacterManagement() {
                         {character.User?.username?.[0] || '?'}
                       </div>
                       <div>
-                        <div className="font-medium text-white">{character.User?.username}</div>
+                        <div className="font-medium text-white">{character.User?.Character?.name || character.User?.username}</div>
                         <div className="text-sm text-hitman-400">{character.User?.email}</div>
                       </div>
                     </div>
@@ -318,6 +447,7 @@ export default function CharacterManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
+                      <MoneyIcon className="w-4 h-4" />
                       <span className="font-medium">${character.money?.toLocaleString()}</span>
                       <button
                         onClick={() => handleAdjustMoney(character.id)}
@@ -391,6 +521,26 @@ export default function CharacterManagement() {
                         <Globe className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleLoginAsUser(character.User?.id, character.User?.username)}
+                        className="text-purple-400 hover:text-purple-300 p-1 rounded"
+                        title="تسجيل الدخول كالمستخدم"
+                      >
+                        <Users className="w-4 h-4" />
+                      </button>
+                      <button
+                        onMouseEnter={(e) => handleShowInventory(e, character.User?.id)}
+                        onMouseLeave={handleHideInventory}
+                        className="text-blue-400 hover:text-blue-300 p-1 rounded relative"
+                        title="عرض المخزون"
+                      >
+                        <Package className="w-4 h-4" />
+                        {inventoryCounts[character.User?.id] > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-accent-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                            {inventoryCounts[character.User?.id]}
+                          </span>
+                        )}
+                      </button>
+                      <button
                         onClick={() => handleResetCharacter(character.id)}
                         className="text-red-400 hover:text-red-300 p-1 rounded"
                         title="إعادة تعيين الشخصية"
@@ -425,6 +575,13 @@ export default function CharacterManagement() {
           </div>
         </div>
       )}
+
+      {/* Inventory Tooltip */}
+      <InventoryTooltip
+        inventory={inventoryData}
+        isVisible={inventoryTooltip.isVisible}
+        position={inventoryTooltip.position}
+      />
     </div>
   );
 } 

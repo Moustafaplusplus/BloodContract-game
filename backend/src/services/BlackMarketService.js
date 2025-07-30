@@ -211,4 +211,80 @@ export class BlackMarketService {
     await item.save();
     return item;
   }
+
+  // Create notification for black market listing posted
+  static async createListingPostedNotification(userId, itemName, price) {
+    console.log(`[BlackMarketService] Creating listing posted notification for user ${userId}, item: ${itemName}, price: ${price}`);
+    try {
+      const notification = await NotificationService.createNotification(
+        userId,
+        'BLACKMARKET_LISTING_POSTED',
+        'تم نشر إعلان في السوق السوداء',
+        `تم نشر إعلان لـ ${itemName} بسعر ${price.toLocaleString()} ريال`,
+        { itemName, price }
+      );
+      console.log(`[BlackMarketService] Listing posted notification created successfully:`, notification);
+      return notification;
+    } catch (error) {
+      console.error(`[BlackMarketService] Error creating listing posted notification:`, error);
+      throw error;
+    }
+  }
+
+  // Create notification for black market listing sold
+  static async createListingSoldNotification(userId, itemName, price) {
+    console.log(`[BlackMarketService] Creating listing sold notification for user ${userId}, item: ${itemName}, price: ${price}`);
+    try {
+      const notification = await NotificationService.createNotification(
+        userId,
+        'BLACKMARKET_LISTING_SOLD',
+        'تم بيع إعلانك في السوق السوداء',
+        `تم بيع ${itemName} بسعر ${price.toLocaleString()} ريال`,
+        { itemName, price }
+      );
+      console.log(`[BlackMarketService] Listing sold notification created successfully:`, notification);
+      return notification;
+    } catch (error) {
+      console.error(`[BlackMarketService] Error creating listing sold notification:`, error);
+      throw error;
+    }
+  }
+
+  // Create notification for black market listing cancelled
+  static async createListingCancelledNotification(userId, itemName) {
+    console.log(`[BlackMarketService] Creating listing cancelled notification for user ${userId}, item: ${itemName}`);
+    try {
+      const notification = await NotificationService.createNotification(
+        userId,
+        'BLACKMARKET_LISTING_CANCELLED',
+        'تم إلغاء إعلانك في السوق السوداء',
+        `تم إلغاء إعلان ${itemName} واستعادة العنصر`,
+        { itemName }
+      );
+      console.log(`[BlackMarketService] Listing cancelled notification created successfully:`, notification);
+      return notification;
+    } catch (error) {
+      console.error(`[BlackMarketService] Error creating listing cancelled notification:`, error);
+      throw error;
+    }
+  }
+
+  // Create notification for black market item purchased
+  static async createItemPurchasedNotification(userId, itemName, price) {
+    console.log(`[BlackMarketService] Creating item purchased notification for user ${userId}, item: ${itemName}, price: ${price}`);
+    try {
+      const notification = await NotificationService.createNotification(
+        userId,
+        'BLACKMARKET_ITEM_PURCHASED',
+        'تم شراء عنصر من السوق السوداء',
+        `تم شراء ${itemName} بسعر ${price.toLocaleString()} ريال`,
+        { itemName, price }
+      );
+      console.log(`[BlackMarketService] Item purchased notification created successfully:`, notification);
+      return notification;
+    } catch (error) {
+      console.error(`[BlackMarketService] Error creating item purchased notification:`, error);
+      throw error;
+    }
+  }
 } 

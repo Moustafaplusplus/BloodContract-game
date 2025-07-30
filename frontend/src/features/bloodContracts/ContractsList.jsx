@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+import VipName from '../profile/VipName.jsx';
 
 function getRemainingTime(expiry) {
   const now = new Date();
@@ -91,7 +92,7 @@ const ContractsList = ({ onAttack }) => {
         <tbody>
           {contracts.map(contract => (
             <tr key={contract.id} style={{ borderBottom: '1px solid #333' }}>
-              <td style={{ padding: '0.5rem', color: '#fff' }}>{contract.target?.username}</td>
+              <td style={{ padding: '0.5rem', color: '#fff' }}><VipName user={contract.target} /></td>
               <td style={{ padding: '0.5rem', color: '#fff' }}>{contract.target?.fame}</td>
               <td style={{ padding: '0.5rem', color: '#fff' }}>{contract.target?.level}</td>
               <td style={{ padding: '0.5rem', color: '#fff' }}>${contract.price}</td>

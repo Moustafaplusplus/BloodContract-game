@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -34,6 +34,7 @@ import { Dialog } from '@headlessui/react';
 import './vipSparkle.css';
 import VipName from './VipName.jsx';
 import Modal from "@/components/Modal";
+import MoneyIcon from "@/components/MoneyIcon";
 import { useSocket } from "@/hooks/useSocket";
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 
@@ -79,7 +80,9 @@ function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
         <div className="flex items-center justify-between mb-4 gap-4">
           <div className="flex-1 text-center">
             <div className="text-lg font-bold text-accent-red">الفائز</div>
-            <div className="text-xl font-bouya">{winner?.name || "؟"}</div>
+            <div className="text-xl font-bouya">
+              <VipName user={winner} />
+            </div>
             <div className="text-hitman-300 text-sm">@{winner?.username}</div>
           </div>
           <div className="flex-1 text-center">
@@ -121,6 +124,7 @@ export default function Profile() {
   const { username } = useParams();
   const { token } = useAuth();
   const { stats: hudStats, invalidateHud } = useHud();
+  const queryClient = useQueryClient();
   const [attacking, setAttacking] = useState(false);
   const [remainingTime, setRemainingTime] = useState(0);
   const [totalTime, setTotalTime] = useState(null);
@@ -133,6 +137,9 @@ export default function Profile() {
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [profileRatings, setProfileRatings] = useState({ likes: 0, dislikes: 0, userRating: null });
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [showFightResult, setShowFightResult] = useState(false);
+  const [fightResult, setFightResult] = useState(null);
+  const [attackImmunityRemaining, setAttackImmunityRemaining] = useState(0);
 
   const {
     data: character,
@@ -182,59 +189,91 @@ export default function Profile() {
   // Fame compatibility: support both top-level and nested fame
   let fame = character?.fame;
   if (!fame && character?.character?.fame) fame = character.character.fame;
+  
+  const isOwnProfile = !username;
+  const userId = character?.userId;
+  
   // When constructing displayCharacter, inject fame
-  const displayCharacter = {
+  // For own profile, use HUD data which is more up-to-date
+  const displayCharacter = isOwnProfile && hudStats ? {
+    ...hudStats,
+    fame: fame ?? 0,
+  } : {
     ...(character || mockCharacter),
     fame: fame ?? 0,
   };
-
-  const isOwnProfile = !username;
-  const userId = character?.userId;
   
   // Check if this is the current user (for self-attack prevention)
   const isCurrentUser = hudStats?.userId === userId;
 
-  const { data: hospitalStatus } = useQuery({
-    queryKey: ['hospitalStatus', userId, isOwnProfile],
-    queryFn: async () => {
+  const [hospitalStatus, setHospitalStatus] = useState(null);
+
+  // Fetch hospital status function
+  const fetchHospitalStatus = async () => {
+    if (!token) return;
+    
+    try {
       let url = '/api/confinement/hospital';
       if (!isOwnProfile && userId) {
         url = `/api/confinement/hospital/${userId}`;
       }
       const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt')}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) return {};
-      return res.json();
-    },
-    enabled: isOwnProfile || !!userId,
-    staleTime: 10000,
-  });
-
-  useEffect(() => {
-    if (hospitalStatus?.inHospital && hospitalStatus?.releaseAt && hospitalStatus?.startedAt) {
-      const releaseAt = new Date(hospitalStatus.releaseAt).getTime();
-      const startedAt = new Date(hospitalStatus.startedAt).getTime();
-      const now = Date.now();
-      const total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
-      setTotalTime(total);
-      setRemainingTime(Math.max(0, Math.round((releaseAt - now) / 1000)));
-
-      const interval = setInterval(() => {
-        const now = Date.now();
-        const remaining = Math.max(0, Math.round((releaseAt - now) / 1000));
-        setRemainingTime(remaining);
-        if (remaining <= 0) {
-          clearInterval(interval);
+      if (!res.ok) return;
+      const data = await res.json();
+      setHospitalStatus(data);
+      
+      if (data.inHospital && data.remainingSeconds) {
+        // Use the remainingSeconds directly from backend (most accurate)
+        const remaining = data.remainingSeconds;
+        
+        // Calculate total time from startedAt and releasedAt for progress bar
+        let total = remaining;
+        if (data.releaseAt && data.startedAt) {
+          const releaseAt = new Date(data.releaseAt).getTime();
+          const startedAt = new Date(data.startedAt).getTime();
+          total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
         }
-      }, 1000);
-
-      return () => clearInterval(interval);
-    } else if (hospitalStatus?.inHospital && hospitalStatus?.remainingSeconds) {
-      setTotalTime(hospitalStatus.remainingSeconds);
-      setRemainingTime(hospitalStatus.remainingSeconds);
+        
+        setTotalTime(total);
+        setRemainingTime(remaining);
+      } else {
+        // Not in hospital, reset everything
+        setTotalTime(null);
+        setRemainingTime(0);
+      }
+    } catch (error) {
+      console.error("Hospital fetch error:", error);
     }
-  }, [hospitalStatus?.inHospital, hospitalStatus?.releaseAt, hospitalStatus?.startedAt, hospitalStatus?.remainingSeconds]);
+  };
+
+  // Initial fetch on mount
+  useEffect(() => {
+    if (isOwnProfile || userId) {
+      fetchHospitalStatus();
+    }
+  }, [isOwnProfile, userId, token]);
+
+  // Update timer
+  useEffect(() => {
+    if (hospitalStatus?.inHospital && totalTime && remainingTime > 0) {
+      const timer = setInterval(() => {
+        setRemainingTime(prev => {
+          const newRemaining = prev - 1;
+          if (newRemaining <= 0) {
+            clearInterval(timer);
+            fetchHospitalStatus();
+            return 0;
+          }
+          return newRemaining;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [hospitalStatus?.inHospital, totalTime, remainingTime]);
+
+
 
   // Real-time updates for friendship and profile
   useEffect(() => {
@@ -273,10 +312,7 @@ export default function Profile() {
   useEffect(() => {
     if (!socket) return;
     const refetchProfile = () => {
-      // Use react-query's refetch if available
-      // (react-query's useQuery returns a refetch function if destructured)
-      // But here, we can just invalidate the query
-      window?.__REACT_QUERY_CLIENT__?.invalidateQueries?.(["character", username]);
+      queryClient.invalidateQueries(["character", username]);
     };
     if (isOwnProfile) {
       socket.on('hud:update', refetchProfile);
@@ -290,14 +326,18 @@ export default function Profile() {
         socket.off('profile:update', refetchProfile);
       }
     };
-  }, [socket, isOwnProfile, username]);
+  }, [socket, isOwnProfile, username, queryClient]);
 
+  // Real-time updates for hospital status
   useEffect(() => {
-    if (character?.gaveDailyLogin && character?.dailyLoginReward) {
-      // setWelcomeExp(character.dailyLoginReward); // Removed
-      // setShowWelcomeModal(true); // Removed
-    }
-  }, [character]);
+    if (!socket) return;
+    socket.on('hospital:update', fetchHospitalStatus);
+    const pollInterval = setInterval(fetchHospitalStatus, 10000);
+    return () => {
+      socket.off('hospital:update', fetchHospitalStatus);
+      clearInterval(pollInterval);
+    };
+  }, [socket]);
 
   useEffect(() => {
     if (character?.userId) {
@@ -364,6 +404,30 @@ export default function Profile() {
 
   // Calculate progress
   const progress = totalTime && totalTime > 0 ? Math.max(0, Math.min(1, (totalTime - remainingTime) / totalTime)) : 0;
+
+  // Attack immunity countdown timer
+  useEffect(() => {
+    if (displayCharacter?.attackImmunityExpiresAt) {
+      const updateTimer = () => {
+        const now = new Date();
+        const expiresAt = new Date(displayCharacter.attackImmunityExpiresAt);
+        const remainingMs = expiresAt.getTime() - now.getTime();
+        
+        if (remainingMs > 0) {
+          setAttackImmunityRemaining(remainingMs);
+        } else {
+          setAttackImmunityRemaining(0);
+        }
+      };
+
+      updateTimer(); // Initial update
+      const interval = setInterval(updateTimer, 1000); // Update every second
+
+      return () => clearInterval(interval);
+    } else {
+      setAttackImmunityRemaining(0);
+    }
+  }, [displayCharacter?.attackImmunityExpiresAt]);
 
   if (isLoading) {
     return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل الملف الشخصي..." />;
@@ -490,6 +554,8 @@ export default function Profile() {
             toast.error("لا يمكنك الهجوم وأنت في المستشفى. يجب عليك الانتظار حتى خروجك.");
           } else if (error.message?.includes("لا يمكنك مهاجمة لاعب في المستشفى")) {
             toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً.");
+          } else if (error.message?.includes("لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً")) {
+            toast.error("🛡️ لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً.");
           } else if (error.message?.includes("Failed to fetch") || error.message?.includes("ERR_CONNECTION_REFUSED")) {
             toast.error("فشل في الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
           } else {
@@ -530,7 +596,7 @@ export default function Profile() {
         {hospitalStatus?.inHospital && (
           <div className="bg-black border-2 border-red-600 text-white rounded-lg p-4 mb-4 text-center shadow-md">
             <span className="font-bold text-red-400">
-              {isOwnProfile ? "أنت في المستشفى" : `${displayCharacter?.username || "هذا اللاعب"} في المستشفى`}
+              {isOwnProfile ? "أنت في المستشفى" : `${displayCharacter?.displayName || displayCharacter?.name || displayCharacter?.username || "هذا اللاعب"} في المستشفى`}
             </span>
             <span className="mx-2">|</span>
             <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span></span>
@@ -574,18 +640,16 @@ export default function Profile() {
 
                 {/* Basic Info */}
                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <VipName isVIP={isVIP} className="large">
-                    {displayCharacter.name || displayCharacter.username}
-                  </VipName>
+                  <VipName user={displayCharacter} className="large" />
                   {character?.userId && (
-                    <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded ml-2">ID: {character.userId}</span>
+                    <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded font-bold">ID: {character.userId}</span>
                   )}
                 </h2>
                 {/* Money on hand */}
                 <div className="flex items-center justify-center gap-2 mt-2 mb-1">
-                  <DollarSign className="w-5 h-5 text-accent-green" />
+                  <MoneyIcon className="w-8 h-8" />
                   <span className="text-accent-green font-bold">النقود:</span>
-                  <span className="text-lg font-mono text-accent-green">{displayCharacter.money?.toLocaleString() ?? 0}$</span>
+                  <span className="text-lg font-mono text-accent-green">{displayCharacter.money?.toLocaleString() ?? 0}</span>
                 </div>
                 <p className="text-accent-red font-medium mb-1">
                   لاعب جديد
@@ -612,6 +676,23 @@ export default function Profile() {
                     <span>{displayCharacter.strength || 0}</span>
                   </div>
                 </div>
+
+                {/* Attack Immunity Status */}
+                {displayCharacter.attackImmunityExpiresAt && new Date(displayCharacter.attackImmunityExpiresAt) > new Date() && (
+                  <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 border border-blue-500/50 rounded-xl p-4 mb-4 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Shield className="w-5 h-5 text-blue-400" />
+                      <span className="text-blue-400 font-bold">حماية من الهجمات</span>
+                    </div>
+                    <div className="text-blue-300 text-sm">
+                      متبقى: {attackImmunityRemaining > 0 ? (() => {
+                        const remainingMinutes = Math.floor(attackImmunityRemaining / (1000 * 60));
+                        const remainingSeconds = Math.floor((attackImmunityRemaining % (1000 * 60)) / 1000);
+                        return `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                      })() : "منتهي"}
+                    </div>
+                  </div>
+                )}
               </div>
               {/* Action Buttons (hide if viewing own profile) */}
               {!isCurrentUser && (

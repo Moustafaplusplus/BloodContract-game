@@ -1,0 +1,48 @@
+# بيانات الأسلحة - Weapons Seed Data
+# Format: name|description|damage|price|currency|type|rarity|imageUrl
+
+# الأسلحة الأساسية (مال عادي) - Basic Weapons (Money)
+بندقية AK-47|بندقية هجومية كلاسيكية موثوقة وفعالة|85|15000|money|rifle|common|/public/weapons/ak-47.png
+بندقية محسنة|نسخة محسنة من البندقية العادية مع دقة أعلى|95|25000|money|rifle|uncommon|/public/weapons/enhanced-rifle.png
+قناص عادي|بندقية قنص قياسية للهجمات المتوسطة المدى|100|35000|money|sniper|uncommon|/public/weapons/sniper.png
+مسدس جلاك|مسدس خفيف وسريع للاستخدام السريع|65|8000|money|pistol|common|/public/weapons/glock-gun.png
+مسدس ديزرت إيجل|مسدس قوي وموثوق للهجمات القريبة|75|12000|money|pistol|uncommon|/public/weapons/desert-eagle-pistol.png
+رشاش أوزي|رشاش خفيف وسريع للهجمات القريبة|70|18000|money|smg|uncommon|/public/weapons/uzi.png
+رشاش أوزي محسن مع كاتم صوت|نسخة محسنة من الأوزي مع كاتم صوت للهجمات الصامتة|80|28000|money|smg|rare|/public/weapons/enhanced-uzi-with-a-suppresor.png
+رشاش مينيغان آلي|رشاش ثقيل بقوة نارية هائلة|110|55000|money|machine_gun|rare|/public/weapons/minigun-automatic-machine-gun.png
+بندقية خرطوش|بندقية خرطوش قوية للهجمات القريبة|90|22000|money|shotgun|uncommon|/public/weapons/shotgun.png
+قاذف اللهب|سلاح ناري يطلق لهب حارق|130|65000|money|flamethrower|rare|/public/weapons/firethrower.png
+قاذف قنابل|سلاح ثقيل لإطلاق القنابل المتفجرة|150|75000|money|grenade_launcher|epic|/public/weapons/grenade-launcher.png
+قاذف صواريخ RPG|سلاح صاروخي قوي للهجمات المدمرة|200|95000|money|rocket_launcher|epic|/public/weapons/rpg-rocket-launcher.png
+فأس يدوي|سلاح قريب بسيط وفعال|45|5000|money|axe|common|/public/weapons/hand-axe.png
+سكين تكتيكي|سكين تكتيكي للهجمات القريبة والصامتة|35|3000|money|knife|common|/public/weapons/tactical-knife.png
+
+# الأسلحة المتطورة (عملة سوداء) - Advanced Weapons (Blackcoin)
+قناص متقدم|بندقية قنص متطورة للهجمات بعيدة المدى|120|45000|blackcoin|sniper|rare|/public/weapons/advanced-sniper.png
+مسدس ليزر|مسدس متطور يطلق أشعة ليزر|120|70000|blackcoin|laser_pistol|epic|/public/weapons/laser-gun.png
+مسدس صدمة|مسدس يطلق موجات صدمة|100|60000|blackcoin|shockwave_pistol|epic|/public/weapons/shockwave-gun.png
+مسدس صدمة كبير|سلاح صدمة قوي للهجمات المدمرة|180|110000|blackcoin|shockwave_rifle|legend|/public/weapons/shockwave-big-gun.png
+بندقية بلازما|سلاح متطور يطلق طاقة البلازما|140|85000|blackcoin|plasma_rifle|epic|/public/weapons/plasma-rifle.png
+بندقية نبض X9|سلاح متطور يطلق نبضات طاقة قوية|160|95000|blackcoin|pulse_rifle|epic|/public/weapons/x9-pulse-laser-rifle.png
+مدفع صوتي|سلاح يطلق موجات صوتية مدمرة|110|65000|blackcoin|sonic_blaster|rare|/public/weapons/sonic-blaster.png
+قنبلة سرب نانو|قنبلة متطورة تحتوي على سرب من الروبوتات النانوية|160|90000|blackcoin|nano_swarm_grenade|epic|/public/weapons/nano-swarm-grenade.png
+قوس ليزر أسطوري|قوس أسطوري يطلق سهام ليزر قوية|200|150000|blackcoin|legendary_laser_bow|legend|/public/weapons/legendary-laser-bow.png
+
+# Weapon Stats Explanation:
+# - damage: Damage dealt by the weapon
+# - price: Cost in money or blackcoins
+# - currency: money or blackcoin
+# - type: weapon category (rifle, pistol, smg, etc.)
+# - rarity: common, uncommon, rare, epic, legend
+# - imageUrl: Path to weapon image in public folder
+
+# Rarity Distribution:
+# Common: 4 weapons (basic weapons)
+# Uncommon: 5 weapons (mid-tier weapons)
+# Rare: 4 weapons (high-performance weapons)
+# Epic: 6 weapons (advanced weapons)
+# Legendary: 2 weapons (ultimate weapons)
+
+# Currency Distribution:
+# Money weapons: 14 weapons (common to epic)
+# Blackcoin weapons: 9 weapons (rare to legendary) 

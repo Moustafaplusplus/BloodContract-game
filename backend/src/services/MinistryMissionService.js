@@ -5,9 +5,9 @@ import { TaskService } from './TaskService.js';
 export class MinistryMissionService {
   // Calculate progressive rewards based on mission level
   static calculateRewards(missionLevel, ending) {
-    const baseExp = 200; // Doubled from 100
-    const baseMoney = 1000; // Doubled from 500
-    const baseBlackcoins = 5; // Kept the same
+    const baseExp = 800;
+    const baseMoney = 1200;
+    const baseBlackcoins = 5;
     
     // Progressive scaling based on mission level (not player level)
     const levelMultiplier = Math.max(1, Math.floor(missionLevel / 10) + 1);
@@ -273,6 +273,104 @@ export class MinistryMissionService {
       };
     } catch (error) {
       console.error('Error fetching user mission stats:', error);
+      throw error;
+    }
+  }
+
+  // Admin: Get all missions for management
+  static async getAdminMissionsList() {
+    try {
+      const missions = await MinistryMission.findAll({
+        order: [['order', 'ASC'], ['createdAt', 'DESC']]
+      });
+
+      return missions.map(mission => ({
+        id: mission.id,
+        missionId: mission.missionId,
+        title: mission.title,
+        description: mission.description,
+        minLevel: mission.minLevel,
+        thumbnail: mission.thumbnail,
+        banner: mission.banner,
+        isActive: mission.isActive,
+        order: mission.order,
+        createdAt: mission.createdAt,
+        updatedAt: mission.updatedAt,
+        pagesCount: mission.missionData?.pages ? Object.keys(mission.missionData.pages).length : 0,
+        endingsCount: mission.missionData?.endings ? Object.keys(mission.missionData.endings).length : 0
+      }));
+    } catch (error) {
+      console.error('Error fetching admin missions list:', error);
+      throw error;
+    }
+  }
+
+  // Admin: Create new mission
+  static async createMission(missionData) {
+    try {
+      // Check if mission ID already exists
+      const existingMission = await MinistryMission.findOne({
+        where: { missionId: missionData.missionId }
+      });
+
+      if (existingMission) {
+        throw new Error('Mission ID already exists');
+      }
+
+      const mission = await MinistryMission.create(missionData);
+      return mission;
+    } catch (error) {
+      console.error('Error creating mission:', error);
+      throw error;
+    }
+  }
+
+  // Admin: Update mission
+  static async updateMission(id, missionData) {
+    try {
+      const mission = await MinistryMission.findByPk(id);
+
+      if (!mission) {
+        throw new Error('Mission not found');
+      }
+
+      // If mission ID is being changed, check for conflicts
+      if (missionData.missionId && missionData.missionId !== mission.missionId) {
+        const existingMission = await MinistryMission.findOne({
+          where: { missionId: missionData.missionId }
+        });
+
+        if (existingMission) {
+          throw new Error('Mission ID already exists');
+        }
+      }
+
+      await mission.update(missionData);
+      return mission;
+    } catch (error) {
+      console.error('Error updating mission:', error);
+      throw error;
+    }
+  }
+
+  // Admin: Delete mission
+  static async deleteMission(id) {
+    try {
+      const mission = await MinistryMission.findByPk(id);
+
+      if (!mission) {
+        throw new Error('Mission not found');
+      }
+
+      // Delete associated user progress
+      await UserMinistryMission.destroy({
+        where: { missionId: mission.missionId }
+      });
+
+      // Delete the mission
+      await mission.destroy();
+    } catch (error) {
+      console.error('Error deleting mission:', error);
       throw error;
     }
   }

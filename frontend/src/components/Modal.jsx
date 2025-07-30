@@ -11,7 +11,12 @@ const Modal = ({
   onConfirm,
   showCancel = false,
   cancelText = 'إلغاء',
-  children
+  children,
+  inputType,
+  inputPlaceholder,
+  inputValue,
+  onInputChange,
+  extraButton
 }) => {
   if (!isOpen) return null;
 
@@ -92,6 +97,20 @@ const Modal = ({
             {message}
           </p>
 
+          {/* Input field */}
+          {inputType && (
+            <div className="mb-6">
+              <input
+                type={inputType}
+                placeholder={inputPlaceholder}
+                value={inputValue || ''}
+                onChange={(e) => onInputChange && onInputChange(e.target.value)}
+                className="w-full p-3 bg-bloodcontract-800 border border-bloodcontract-600 rounded-lg text-white placeholder-bloodcontract-400 focus:border-accent-red focus:ring-1 focus:ring-accent-red/30 transition-colors"
+                autoFocus
+              />
+            </div>
+          )}
+
           {/* Custom children (e.g., price input) */}
           {children}
 
@@ -105,10 +124,30 @@ const Modal = ({
                 {cancelText}
               </button>
             )}
+            {extraButton && (
+              <button
+                onClick={() => {
+                  if (extraButton.action) {
+                    extraButton.action();
+                  }
+                }}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                {extraButton.text}
+              </button>
+            )}
             <button
               onClick={() => {
-                if (onConfirm) onConfirm();
-                onClose();
+                if (onConfirm) {
+                  if (inputType && inputValue) {
+                    onConfirm(inputValue);
+                  } else if (!inputType) {
+                    onConfirm();
+                  }
+                }
+                if (!inputType || inputValue) {
+                  onClose();
+                }
               }}
               className={`px-6 py-3 ${getButtonColor()} text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105`}
             >

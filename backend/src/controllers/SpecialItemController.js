@@ -34,14 +34,17 @@ export class SpecialItemController {
 
   static async useSpecialItem(req, res) {
     try {
-      const result = await SpecialItemService.useSpecialItem(req.user.id, req.params.id);
+      const additionalData = req.body || {};
+      const result = await SpecialItemService.useSpecialItem(req.user.id, req.params.id, additionalData);
       res.json(result);
     } catch (error) {
       console.error('Use special item error:', error);
       if (error.message === 'العنصر غير موجود' || error.message === 'لا تملك هذا العنصر') {
         return res.status(404).json({ message: error.message });
       }
-      if (error.message.includes('يجب الانتظار')) {
+      if (error.message.includes('يجب الانتظار') || error.message.includes('يجب أن تكون المستوى') || 
+          error.message.includes('يجب تحديد العصابة') || error.message.includes('لا يمكنك استهداف') ||
+          error.message.includes('جميع أعضاء العصابة المستهدفة محتجزون')) {
         return res.status(400).json({ message: error.message });
       }
       res.status(500).json({ message: 'فشل استخدام العنصر' });

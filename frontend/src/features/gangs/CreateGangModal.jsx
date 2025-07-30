@@ -18,7 +18,9 @@ export default function CreateGangModal({ onClose }) {
     setLoading(true);
     setError('');
     try {
-      await axios.post('/api/gangs', { name, description, method });
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post('/api/gangs', { name, description, method }, { headers });
       window.location.reload();
     } catch (err) {
       const errorMessage = err.response?.data?.error || 'فشل الإنشاء';

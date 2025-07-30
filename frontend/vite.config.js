@@ -45,6 +45,18 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true,
       },
+      '/crimes': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+      '/avatars': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+      '/missions': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
     },
   },
 });

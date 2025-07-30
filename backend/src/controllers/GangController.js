@@ -65,8 +65,8 @@ export class GangController {
   // Join gang
   static async joinGang(req, res) {
     try {
-      const { gangId } = req.params;
-      const member = await GangService.sendJoinRequest(gangId, req.user.id);
+      const { id } = req.params;
+      const member = await GangService.sendJoinRequest(id, req.user.id);
       res.status(201).json(member);
     } catch (error) {
       console.error('[ERROR] Join gang:', error);
@@ -106,12 +106,12 @@ export class GangController {
   // Transfer leadership
   static async transferLeadership(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { newLeaderId } = req.body;
       if (!newLeaderId) {
         return res.status(400).json({ error: 'New leader ID required' });
       }
-      const gang = await GangService.transferLeadership(gangId, newLeaderId, req.user.id);
+      const gang = await GangService.transferLeadership(id, newLeaderId, req.user.id);
       res.json(gang);
     } catch (error) {
       console.error('[ERROR] Transfer leadership:', error);
@@ -128,12 +128,12 @@ export class GangController {
   // Contribute money
   static async contributeMoney(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { amount } = req.body;
       if (!amount || amount <= 0) {
         return res.status(400).json({ error: 'Valid amount required' });
       }
-      const result = await GangService.contributeMoney(gangId, req.user.id, amount);
+      const result = await GangService.contributeMoney(id, req.user.id, amount);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Contribute money:', error);
@@ -152,12 +152,12 @@ export class GangController {
   // Update gang board
   static async updateBoard(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { board } = req.body;
       if (!board) {
         return res.status(400).json({ error: 'Board content required' });
       }
-      const result = await GangService.updateBoard(gangId, req.user.id, board);
+      const result = await GangService.updateBoard(id, req.user.id, board);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Update board:', error);
@@ -176,8 +176,8 @@ export class GangController {
   // Get gang vault
   static async getVault(req, res) {
     try {
-      const { gangId } = req.params;
-      const vault = await GangService.getVault(gangId);
+      const { id } = req.params;
+      const vault = await GangService.getVault(id);
       res.json({ vault });
     } catch (error) {
       console.error('[ERROR] Get vault:', error);
@@ -188,9 +188,9 @@ export class GangController {
   // Update gang vault (admin/owner only)
   static async updateVault(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { money } = req.body;
-      const result = await GangService.updateVault(gangId, req.user.id, money);
+      const result = await GangService.updateVault(id, req.user.id, money);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Update vault:', error);
@@ -207,8 +207,8 @@ export class GangController {
   // Delete gang (owner only)
   static async deleteGang(req, res) {
     try {
-      const { gangId } = req.params;
-      const result = await GangService.deleteGang(gangId, req.user.id);
+      const { id } = req.params;
+      const result = await GangService.deleteGang(id, req.user.id);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Delete gang:', error);
@@ -225,12 +225,12 @@ export class GangController {
   // Transfer money from vault to member (owner only)
   static async transferFromVault(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { memberId, amount } = req.body;
       if (!memberId || !amount || amount <= 0) {
         return res.status(400).json({ error: 'Valid memberId and amount required' });
       }
-      const result = await GangService.transferFromVault(gangId, req.user.id, memberId, amount);
+      const result = await GangService.transferFromVault(id, req.user.id, memberId, amount);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Transfer from vault:', error);
@@ -253,12 +253,12 @@ export class GangController {
   // Kick a member (leader/officer only)
   static async kickMember(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { targetUserId } = req.body;
       if (!targetUserId) {
         return res.status(400).json({ error: 'Target user ID required' });
       }
-      const result = await GangService.kickMember(gangId, req.user.id, targetUserId);
+      const result = await GangService.kickMember(id, req.user.id, targetUserId);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Kick member:', error);
@@ -275,12 +275,12 @@ export class GangController {
   // Promote member to officer (leader only)
   static async promoteMember(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { targetUserId } = req.body;
       if (!targetUserId) {
         return res.status(400).json({ error: 'Target user ID required' });
       }
-      const result = await GangService.promoteMember(gangId, req.user.id, targetUserId);
+      const result = await GangService.promoteMember(id, req.user.id, targetUserId);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Promote member:', error);
@@ -297,12 +297,12 @@ export class GangController {
   // Demote officer to member (leader only)
   static async demoteOfficer(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { targetUserId } = req.body;
       if (!targetUserId) {
         return res.status(400).json({ error: 'Target user ID required' });
       }
-      const result = await GangService.demoteOfficer(gangId, req.user.id, targetUserId);
+      const result = await GangService.demoteOfficer(id, req.user.id, targetUserId);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Demote officer:', error);
@@ -319,8 +319,8 @@ export class GangController {
   // Get join requests for a gang (leader/officer only)
   static async getJoinRequests(req, res) {
     try {
-      const { gangId } = req.params;
-      const requests = await GangService.getJoinRequests(gangId, req.user.id);
+      const { id } = req.params;
+      const requests = await GangService.getJoinRequests(id, req.user.id);
       res.json(requests);
     } catch (error) {
       console.error('[ERROR] Get join requests:', error);
@@ -334,12 +334,12 @@ export class GangController {
   // Accept join request (leader/officer only)
   static async acceptJoinRequest(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { requestId } = req.body;
       if (!requestId) {
         return res.status(400).json({ error: 'Request ID required' });
       }
-      const result = await GangService.acceptJoinRequest(gangId, req.user.id, requestId);
+      const result = await GangService.acceptJoinRequest(id, req.user.id, requestId);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Accept join request:', error);
@@ -356,12 +356,12 @@ export class GangController {
   // Reject join request (leader/officer only)
   static async rejectJoinRequest(req, res) {
     try {
-      const { gangId } = req.params;
+      const { id } = req.params;
       const { requestId } = req.body;
       if (!requestId) {
         return res.status(400).json({ error: 'Request ID required' });
       }
-      const result = await GangService.rejectJoinRequest(gangId, req.user.id, requestId);
+      const result = await GangService.rejectJoinRequest(id, req.user.id, requestId);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Reject join request:', error);
@@ -389,8 +389,8 @@ export class GangController {
   // Cancel join request
   static async cancelJoinRequest(req, res) {
     try {
-      const { gangId } = req.params;
-      const result = await GangService.cancelJoinRequest(req.user.id, gangId);
+      const { id } = req.params;
+      const result = await GangService.cancelJoinRequest(req.user.id, id);
       res.json(result);
     } catch (error) {
       console.error('[ERROR] Cancel join request:', error);

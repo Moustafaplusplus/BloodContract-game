@@ -101,6 +101,21 @@ router.delete('/:id', auth, adminAuth, CrimeController.deleteCrime);
 // POST /api/crimes/execute/:crimeId - Execute a specific crime (auth required)
 router.post('/execute/:crimeId', auth, validate('executeCrime'), CrimeController.executeCrime);
 
+// GET /api/crimes/debug/:id - Debug endpoint to view crime data (admin only)
+router.get('/debug/:id', auth, adminAuth, async (req, res) => {
+  try {
+    const crimeId = parseInt(req.params.id, 10);
+    const crime = await Crime.findByPk(crimeId);
+    if (!crime) {
+      return res.status(404).json({ error: "Crime not found" });
+    }
+    res.json(crime.toJSON());
+  } catch (error) {
+    console.error('[Crime Debug] Error:', error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // POST /api/crimes/execute - Execute a crime (alternative endpoint, auth required)
 router.post('/execute', auth, validate('executeCrime'), CrimeController.executeCrime);
 

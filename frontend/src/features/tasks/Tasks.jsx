@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import MoneyIcon from '@/components/MoneyIcon';
+import { useUnclaimedTasks } from '@/hooks/useUnclaimedTasks';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(null);
   const [promotionStatus, setPromotionStatus] = useState(null);
+  const [dailyTask, setDailyTask] = useState(null);
+  const [claimingDaily, setClaimingDaily] = useState(false);
+  const { refetch: refetchUnclaimedCount } = useUnclaimedTasks();
 
   useEffect(() => {
     fetchTasks();
     fetchPromotionStatus();
+    fetchDailyTaskStatus();
   }, []);
 
   async function fetchTasks() {
@@ -33,6 +39,15 @@ export default function Tasks() {
     }
   }
 
+  async function fetchDailyTaskStatus() {
+    try {
+      const res = await axios.get('/api/tasks/daily/status');
+      setDailyTask(res.data);
+    } catch {
+      setDailyTask(null);
+    }
+  }
+
   async function collectReward(taskId) {
     setCollecting(taskId);
     try {
@@ -42,10 +57,25 @@ export default function Tasks() {
         setPromotionStatus(res.data.promotionStatus);
       }
       fetchTasks(); // Refresh to update collected status
+      refetchUnclaimedCount(); // Refresh navigation badge
     } catch (error) {
       // TODO: Show error message
     } finally {
       setCollecting(null);
+    }
+  }
+
+  async function claimDailyTask() {
+    setClaimingDaily(true);
+    try {
+      const res = await axios.post('/api/tasks/daily/claim');
+      fetchDailyTaskStatus(); // Refresh daily task status
+      refetchUnclaimedCount(); // Refresh navigation badge
+      // TODO: Show success message with rewards
+    } catch (error) {
+      // TODO: Show error message
+    } finally {
+      setClaimingDaily(false);
     }
   }
 
@@ -106,6 +136,53 @@ export default function Tasks() {
           <div className="w-32 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto"></div>
           <p className="text-hitman-300 mt-4">أكمل المهام واحصل على المكافآت</p>
         </div>
+
+        {/* Daily Task */}
+        {dailyTask && (
+          <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 shadow-lg border border-yellow-500 mb-8">
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-bold text-yellow-400 mb-2">🎁 المهمة اليومية</h2>
+              <p className="text-hitman-300">سجل دخولك اليومي واحصل على مكافآت مجانية!</p>
+            </div>
+
+            {/* Rewards Display */}
+            <div className="flex justify-center gap-4 mb-4">
+              <span className="bg-green-900/50 text-green-300 px-3 py-1 rounded text-sm flex items-center gap-1">
+                <MoneyIcon className="w-4 h-4" />
+                1 بلاك كوين
+              </span>
+              <span className="bg-blue-900/50 text-blue-300 px-3 py-1 rounded text-sm">
+                ⭐ {dailyTask.expReward?.toLocaleString() || 0} خبرة
+              </span>
+            </div>
+
+            {/* Action Button */}
+            <div className="text-center">
+              {dailyTask.isAvailable ? (
+                <button
+                  onClick={claimDailyTask}
+                  disabled={claimingDaily}
+                  className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 text-white px-8 py-3 rounded-lg font-bold transition text-lg"
+                >
+                  {claimingDaily ? 'جاري المطالبة...' : '🎁 احصل على المكافأة اليومية'}
+                </button>
+              ) : (
+                <div className="text-yellow-400 text-lg font-bold">
+                  ✅ تم المطالبة اليوم
+                </div>
+              )}
+            </div>
+
+            {/* Next Available Time */}
+            {dailyTask.lastClaimDate && !dailyTask.isAvailable && (
+              <div className="text-center mt-3">
+                <p className="text-hitman-400 text-sm">
+                  المكافأة التالية متاحة بعد 24 ساعة من آخر مطالبة
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Promotion Status */}
         {promotionStatus && (
@@ -207,8 +284,9 @@ export default function Tasks() {
                   <span className="text-xs text-hitman-400">المكافآت:</span>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {task.rewardMoney > 0 && (
-                      <span className="bg-green-900/50 text-green-300 px-2 py-1 rounded text-xs">
-                        💰 {task.rewardMoney.toLocaleString()}
+                      <span className="bg-green-900/50 text-green-300 px-2 py-1 rounded text-xs flex items-center gap-1">
+                        <MoneyIcon className="w-4 h-4" />
+                        {task.rewardMoney.toLocaleString()}
                       </span>
                     )}
                     {task.rewardExp > 0 && (

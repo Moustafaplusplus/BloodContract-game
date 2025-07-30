@@ -89,6 +89,7 @@ export default function Signup() {
         gender: form.gender,
         password: form.password,
       });
+      
       setToken(data.token);
       setModal({
         isOpen: true,
@@ -179,6 +180,9 @@ export default function Signup() {
                       minLength={3}
                     />
                     <div className="input-border"></div>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    يمكن استخدام الأحرف والأرقام والنقاط والشرطات والشرطات السفلية
                   </div>
                 </div>
 

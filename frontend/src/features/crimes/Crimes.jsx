@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "react-toastify";
 import { extractErrorMessage } from "@/utils/errorHandler";
@@ -40,12 +41,25 @@ export default function Crimes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { token } = useAuth();
+  const { stats } = useHud();
   const { socket } = useSocket();
   const { showModal } = useModalManager();
   const [cooldownLeft, setCooldownLeft] = useState(0);
+  const [totalCooldown, setTotalCooldown] = useState(0);
   const [jailStatus, setJailStatus] = useState({ inJail: false });
   const [hospitalStatus, setHospitalStatus] = useState({ inHospital: false });
   const justAttemptedCrime = useRef(false);
+
+  // Initialize cooldown from HUD data
+  useEffect(() => {
+    if (stats?.crimeCooldown && stats.crimeCooldown > 0) {
+      setCooldownLeft(stats.crimeCooldown);
+      // Estimate total cooldown based on typical crime cooldowns (60-300 seconds)
+      // This is a fallback since we don't have the exact crime that was executed
+      const estimatedTotal = Math.max(stats.crimeCooldown, 60);
+      setTotalCooldown(estimatedTotal);
+    }
+  }, [stats?.crimeCooldown]);
 
   // Fetch jail/hospital status
   const fetchStatuses = useCallback(() => {
@@ -91,11 +105,46 @@ export default function Crimes() {
   /* ───────────────────────── عدّاد التبريد ──────────��──────────── */
   useEffect(() => {
     if (cooldownLeft <= 0) return;
-    const t = setInterval(() => {
-      setCooldownLeft((sec) => (sec > 1 ? sec - 1 : 0));
-    }, 1_000);
-    return () => clearInterval(t);
+    
+    const timer = setInterval(() => {
+      setCooldownLeft(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
   }, [cooldownLeft]);
+
+  // Listen for HUD updates to sync cooldown
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleHudUpdate = () => {
+      // The HUD data will be updated via the useHud hook
+      // We just need to re-initialize the cooldown when stats change
+      if (stats?.crimeCooldown && stats.crimeCooldown > 0) {
+        setCooldownLeft(stats.crimeCooldown);
+      }
+    };
+    
+    socket.on('hud:update', handleHudUpdate);
+    
+    // Also poll for updates every 10 seconds as a fallback
+    const pollInterval = setInterval(() => {
+      if (stats?.crimeCooldown && stats.crimeCooldown > 0) {
+        setCooldownLeft(stats.crimeCooldown);
+      }
+    }, 10000);
+    
+    return () => {
+      socket.off('hud:update', handleHudUpdate);
+      clearInterval(pollInterval);
+    };
+  }, [socket, stats?.crimeCooldown]);
 
   /* ───────────── جلب قائمة الجرائم ───────────── */
   const {
@@ -131,7 +180,10 @@ export default function Crimes() {
         replace: true 
       });
       
-      if (data.cooldownLeft) setCooldownLeft(data.cooldownLeft);
+      if (data.cooldownLeft) {
+        setCooldownLeft(data.cooldownLeft);
+        setTotalCooldown(data.cooldownLeft);
+      }
       queryClient.invalidateQueries(["crimes"]);
     },
     onError: (err) => {
@@ -226,22 +278,71 @@ export default function Crimes() {
           <div className="w-32 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto"></div>
         </div>
 
+        {/* Block Warning - Jail/Hospital */}
+        {isBlocked && (
+          <div className="mb-8 animate-slide-up">
+            <div className="bg-gradient-to-r from-accent-red/20 to-red-900/20 border border-accent-red/30 rounded-xl p-6 backdrop-blur-sm">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <AlertTriangle className="w-8 h-8 text-accent-red mr-3 animate-pulse" />
+                  <h3 className="text-xl font-bold text-accent-red">
+                    {jailStatus.inJail ? "أنت في السجن" : "أنت في المستشفى"}
+                  </h3>
+                </div>
+                
+                <div className="text-center mb-4">
+                  <div className="text-4xl font-mono text-accent-red mb-2 font-bold">
+                    {jailStatus.inJail 
+                      ? formatCooldown(Math.max(0, Math.floor((jailStatus.remainingSeconds || 0))))
+                      : formatCooldown(Math.max(0, Math.floor((hospitalStatus.remainingSeconds || 0))))
+                    }
+                  </div>
+                  <p className="text-hitman-300 text-sm">
+                    {jailStatus.inJail 
+                      ? "الوقت المتبقي للخروج من السجن"
+                      : "الوقت المتبقي للخروج من المستشفى"
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cooldown Warning */}
-        {cooldownLeft > 0 && (
+        {cooldownLeft > 0 && !isBlocked && (
           <div className="mb-8 animate-slide-up">
             <div className="bg-gradient-to-r from-accent-red/20 to-accent-orange/20 border border-accent-red/30 rounded-xl p-6 backdrop-blur-sm">
-              <div className="flex items-center justify-center">
-                <Clock className="w-6 h-6 text-accent-red mr-3" />
-                <div className="text-center">
-                  <p className="text-white font-semibold text-lg">
-                    فترة هدوء مطلوبة
-                  </p>
-                  <p className="text-accent-red font-mono text-xl">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <Clock className="w-8 h-8 text-accent-red mr-3 animate-pulse" />
+                  <h3 className="text-xl font-bold text-accent-red">فترة هدوء مطلوبة</h3>
+                </div>
+                
+                {/* Timer Display */}
+                <div className="text-center mb-4">
+                  <div className="text-4xl font-mono text-accent-red mb-2 font-bold">
                     {formatCooldown(cooldownLeft)}
-                  </p>
-                  <p className="text-hitman-300 text-sm">
-                    يجب الانتظار قبل المهمة التالية
-                  </p>
+                  </div>
+                  <p className="text-hitman-300 text-sm">الوقت المتبقي قبل المهمة التالية</p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-hitman-300">تقدم فترة الهدوء</span>
+                    <span className="text-accent-red font-bold">
+                      {totalCooldown > 0 ? Math.round(((totalCooldown - cooldownLeft) / totalCooldown) * 100) : 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-hitman-700 rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-accent-red to-red-600 h-3 rounded-full transition-all duration-1000"
+                      style={{ 
+                        width: `${totalCooldown > 0 ? Math.max(0, Math.min(100, ((totalCooldown - cooldownLeft) / totalCooldown) * 100)) : 0}%` 
+                      }}
+                    ></div>
+                  </div>
                 </div>
               </div>
             </div>

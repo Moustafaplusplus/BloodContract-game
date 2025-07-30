@@ -32,7 +32,6 @@ export function useHud() {
   /* ─── helper callable from any component ─── */
   const invalidateHud = useCallback(() => {
     if (socket && socket.connected && isAuthed) {
-      console.log('[HUD] Requesting HUD data refresh');
       socket.emit('hud:request');
     }
   }, [socket, isAuthed]);
@@ -45,7 +44,6 @@ export function useHud() {
     }
 
     const handleConnect = () => {
-      console.log('[HUD] Socket connected, requesting initial data');
       setSocketConnected(true);
       if (!hasRequestedInitialDataRef.current && isAuthed) {
         hasRequestedInitialDataRef.current = true;
@@ -54,7 +52,6 @@ export function useHud() {
     };
 
     const handleDisconnect = () => {
-      console.log('[HUD] Socket disconnected');
       setSocketConnected(false);
       hasRequestedInitialDataRef.current = false;
     };
@@ -82,7 +79,6 @@ export function useHud() {
     const newUserId = getUserIdFromToken();
     
     if (newUserId !== currentUserIdRef.current) {
-      console.log('[HUD] User changed from', currentUserIdRef.current, 'to', newUserId);
       currentUserIdRef.current = newUserId;
       hasRequestedInitialDataRef.current = false;
       
@@ -107,17 +103,8 @@ export function useHud() {
       
       // Only update HUD if the data is for the current user
       if (snapshot?.userId === currentUserId) {
-        console.log('[HUD] Received update for current user:', {
-          username: snapshot?.username || 'No username',
-          level: snapshot?.level || 'No level',
-          userId: snapshot?.userId || 'No userId',
-          money: snapshot?.money || 'No money',
-          blackcoins: snapshot?.blackcoins || 'No blackcoins'
-        });
         setHud(snapshot);
         setLoading(false);
-      } else {
-        console.log('[HUD] Ignoring update for different user:', snapshot?.userId, 'vs current:', currentUserId);
       }
     };
 
@@ -131,7 +118,6 @@ export function useHud() {
   /* ─── handle logout ─── */
   useEffect(() => {
     if (!isAuthed) {
-      console.log('[HUD] User logged out, clearing HUD data');
       setHud(null);
       setLoading(false);
       currentUserIdRef.current = null;

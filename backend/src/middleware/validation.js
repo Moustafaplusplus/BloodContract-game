@@ -1,16 +1,123 @@
 import Joi from 'joi';
 
+// Username validation function - only alphanumeric, dots, hyphens, and underscores
+const validateUsername = (value, helpers) => {
+  // Regex for alphanumeric characters, dots, hyphens, and underscores only
+  const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+  
+  if (!usernameRegex.test(value)) {
+    return helpers.error('any.invalid');
+  }
+  
+  // Check for consecutive special characters
+  if (/[._-]{2,}/.test(value)) {
+    return helpers.error('any.invalid');
+  }
+  
+  // Check if starts or ends with special characters
+  if (/^[._-]|[._-]$/.test(value)) {
+    return helpers.error('any.invalid');
+  }
+  
+  return value;
+};
+
+// Character name validation function - same as username
+const validateCharacterName = (value, helpers) => {
+  // Regex for alphanumeric characters, dots, hyphens, and underscores only
+  const nameRegex = /^[a-zA-Z0-9._-]+$/;
+  
+  if (!nameRegex.test(value)) {
+    return helpers.error('any.invalid');
+  }
+  
+  // Check for consecutive special characters
+  if (/[._-]{2,}/.test(value)) {
+    return helpers.error('any.invalid');
+  }
+  
+  // Check if starts or ends with special characters
+  if (/^[._-]|[._-]$/.test(value)) {
+    return helpers.error('any.invalid');
+  }
+  
+  return value;
+};
+
+// Enhanced email validation function
+const validateEmail = (value, helpers) => {
+  // Basic email format check
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(value)) {
+    return helpers.error('string.email');
+  }
+
+  // Block disposable/fake email domains
+  const blockedDomains = [
+    'test.com', 'test.org', 'test.net', 'test.co', 'test.io',
+    'example.com', 'example.org', 'example.net', 'example.co',
+    'user.com', 'user.org', 'user.net', 'user.co',
+    'temp.com', 'temp.org', 'temp.net', 'temp.co',
+    'fake.com', 'fake.org', 'fake.net', 'fake.co',
+    'disposable.com', 'disposable.org', 'disposable.net',
+    '10minutemail.com', 'guerrillamail.com', 'mailinator.com',
+    'tempmail.com', 'throwaway.com', 'trashmail.com',
+    'yopmail.com', 'getnada.com', 'mailnesia.com',
+    'sharklasers.com', 'grr.la', 'guerrillamailblock.com',
+    'pokemail.net', 'spam4.me', 'bccto.me', 'chacuo.net',
+    'dispostable.com', 'mailmetrash.com', 'tempr.email',
+    'tmpeml.com', 'tmpmail.org', 'tmpmail.net',
+    'maildrop.cc', 'mailinator.net', 'mailinator.org',
+    'mailinator.com', 'mailinator2.com', 'mailinator3.com',
+    'mailinator4.com', 'mailinator5.com', 'mailinator6.com',
+    'mailinator7.com', 'mailinator8.com', 'mailinator9.com',
+    'mailinator10.com', 'mailinator11.com', 'mailinator12.com',
+    'mailinator13.com', 'mailinator14.com', 'mailinator15.com',
+    'mailinator16.com', 'mailinator17.com', 'mailinator18.com',
+    'mailinator19.com', 'mailinator20.com', 'mailinator21.com',
+    'mailinator22.com', 'mailinator23.com', 'mailinator24.com',
+    'mailinator25.com', 'mailinator26.com', 'mailinator27.com',
+    'mailinator28.com', 'mailinator29.com', 'mailinator30.com',
+    'mailinator31.com', 'mailinator32.com', 'mailinator33.com',
+    'mailinator34.com', 'mailinator35.com', 'mailinator36.com',
+    'mailinator37.com', 'mailinator38.com', 'mailinator39.com',
+    'mailinator40.com', 'mailinator41.com', 'mailinator42.com',
+    'mailinator43.com', 'mailinator44.com', 'mailinator45.com',
+    'mailinator46.com', 'mailinator47.com', 'mailinator48.com',
+    'mailinator49.com', 'mailinator50.com'
+  ];
+
+  const domain = value.split('@')[1]?.toLowerCase();
+  if (blockedDomains.includes(domain)) {
+    return helpers.error('any.invalid');
+  }
+
+  // Block single character domains
+  if (domain && domain.length < 2) {
+    return helpers.error('any.invalid');
+  }
+
+  // Block domains with only numbers
+  if (domain && /^\d+$/.test(domain.split('.')[0])) {
+    return helpers.error('any.invalid');
+  }
+
+  return value;
+};
+
 // Validation schemas for different endpoints
 export const validationSchemas = {
   // User authentication
   signup: Joi.object({
-    username: Joi.string().min(3).max(30).required().messages({
+    username: Joi.string().min(3).max(30).custom(validateUsername).required().messages({
       'string.min': 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل',
       'string.max': 'اسم المستخدم يجب أن يكون 30 حرف كحد أقصى',
+      'any.invalid': 'اسم المستخدم يجب أن يحتوي على أحرف وأرقام فقط مع إمكانية استخدام النقاط والشرطات والشرطات السفلية',
       'any.required': 'اسم المستخدم مطلوب'
     }),
-    email: Joi.string().email().required().messages({
+    email: Joi.string().custom(validateEmail).required().messages({
       'string.email': 'البريد الإلكتروني غير صحيح',
+      'any.invalid': 'البريد الإلكتروني غير مسموح به (يجب أن يكون بريد إلكتروني حقيقي)',
       'any.required': 'البريد الإلكتروني مطلوب'
     }),
     password: Joi.string().min(6).max(100).required().messages({
@@ -189,10 +296,21 @@ export const validationSchemas = {
 
   // Username availability check
   checkUsername: Joi.object({
-    username: Joi.string().min(3).max(30).required().messages({
+    username: Joi.string().min(3).max(30).custom(validateUsername).required().messages({
       'string.min': 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل',
       'string.max': 'اسم المستخدم يجب أن يكون 30 حرف كحد أقصى',
+      'any.invalid': 'اسم المستخدم يجب أن يحتوي على أحرف وأرقام فقط مع إمكانية استخدام النقاط والشرطات والشرطات السفلية',
       'any.required': 'اسم المستخدم مطلوب'
+    })
+  }),
+
+  // Character name change
+  changeCharacterName: Joi.object({
+    newName: Joi.string().min(3).max(20).custom(validateCharacterName).required().messages({
+      'string.min': 'الاسم يجب أن يكون 3 أحرف على الأقل',
+      'string.max': 'الاسم يجب أن يكون 20 حرف كحد أقصى',
+      'any.invalid': 'الاسم يجب أن يحتوي على أحرف وأرقام فقط مع إمكانية استخدام النقاط والشرطات والشرطات السفلية',
+      'any.required': 'الاسم الجديد مطلوب'
     })
   }),
 

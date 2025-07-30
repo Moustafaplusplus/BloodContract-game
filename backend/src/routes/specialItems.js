@@ -37,7 +37,7 @@ router.get('/', SpecialItemController.getSpecialItems);
 
 // Protected routes (require authentication)
 router.post('/buy/:id', auth, SpecialItemController.buySpecialItem);
-router.post('/use/:id', auth, SpecialItemController.useSpecialItem);
+router.post('/:id/use', auth, SpecialItemController.useSpecialItem);
 router.post('/sell/:id', auth, SpecialItemController.sellSpecialItem);
 
 // Admin routes

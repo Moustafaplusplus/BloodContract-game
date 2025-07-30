@@ -38,7 +38,7 @@ const rarityIcons = {
   legend: '⭐⭐⭐⭐⭐'
 };
 
-function DogCard({ dog, isOwned = false, isActive = false, onBuy, onActivate, onSell, buying, activating, selling }) {
+function DogCard({ dog, isOwned = false, isActive = false, onBuy, onEquip, onUnequip, onSell, buying, equipping, unequipping, selling }) {
   const rarity = dog.rarity?.toLowerCase() || 'common';
   
   return (
@@ -116,21 +116,29 @@ function DogCard({ dog, isOwned = false, isActive = false, onBuy, onActivate, on
           </button>
         ) : (
           <div className="flex space-x-2 rtl:space-x-reverse">
-            {!isActive && (
+            {isActive ? (
               <button
-                onClick={() => onActivate(dog.id)}
-                disabled={activating === dog.id}
+                onClick={() => onUnequip()}
+                disabled={unequipping}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
+              >
+                <Settings className="w-3 h-3 mr-1" />
+                {unequipping ? '...جاري الإلغاء' : 'إلغاء التفعيل'}
+              </button>
+            ) : (
+              <button
+                onClick={() => onEquip(dog.id)}
+                disabled={equipping === dog.id}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
               >
                 <Settings className="w-3 h-3 mr-1" />
-                {activating === dog.id ? '...جاري التفعيل' : 'تفعيل'}
+                {equipping === dog.id ? '...جاري التفعيل' : 'تفعيل'}
               </button>
             )}
             <button
               onClick={() => onSell(dog.id)}
-              disabled={selling === dog.id || isActive}
+              disabled={selling === dog.id}
               className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center border border-accent-red disabled:opacity-60"
-              title={isActive ? 'لا يمكنك بيع الكلب الحالي' : ''}
             >
               <Trash2 className="w-3 h-3 mr-1" />
               {selling === dog.id ? '...جاري البيع' : 'بيع'}
@@ -148,6 +156,7 @@ export default function Dogs() {
   const [activating, setActivating] = useState(null);
   const [selling, setSelling] = useState(null);
   const [buying, setBuying] = useState(null);
+  const [unequipping, setUnequipping] = useState(null);
 
   // Fetch all available dogs (market) - only regular money dogs
   const {
@@ -156,7 +165,7 @@ export default function Dogs() {
     error: dogsError
   } = useQuery({
     queryKey: ['dogs'],
-    queryFn: () => axios.get('/api/dogs').then(res => res.data.filter(dog => dog.currency === 'money')),
+    queryFn: () => axios.get('/api/dogs').then(res => res.data),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -182,7 +191,7 @@ export default function Dogs() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Activate dog mutation
+  // Activate dog mutation (equip)
   const activateMutation = useMutation({
     mutationFn: (dogId) => axios.post('/api/dogs/activate', { dogId }).then(res => res.data),
     onMutate: (dogId) => setActivating(dogId),
@@ -195,13 +204,27 @@ export default function Dogs() {
     onError: (error) => toast.error(extractErrorMessage(error)),
   });
 
+  // Deactivate dog mutation (unequip)
+  const deactivateMutation = useMutation({
+    mutationFn: () => axios.post('/api/dogs/deactivate').then(res => res.data),
+    onMutate: () => setUnequipping(true),
+    onSettled: () => setUnequipping(null),
+    onSuccess: () => {
+      toast.success('تم إلغاء تفعيل الكلب!');
+      queryClient.invalidateQueries(['character']);
+      queryClient.invalidateQueries(['owned-dogs']);
+    },
+    onError: (error) => toast.error(extractErrorMessage(error)),
+  });
+
   // Sell dog mutation
   const sellMutation = useMutation({
     mutationFn: (dogId) => axios.post('/api/dogs/sell', { dogId }).then(res => res.data),
     onMutate: (dogId) => setSelling(dogId),
     onSettled: () => setSelling(null),
     onSuccess: (data) => {
-      toast.success(`تم بيع الكلب! حصلت على ${data.refund} نقود`);
+      const currencyText = data.currency === 'blackcoin' ? 'عملة سوداء' : 'نقود';
+      toast.success(`تم بيع الكلب! حصلت على ${data.refund} ${currencyText}`);
       queryClient.invalidateQueries(['owned-dogs']);
       queryClient.invalidateQueries(['character']);
     },
@@ -302,9 +325,11 @@ export default function Dogs() {
                     dog={dogData}
                     isOwned={true}
                     isActive={dogIsActive}
-                    onActivate={activateMutation.mutate}
+                    onEquip={activateMutation.mutate}
+                    onUnequip={deactivateMutation.mutate}
                     onSell={sellMutation.mutate}
-                    activating={activating}
+                    equipping={activating}
+                    unequipping={unequipping}
                     selling={selling}
                   />
                 ))}
@@ -324,7 +349,9 @@ export default function Dogs() {
                   isOwned={isOwned(dog.id)}
                   isActive={isActive(dog.id)}
                   onBuy={buyMutation.mutate}
+                  onUnequip={deactivateMutation.mutate}
                   buying={buying}
+                  unequipping={unequipping}
                 />
               ))}
             </div>

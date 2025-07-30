@@ -2,7 +2,9 @@ import { InventoryItem } from '../models/Inventory.js';
 import { Character } from '../models/Character.js';
 import { Weapon, Armor } from '../models/Shop.js';
 import { SpecialItem } from '../models/SpecialItem.js';
-import { io } from '../socket.js';
+import { CharacterService } from './CharacterService.js';
+import { io, emitNotification } from '../socket.js';
+import { NotificationService } from './NotificationService.js';
 
 export class InventoryService {
   // Helper functions
@@ -124,24 +126,70 @@ export class InventoryService {
   }
 
   // Sell an item: only unequipped, decrement quantity or delete row
-  static async sellItem(userId, type, itemId) {
+  static async sellItem(userId, type, itemId, sellOption = 'quick') {
     const itemType = this.canonicalType(type);
     if (!itemType) throw new Error("invalid type");
     const row = await InventoryItem.findOne({ where: { userId, itemType, itemId, equipped: false } });
     if (!row || row.quantity < 1) throw new Error("item not owned");
     const refModel = this.modelFor(itemType);
     const ref = refModel ? await refModel.findByPk(itemId) : null;
-    const sellPrice = Math.round((ref?.price || 0) * 0.25);
-    // Update character money
-    const char = await Character.findOne({ where: { userId } });
-    char.money += sellPrice;
-    await char.save();
-    // Decrement or delete
-    row.quantity -= 1;
-    if (row.quantity <= 0) await row.destroy();
-    else await row.save();
-    if (io) io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
-    return { message: "sold", sellPrice };
+    
+    if (sellOption === 'quick') {
+      // Quick sell for 100 money
+      const sellPrice = 100;
+      // Update character money
+      const char = await Character.findOne({ where: { userId } });
+      char.money += sellPrice;
+      await char.save();
+      // Decrement or delete
+      row.quantity -= 1;
+      if (row.quantity <= 0) await row.destroy();
+      else await row.save();
+      if (io) io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+      return { message: "sold", sellPrice, method: 'quick' };
+    } else if (sellOption === 'blackmarket') {
+      // Direct to blackmarket - create a listing automatically
+      const { BlackMarketListing } = await import('../models/BlackMarketListing.js');
+      const char = await Character.findOne({ where: { userId } });
+      if (!char) throw new Error("character not found");
+      
+      // Calculate a reasonable price for blackmarket (higher than quick sell)
+      const suggestedPrice = Math.max(150, Math.round((ref?.price || 100) * 0.5));
+      
+      // Create listing
+      const listing = await BlackMarketListing.create({
+        sellerId: char.id,
+        itemType,
+        itemId,
+        quantity: 1,
+        price: suggestedPrice,
+        status: 'active',
+        name: ref?.name || 'Unknown Item',
+        imageUrl: ref?.imageUrl || null,
+        rarity: ref?.rarity || 'common',
+        stats: {
+          damage: ref?.damage || null,
+          def: ref?.def || null,
+          hpBonus: ref?.hpBonus || null,
+          energyBonus: ref?.energyBonus || null,
+        },
+      });
+      
+      // Remove item from inventory
+      row.quantity -= 1;
+      if (row.quantity <= 0) await row.destroy();
+      else await row.save();
+      
+      return { 
+        message: "listed", 
+        listing, 
+        method: 'blackmarket',
+        suggestedPrice,
+        message: `تم إدراج العنصر في السوق السوداء بسعر ${suggestedPrice} مال`
+      };
+    } else {
+      throw new Error("invalid sell option");
+    }
   }
 
   static async addItemToInventory(userId, type, itemId, quantity = 1) {
@@ -158,73 +206,19 @@ export class InventoryService {
   }
 
   static async useSpecialItem(userId, itemId) {
-    const item = await SpecialItem.findByPk(itemId);
-    if (!item) {
-      throw new Error("item not found");
-    }
-
-    const character = await Character.findOne({ where: { userId } });
-    if (!character) {
-      throw new Error("character not found");
-    }
-
-    // Check if user has the item
-    const inventoryItem = await InventoryItem.findOne({
-      where: { userId, itemType: 'special', itemId, equipped: false }
-    });
-
-    if (!inventoryItem || inventoryItem.quantity < 1) {
-      throw new Error("item not owned");
-    }
-
-
-
-    // Apply effects
-    const effects = item.effect;
-    let effectApplied = false;
-
-    if (effects.health) {
-      const maxHp = character.getMaxHp();
-      if (effects.health === 'max') {
-        character.hp = maxHp;
-      } else {
-        character.hp = Math.min(character.hp + effects.health, maxHp);
-      }
-      effectApplied = true;
-    }
-
-    if (effects.energy) {
-      const maxEnergy = character.maxEnergy;
-      if (effects.energy === 'max') {
-        character.energy = maxEnergy;
-      } else {
-        character.energy = Math.min(character.energy + effects.energy, maxEnergy);
-      }
-      effectApplied = true;
-    }
-
-    // Save character changes
-    await character.save();
-
-    // Update inventory - item is consumed
-    inventoryItem.quantity -= 1;
+    console.log('[InventoryService] useSpecialItem called with userId:', userId, 'itemId:', itemId);
     
-    if (inventoryItem.quantity <= 0) {
-      await inventoryItem.destroy();
-    } else {
-      await inventoryItem.save();
+    // Import and use the SpecialItemService which contains the complete logic including CD reset
+    const { SpecialItemService } = await import('./SpecialItemService.js');
+    
+    try {
+      console.log('[InventoryService] Calling SpecialItemService.useSpecialItem...');
+      const result = await SpecialItemService.useSpecialItem(userId, itemId);
+      console.log('[InventoryService] SpecialItemService.useSpecialItem result:', result);
+      return result;
+    } catch (error) {
+      console.error('[InventoryService] Error calling SpecialItemService.useSpecialItem:', error);
+      throw error;
     }
-
-    // Emit HUD update
-    if (io) {
-      io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
-    }
-
-    return {
-      message: "item used successfully",
-      item: item,
-      effects: effects,
-      effectApplied
-    };
   }
 } 

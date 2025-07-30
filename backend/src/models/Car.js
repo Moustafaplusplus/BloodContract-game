@@ -25,10 +25,6 @@ Car.init({
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
-  energyRegen: {
-    type: DataTypes.INTEGER,
-    defaultValue: 0
-  },
   attackBonus: {
     type: DataTypes.INTEGER,
     defaultValue: 0

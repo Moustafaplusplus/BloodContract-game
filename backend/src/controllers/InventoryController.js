@@ -50,31 +50,41 @@ export class InventoryController {
 
   static async sellItem(req, res) {
     try {
-      const { type, itemId } = req.body;
-      const result = await InventoryService.sellItem(req.user.id, type, itemId);
+      const { type, itemId, sellOption = 'quick' } = req.body;
+      if (!type || !itemId) {
+        return res.status(400).json({ error: 'Type and itemId are required' });
+      }
+      
+      const result = await InventoryService.sellItem(req.user.id, type, itemId, sellOption);
       res.json(result);
     } catch (error) {
-      if (error.message === 'invalid type') {
-        return res.status(400).json({ message: error.message });
-      }
+      console.error('Sell item error:', error);
       if (error.message === 'item not owned') {
-        return res.status(404).json({ message: error.message });
+        return res.status(404).json({ error: 'Item not found or not owned' });
       }
-      console.error('[Inventory] Sell failed', error);
-      res.sendStatus(500);
+      if (error.message === 'invalid type') {
+        return res.status(400).json({ error: 'Invalid item type' });
+      }
+      if (error.message === 'invalid sell option') {
+        return res.status(400).json({ error: 'Invalid sell option' });
+      }
+      res.status(500).json({ error: 'Failed to sell item' });
     }
   }
 
   static async useSpecialItem(req, res) {
     try {
+      console.log('useSpecialItem controller called with body:', req.body);
       const { itemId } = req.body;
+      console.log('itemId from body:', itemId);
       const result = await InventoryService.useSpecialItem(req.user.id, itemId);
+      console.log('useSpecialItem result:', result);
       res.json(result);
     } catch (error) {
       if (error.message === 'item not owned') {
         return res.status(404).json({ message: error.message });
       }
-      if (error.message.includes('cooldown')) {
+      if (error.message.includes('cooldown') || error.message.includes('يجب أن تكون المستوى')) {
         return res.status(400).json({ message: error.message });
       }
       console.error('[Inventory] Use special item failed', error);

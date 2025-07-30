@@ -1,7 +1,18 @@
-import { Character, User, IpTracking } from '../models/index.js';
-import { Statistic } from '../models/Statistic.js';
+import { 
+  User, 
+  Character, 
+  IpTracking, 
+  Statistic, 
+  Fight, 
+  Crime, 
+  Car, 
+  Dog, 
+  BloodContract, 
+  MinistryMission 
+} from '../models/index.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/db.js';
+import jwt from 'jsonwebtoken';
 
 export class AdminSystemService {
   // Ban/unban user
@@ -41,7 +52,17 @@ export class AdminSystemService {
       totalBlackcoins,
       averageLevel,
       bannedUsers,
-      blockedIps
+      blockedIps,
+      totalExperience,
+      maxLevel,
+      totalFights,
+      totalCrimes,
+      totalCars,
+      totalDogs,
+      totalWeapons,
+      totalArmors,
+      totalContracts,
+      totalMissions
     ] = await Promise.all([
       User.count(),
       Character.count(),
@@ -58,7 +79,18 @@ export class AdminSystemService {
         attributes: [[sequelize.fn('AVG', sequelize.col('level')), 'averageLevel']]
       }),
       User.count({ where: { isBanned: true } }),
-      IpTracking.count({ where: { isBlocked: true } })
+      IpTracking.count({ where: { isBlocked: true } }),
+      Character.sum('exp'),
+      Character.max('level'),
+      Fight.count(),
+      Crime.count(),
+      Car.count(),
+      Dog.count(),
+      // Note: Weapons and Armors are part of Shop model, so we'll count them separately
+      Promise.resolve(0), // totalWeapons - will implement when Shop model is properly structured
+      Promise.resolve(0), // totalArmors - will implement when Shop model is properly structured
+      BloodContract.count(),
+      MinistryMission.count()
     ]);
 
     return {
@@ -69,7 +101,17 @@ export class AdminSystemService {
       totalBlackcoins: totalBlackcoins || 0,
       averageLevel: Math.round(averageLevel?.dataValues?.averageLevel || 1),
       bannedUsers,
-      blockedIps
+      blockedIps,
+      totalExperience: totalExperience || 0,
+      maxLevel: maxLevel || 1,
+      totalFights,
+      totalCrimes,
+      totalCars,
+      totalDogs,
+      totalWeapons,
+      totalArmors,
+      totalContracts,
+      totalMissions
     };
   }
 
@@ -203,5 +245,145 @@ export class AdminSystemService {
       };
     }));
     return results;
+  }
+
+  // Generate login token for any user (admin feature)
+  static async generateUserLoginToken(userId) {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get user's character
+    const character = await Character.findOne({ where: { userId } });
+    if (!character) {
+      throw new Error('User has no character');
+    }
+
+    // Generate token for the user
+    const token = jwt.sign(
+      { id: user.id, characterId: character.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' } // Short expiration for security
+    );
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin
+      },
+      character: {
+        id: character.id,
+        name: character.name,
+        level: character.level
+      }
+    };
+  }
+
+  // Get user's inventory (admin feature)
+  static async getUserInventory(userId) {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get user's character
+    const character = await Character.findOne({ where: { userId } });
+    if (!character) {
+      throw new Error('User has no character');
+    }
+
+    // Import models
+    const { InventoryItem } = await import('../models/Inventory.js');
+    const { Weapon, Armor } = await import('../models/Shop.js');
+    const { SpecialItem } = await import('../models/SpecialItem.js');
+    const { House } = await import('../models/House.js');
+    const { Car } = await import('../models/Car.js');
+    const { Dog } = await import('../models/Dog.js');
+
+    // Get all inventory items
+    const inventoryItems = await InventoryItem.findAll({
+      where: { userId }
+    });
+
+    // Get equipped items from character
+    const equippedItems = {
+      weapon1: character.equippedWeapon1Id,
+      weapon2: character.equippedWeapon2Id,
+      armor: character.equippedArmorId,
+      house: character.equippedHouseId
+    };
+
+    // Fetch related items based on itemType
+    const formattedInventory = [];
+    
+    for (const item of inventoryItems) {
+      let itemData = null;
+      let itemType = item.itemType;
+
+      try {
+        switch (itemType) {
+          case 'weapon':
+            itemData = await Weapon.findByPk(item.itemId);
+            break;
+          case 'armor':
+            itemData = await Armor.findByPk(item.itemId);
+            break;
+          case 'special':
+            itemData = await SpecialItem.findByPk(item.itemId);
+            break;
+          case 'house':
+            itemData = await House.findByPk(item.itemId);
+            break;
+          case 'car':
+            itemData = await Car.findByPk(item.itemId);
+            break;
+          case 'dog':
+            itemData = await Dog.findByPk(item.itemId);
+            break;
+        }
+
+        if (!itemData) continue;
+
+        // Check if item is equipped
+        const isEquipped = 
+          (itemType === 'weapon' && (equippedItems.weapon1 === itemData.id || equippedItems.weapon2 === itemData.id)) ||
+          (itemType === 'armor' && equippedItems.armor === itemData.id) ||
+          (itemType === 'house' && equippedItems.house === itemData.id);
+
+        formattedInventory.push({
+          id: item.id,
+          itemId: itemData.id,
+          name: itemData.name,
+          type: itemType,
+          quantity: item.quantity,
+          isEquipped,
+          rarity: itemData.rarity || 'common',
+          imageUrl: itemData.imageUrl,
+          // Add specific stats based on type
+          ...(itemType === 'weapon' && { damage: itemData.damage, energyBonus: itemData.energyBonus }),
+          ...(itemType === 'armor' && { def: itemData.def, hpBonus: itemData.hpBonus }),
+          ...(itemType === 'house' && { hpBonus: itemData.hpBonus, defenseBonus: itemData.defenseBonus }),
+          ...(itemType === 'car' && { speed: itemData.speed }),
+          ...(itemType === 'dog' && { powerBonus: itemData.powerBonus }),
+          ...(itemType === 'special' && { effect: itemData.effect })
+        });
+      } catch (error) {
+        console.error(`Error fetching ${itemType} with id ${item.itemId}:`, error);
+        continue;
+      }
+    }
+
+    return {
+      userId: user.id,
+      username: user.username,
+      characterName: character.name,
+      inventory: formattedInventory,
+      totalItems: formattedInventory.length,
+      equippedItems: Object.values(equippedItems).filter(Boolean).length
+    };
   }
 } 

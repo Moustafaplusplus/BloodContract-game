@@ -111,6 +111,16 @@ export default function LandingPage() {
                   تسجيل الدخول
                 </span>
               </Link>
+
+              <Link
+                to="/intro"
+                className="group relative bg-transparent border-2 border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-bold py-4 px-8 rounded-lg transition-all duration-300 transform hover:scale-105"
+              >
+                <span className="flex items-center">
+                  <Zap className="w-5 h-5 ml-3 group-hover:rotate-12 transition-transform duration-300" />
+                  شاهد القصة
+                </span>
+              </Link>
             </div>
 
             {/* Game stats or features */}

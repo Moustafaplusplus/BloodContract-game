@@ -4,10 +4,12 @@ import axios from 'axios';
 import { Users, Crown, Target, Shield, Plus, Search, Filter, Star, Activity } from 'lucide-react';
 import CreateGangModal from './CreateGangModal';
 import { useSocket } from "@/hooks/useSocket";
+import { toast } from 'react-hot-toast';
 
 export default function Gangs() {
   const [gangs, setGangs] = useState([]);
   const [myGang, setMyGang] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,12 +22,16 @@ export default function Gangs() {
   useEffect(() => {
     if (!socket) return;
     const fetchGangs = () => {
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       Promise.all([
-        axios.get('/api/gangs'),
-        axios.get('/api/gangs/user/mine').catch(() => null)
-      ]).then(([gangsRes, myGangRes]) => {
+        axios.get('/api/gangs', { headers }),
+        axios.get('/api/gangs/user/mine', { headers }).catch(() => null),
+        axios.get('/api/gangs/user/join-requests', { headers }).catch(() => [])
+      ]).then(([gangsRes, myGangRes, requestsRes]) => {
         setGangs(gangsRes.data);
         setMyGang(myGangRes?.data || null);
+        setPendingRequests(Array.isArray(requestsRes?.data) ? requestsRes.data : []);
       });
     };
     socket.on('gangs:update', fetchGangs);
@@ -38,29 +44,62 @@ export default function Gangs() {
 
   useEffect(() => {
     setLoading(true);
+    const token = localStorage.getItem('jwt');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     Promise.all([
-      axios.get('/api/gangs'),
-      axios.get('/api/gangs/user/mine').catch(() => null)
-    ]).then(([gangsRes, myGangRes]) => {
+      axios.get('/api/gangs', { headers }),
+      axios.get('/api/gangs/user/mine', { headers }).catch(() => null),
+      axios.get('/api/gangs/user/join-requests', { headers }).catch(() => [])
+    ]).then(([gangsRes, myGangRes, requestsRes]) => {
       setGangs(gangsRes.data);
       setMyGang(myGangRes?.data || null);
+      setPendingRequests(Array.isArray(requestsRes?.data) ? requestsRes.data : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
   const handleJoinGang = async (gangId) => {
     try {
-      await axios.post(`/api/gangs/${gangId}/join`);
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.post(`/api/gangs/${gangId}/join`, {}, { headers });
+      
+      // Show success toast
+      toast.success('تم إرسال طلب الانضمام بنجاح!');
+      
       // Instead of reload, update state directly
       Promise.all([
-        axios.get('/api/gangs'),
-        axios.get('/api/gangs/user/mine').catch(() => null)
-      ]).then(([gangsRes, myGangRes]) => {
+        axios.get('/api/gangs', { headers }),
+        axios.get('/api/gangs/user/mine', { headers }).catch(() => null),
+        axios.get('/api/gangs/user/join-requests', { headers }).catch(() => [])
+      ]).then(([gangsRes, myGangRes, requestsRes]) => {
         setGangs(gangsRes.data);
         setMyGang(myGangRes?.data || null);
+        setPendingRequests(Array.isArray(requestsRes?.data) ? requestsRes.data : []);
       });
     } catch (err) {
-      setError(err.response?.data?.error || 'فشل الانضمام للعصابة');
+      const errorMessage = err.response?.data?.error || 'فشل الانضمام للعصابة';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleCancelRequest = async (gangId) => {
+    try {
+      const token = localStorage.getItem('jwt');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.delete(`/api/gangs/${gangId}/join-requests/cancel`, { headers });
+      
+      // Show success toast
+      toast.success('تم إلغاء طلب الانضمام بنجاح!');
+      
+      // Update pending requests
+      const requestsRes = await axios.get('/api/gangs/user/join-requests', { headers });
+      setPendingRequests(Array.isArray(requestsRes?.data) ? requestsRes.data : []);
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || 'فشل إلغاء الطلب';
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -245,20 +284,35 @@ export default function Gangs() {
                       >
                         عرض عصابتك
                       </button>
-                    ) : (
-                      <button
-                        className="w-full bg-gradient-to-r from-accent-green to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => handleJoinGang(gang.id)}
-                        disabled={gang.GangMembers?.length >= gang.maxMembers || myGang}
-                      >
-                        {gang.GangMembers?.length >= gang.maxMembers 
-                          ? 'العصابة ممتلئة' 
-                          : myGang 
-                            ? 'أنت في عصابة أخرى' 
-                            : 'انضم للعصابة'
-                        }
-                      </button>
-                    )}
+                    ) : (() => {
+                      const hasPendingRequest = Array.isArray(pendingRequests) && pendingRequests.some(req => req.gangId === gang.id);
+                      
+                      if (hasPendingRequest) {
+                        return (
+                          <button
+                            className="w-full bg-gradient-to-r from-accent-orange to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-lg font-bold transition-all duration-300 transform hover:scale-105"
+                            onClick={() => handleCancelRequest(gang.id)}
+                          >
+                            إلغاء الطلب
+                          </button>
+                        );
+                      }
+                      
+                      return (
+                        <button
+                          className="w-full bg-gradient-to-r from-accent-green to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => handleJoinGang(gang.id)}
+                          disabled={gang.GangMembers?.length >= gang.maxMembers || myGang}
+                        >
+                          {gang.GangMembers?.length >= gang.maxMembers 
+                            ? 'العصابة ممتلئة' 
+                            : myGang 
+                              ? 'أنت في عصابة أخرى' 
+                              : 'انضم للعصابة'
+                          }
+                        </button>
+                      );
+                    })()}
                   </div>
                 );
               })

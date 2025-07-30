@@ -36,7 +36,13 @@ Notification.init({
       'GANG_JOIN_REQUEST',
       'GANG_MEMBER_LEFT',
       'ASSASSINATED',
-      'SYSTEM'
+      'GHOST_ASSASSINATED',
+      'CONTRACT_ATTEMPTED',
+      'CONTRACT_EXPIRED',
+      'CONTRACT_TARGET_ASSASSINATED',
+      'CD_RESET_ACTIVATED',
+      'SYSTEM',
+      'GAME_NEWS'
     ),
     allowNull: false
   },

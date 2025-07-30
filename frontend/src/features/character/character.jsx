@@ -59,14 +59,14 @@ export default function Character() {
     queryKey: ["hospitalStatus", userId], // Include userId in query key
     queryFn: async () => {
       const token = localStorage.getItem("jwt")
-      console.log("[HOSPITAL_QUERY] Token:", token ? "Present" : "Missing")
+  
       const res = await fetch("/api/confinement/hospital", {
         headers: { Authorization: `Bearer ${token}` },
       })
-      console.log("[HOSPITAL_QUERY] Response status:", res.status)
+      
       if (!res.ok) {
         const errorText = await res.text()
-        console.log("[HOSPITAL_QUERY] Error response:", errorText)
+        
         if (res.status === 401) {
           // Token expired or invalid, don't retry
           throw new Error("Authentication failed")
@@ -74,7 +74,7 @@ export default function Character() {
         return {}
       }
       const data = await res.json()
-      console.log("[HOSPITAL_QUERY] Success response:", data)
+      
       return data
     },
     staleTime: 0, // No stale time
@@ -96,7 +96,7 @@ export default function Character() {
   // Invalidate cache when user changes
   useEffect(() => {
     if (userId) {
-      console.log("[Character] User changed, invalidating cache for user:", userId)
+
       queryClient.invalidateQueries(["character"])
       queryClient.invalidateQueries(["hospitalStatus"])
     }
@@ -340,9 +340,7 @@ export default function Character() {
 
               {/* Basic Info */}
               <h2 className="text-lg sm:text-2xl font-bold flex items-center gap-2 justify-center">
-                <VipName isVIP={isVIP} className="large">
-                  {displayCharacter.name || displayCharacter.username}
-                </VipName>
+                <VipName user={displayCharacter} className="large" />
               </h2>
               <p className="text-red-400 font-medium mb-1 text-sm sm:text-base">
                 الرتبة: {displayCharacter.rank || "مبتدئ"}

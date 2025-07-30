@@ -2,13 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/hooks/useAuth';
-import { Heart, ThumbsUp, ThumbsDown, Trophy, Star, DollarSign, Target, Skull } from 'lucide-react';
+import { Heart, ThumbsUp, ThumbsDown, Trophy, Star, Target, Skull } from 'lucide-react';
+import MoneyIcon from '@/components/MoneyIcon';
 import { toast } from 'react-hot-toast';
+import VipName from '@/features/profile/VipName.jsx';
+import '@/features/profile/vipSparkle.css';
 
 const TABS = [
   { key: 'fame', label: 'الشهرة', icon: Trophy },
   { key: 'level', label: 'المستوى', icon: Star },
-  { key: 'money', label: 'المال', icon: DollarSign },
+  { key: 'money', label: 'المال', icon: MoneyIcon },
   { key: 'killCount', label: 'القتل', icon: Target },
   { key: 'crimesCommitted', label: 'الجرائم', icon: Skull },
 ];
@@ -123,8 +126,8 @@ function Ranking() {
     if (value === null || value === undefined) return '-';
     
     switch (type) {
-      case 'money':
-        return `${value.toLocaleString()}$`;
+          case 'money':
+      return `${value.toLocaleString()}`;
       case 'fame':
       case 'level':
       case 'killCount':
@@ -225,12 +228,12 @@ function Ranking() {
                         >
                           <div className="w-10 h-10 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-full flex items-center justify-center border border-hitman-600 group-hover:border-accent-red transition-colors">
                             <span className="text-lg font-bold text-hitman-300 group-hover:text-accent-red">
-                              {player.username?.charAt(0).toUpperCase()}
+                              {(player.name || player.username)?.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
                             <div className="font-bold text-white group-hover:text-accent-red transition-colors">
-                              {player.username}
+                              <VipName user={player} disableLink={true} />
                             </div>
                             <div className="text-xs text-hitman-400">
                               المستوى {player.level || 1}

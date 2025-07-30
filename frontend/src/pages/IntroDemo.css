@@ -1,0 +1,132 @@
+.intro-demo {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Arial', sans-serif;
+  color: #fff;
+}
+
+.demo-container {
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 3rem;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.demo-container h1 {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  color: #ff4444;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.demo-content {
+  margin-top: 2rem;
+}
+
+.demo-content p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.start-button, .restart-button {
+  background: linear-gradient(45deg, #ff4444, #ff6666);
+  color: #fff;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 1rem;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.start-button:hover, .restart-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(255, 68, 68, 0.3);
+}
+
+.features {
+  margin-top: 3rem;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.features h3 {
+  color: #ff4444;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.features ul {
+  list-style: none;
+  padding: 0;
+}
+
+.features li {
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  opacity: 0.9;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.features li:last-child {
+  border-bottom: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .demo-container {
+    padding: 2rem;
+    margin: 1rem;
+  }
+  
+  .demo-container h1 {
+    font-size: 2rem;
+  }
+  
+  .start-button, .restart-button {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+  
+  .features {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .demo-container {
+    padding: 1.5rem;
+  }
+  
+  .demo-container h1 {
+    font-size: 1.5rem;
+  }
+  
+  .demo-content p {
+    font-size: 1rem;
+  }
+  
+  .features {
+    padding: 1rem;
+  }
+  
+  .features li {
+    font-size: 0.9rem;
+  }
+} 

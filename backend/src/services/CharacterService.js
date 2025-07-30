@@ -1,39 +1,43 @@
 import { Character, User } from '../models/index.js';
 import { Statistic } from '../models/Statistic.js';
 import { TaskService } from './TaskService.js';
+import { NotificationService } from './NotificationService.js';
+import { emitNotification } from '../socket.js';
 
 export class CharacterService {
   // EXP and leveling logic
   static ACTIONS = {
-    DAILY_LOGIN:    'DAILY_LOGIN',
+    // Actions removed
   };
 
   static EXP_RULES = {
-    [this.ACTIONS.DAILY_LOGIN]:    15,
+    // Rules removed
   };
 
-  // Static method to calculate exp needed for any level (exponential/linear system)
+  // Static method to calculate exp needed for any level (balanced progression system)
   static calculateExpNeeded(level) {
-    if (level <= 50) {
-      // Exponential scaling up to level 50: 100 * 1.1^(level-1)
-      return Math.floor(100 * Math.pow(1.1, level - 1));
+    if (level <= 20) {
+      // Steep exponential scaling for early game: 200 * 1.15^(level-1)
+      return Math.floor(200 * Math.pow(1.15, level - 1));
+    } else if (level <= 50) {
+      // Moderate exponential scaling for mid game: baseExp * 1.12^(level-20)
+      const baseExp = Math.floor(200 * Math.pow(1.15, 19)); // exp needed for level 20
+      return Math.floor(baseExp * Math.pow(1.12, level - 20));
+    } else if (level <= 80) {
+      // Steep linear scaling for late game: baseExp + (level-50) * 15000
+      const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)); // exp needed for level 50
+      return baseExp + (level - 50) * 15000;
     } else {
-      // Linear scaling after level 50: base + (level - 50) * increment
-      const baseExp = Math.floor(100 * Math.pow(1.1, 49)); // exp needed for level 50
-      const increment = 5000; // 5000 exp per level after 50
-      return baseExp + (level - 50) * increment;
+      // Very steep linear scaling for end game: baseExp + (level-80) * 25000
+      const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000); // exp needed for level 80
+      return baseExp + (level - 80) * 25000;
     }
   }
 
   static async giveReward({ character, action }, tx = null) {
     let xp;
-    if (action === this.ACTIONS.DAILY_LOGIN) {
-      // 3% of current level's required EXP
-      const neededExp = character.expNeeded();
-      xp = Math.ceil(neededExp * 0.03);
-    } else {
-      xp = this.EXP_RULES[action] ?? 0;
-    }
+    // Daily login logic removed
+    xp = this.EXP_RULES[action] ?? 0;
     if (xp) {
       character.exp += xp;
       await this.maybeLevelUp(character);
@@ -44,8 +48,22 @@ export class CharacterService {
   }
 
   static applyLevelBonuses(char) {
+    const oldMaxEnergy = char.maxEnergy;
+    const oldMaxHp = char.maxHp;
+    
     char.maxEnergy += 2;
-    // Max HP is handled by the getMaxHp() method in Character model (1000 + level * 100)
+    // Update maxHp to match the getMaxHp() calculation
+    char.maxHp = char.getMaxHp();
+    
+    // Increase current HP and energy by the same amount as the max values
+    // This ensures that if a player has 500/1000 HP and levels up to 1100 max HP,
+    // they will have 600/1100 HP (not 500/1100)
+    char.energy += (char.maxEnergy - oldMaxEnergy);
+    char.hp += (char.maxHp - oldMaxHp);
+    
+    // Ensure current values don't exceed maximum values
+    char.energy = Math.min(char.energy, char.maxEnergy);
+    char.hp = Math.min(char.hp, char.maxHp);
     
     // Every level: +2 Strength, +1 Defense
     char.strength += 2;
@@ -78,25 +96,25 @@ export class CharacterService {
       needed = char.expNeeded();
     }
     
-    // Attach level-up info to character for frontend
-    if (levelUpRewards.length > 0) {
-      char._levelUpRewards = levelUpRewards;
-      char._levelsGained = char.level - startingLevel;
-    }
     if (leveledUp) {
       await TaskService.updateProgress(char.userId, 'level', char.level);
       // Fame is recalculated after level up
       const fame = await char.getFame();
       await TaskService.updateProgress(char.userId, 'fame', fame);
+      
+      // Create level-up notification
+      const levelsGained = char.level - startingLevel;
+      const notification = await NotificationService.createLevelUpNotification(
+        char.userId, 
+        levelsGained, 
+        levelUpRewards
+      );
+      
+      // Emit notification via socket
+      emitNotification(char.userId, notification);
     }
     
     return levelUpRewards;
-  }
-
-  // Clear level-up rewards after they've been sent to frontend
-  static clearLevelUpRewards(char) {
-    char._levelUpRewards = null;
-    char._levelsGained = 0;
   }
 
   static calculateLevelRewards(level) {
@@ -148,23 +166,18 @@ export class CharacterService {
     // Increment daysInGame if lastActive is from a previous day
     const now = new Date();
     const lastActive = char.lastActive ? new Date(char.lastActive) : null;
-    let dailyLoginReward = 0;
-    let gaveDailyLogin = false;
+    // Daily login reward logic removed
     if (!lastActive || now.toDateString() !== lastActive.toDateString()) {
       char.daysInGame = (char.daysInGame || 0) + 1;
       char.lastActive = now;
-      // Give daily login reward and capture the amount
-      dailyLoginReward = await this.giveReward({ character: char, action: this.ACTIONS.DAILY_LOGIN });
-      gaveDailyLogin = true;
+      // Daily login reward logic removed
       await char.save();
       await TaskService.updateProgress(char.userId, 'days_in_game', char.daysInGame);
     }
     // Fame update (snapshot)
     const fame = await char.getFame();
     await TaskService.updateProgress(char.userId, 'fame', fame);
-    // Attach reward info for frontend
-    char._dailyLoginReward = dailyLoginReward;
-    char._gaveDailyLogin = gaveDailyLogin;
+    // Daily login reward info removed
     return char;
   }
 

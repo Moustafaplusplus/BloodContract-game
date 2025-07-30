@@ -73,7 +73,7 @@ export class DogController {
       const { dogId } = req.body;
       if (!dogId) return res.status(400).json({ message: 'dogId required' });
       const result = await DogService.sellDog(req.user.id, dogId);
-      res.json({ message: 'Dog sold', refund: result.refund, dogId });
+      res.json({ message: 'Dog sold', refund: result.refund, dogId: result.dogId, currency: result.currency });
     } catch (error) {
       console.error('Sell dog error:', error);
       res.status(400).json({ message: error.message });

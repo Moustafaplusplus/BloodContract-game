@@ -1,84 +1,183 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { toast } from "react-hot-toast";
-import { Sword, Shield, Zap, Heart, ImageIcon } from "lucide-react";
-import { useHud } from "@/hooks/useHud";
-import { useSocket } from "@/hooks/useSocket";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
+import axios from 'axios';
+import { extractErrorMessage } from '@/utils/errorHandler';
+import { 
+  ShoppingBag, 
+  Sword, 
+  Shield, 
+  Zap, 
+  Heart, 
+  DollarSign, 
+  Star,
+  ImageIcon,
+  ShoppingCart,
+  Settings,
+  Trash2,
+  Package,
+  TrendingUp,
+  Clock
+} from 'lucide-react';
+import { handleImageError } from '@/utils/imageUtils';
+import { useHud } from '@/hooks/useHud';
+import { useSocket } from '@/hooks/useSocket';
 
+const TABS = [
+  { key: 'available', label: 'السوق السوداء' },
+  { key: 'my', label: 'إعلاناتي' },
+];
+
+// Rarity colors
 const rarityColors = {
   common: 'text-gray-400',
   uncommon: 'text-green-400',
   rare: 'text-blue-400',
   epic: 'text-purple-400',
-  legend: 'text-yellow-400',
+  legend: 'text-yellow-400'
 };
+
+// Rarity icons
 const rarityIcons = {
   common: '⭐',
   uncommon: '⭐⭐',
   rare: '⭐⭐⭐',
   epic: '⭐⭐⭐⭐',
-  legend: '⭐⭐⭐⭐⭐',
+  legend: '⭐⭐⭐⭐⭐'
 };
-
-const TABS = [
-  { key: "available", label: "إعلانات السوق" },
-  { key: "my", label: "إعلاناتي" },
-];
 
 function Stat({ icon: Icon, color, value, label }) {
   return (
-    <div className="flex items-center gap-1 text-sm font-bold">
-      {Icon && <Icon className={`w-5 h-5 ${color}`} />}
+    <div className="flex items-center gap-1 text-xs font-bold">
+      {Icon && <Icon className={`w-3 h-3 ${color}`} />}
       <span className={color}>{value}</span>
       <span className="text-hitman-300 font-normal text-xs">{label}</span>
     </div>
   );
 }
 
-function InventoryCard({ item, selected, onClick }) {
-  const [imgError, setImgError] = useState(false);
+function BlackMarketItemCard({ item, isOwned = false, onBuy, onPost, onCancel, buying, posting, canceling }) {
+  const rarity = item.rarity?.toLowerCase() || 'common';
+  
   return (
-    <div
-      className={`bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border-2 rounded-2xl shadow-lg p-6 relative transition-all duration-300 backdrop-blur-sm cursor-pointer ${
-        selected ? 'border-accent-red ring-2 ring-accent-red/40 animate-glow' : 'border-hitman-700 hover:scale-105 hover:shadow-2xl'
-      }`}
-      onClick={onClick}
-    >
-      <div className="relative w-full h-24 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800 mb-4 overflow-hidden">
-        {!imgError && item.imageUrl ? (
-          <img
-            src={item.imageUrl}
+    <div className={`relative bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border rounded-xl p-4 space-y-3 hover:bg-hitman-700/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20 ${
+      isOwned ? 'border-hitman-700 opacity-60' : 'border-hitman-700'
+    }`}>
+      {/* Item Image */}
+      <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
+        {item.imageUrl ? (
+          <img 
+            src={item.imageUrl} 
             alt={item.name}
-            className="w-full h-full object-contain rounded-xl"
-            onError={() => setImgError(true)}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => handleImageError(e, item.imageUrl)}
           />
-        ) : (
-          <div className="flex items-center justify-center w-full h-full">
-            <ImageIcon className="w-10 h-10 text-zinc-600" />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${item.imageUrl ? 'hidden' : 'flex'}`}>
+          <Package className="w-8 h-8 text-hitman-400" />
+        </div>
+      </div>
+
+      {/* Item Info */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-white text-sm truncate">{item.name}</h4>
+          <span className={`text-xs ${rarityColors[rarity]}`}>
+            {rarityIcons[rarity]}
+          </span>
+        </div>
+
+        {/* Item Stats */}
+        <div className="space-y-1 text-xs">
+          {item.stats?.damage !== undefined && item.stats.damage !== null && (
+            <div className="flex items-center text-red-400">
+              <Sword className="w-3 h-3 mr-1" />
+              <span>ضرر: {item.stats.damage}</span>
+            </div>
+          )}
+          {item.stats?.def !== undefined && item.stats.def !== null && (
+            <div className="flex items-center text-blue-400">
+              <Shield className="w-3 h-3 mr-1" />
+              <span>دفاع: {item.stats.def}</span>
+            </div>
+          )}
+          {item.stats?.energyBonus !== undefined && item.stats.energyBonus !== null && item.stats.energyBonus !== 0 && (
+            <div className="flex items-center text-yellow-400">
+              <Zap className="w-3 h-3 mr-1" />
+              <span>طاقة: +{item.stats.energyBonus}</span>
+            </div>
+          )}
+          {item.stats?.hpBonus !== undefined && item.stats.hpBonus !== null && item.stats.hpBonus !== 0 && (
+            <div className="flex items-center text-green-400">
+              <Heart className="w-3 h-3 mr-1" />
+              <span>صحة: +{item.stats.hpBonus}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-accent-green font-bold text-sm">
+            <DollarSign className="w-4 h-4 mr-1" />
+            <span>{item.price?.toLocaleString()}</span>
+          </div>
+          {item.quantity && (
+            <div className="flex items-center text-hitman-400 text-xs">
+              <Package className="w-3 h-3 mr-1" />
+              <span>{item.quantity}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Seller Info */}
+        {item.seller && (
+          <div className="flex items-center text-hitman-400 text-xs">
+            <span>البائع: {item.seller.name}</span>
           </div>
         )}
-      </div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-bold text-lg text-white truncate">{item.name}</span>
-        <span className={`text-base ${rarityColors[item.rarity]}`}>{rarityIcons[item.rarity]}</span>
-      </div>
-      <div className="flex flex-wrap gap-3 mb-2">
-        {item.damage !== undefined && item.damage !== null && (
-          <Stat icon={Sword} color="text-accent-red" value={item.damage} label="ضرر" />
-        )}
-        {item.def !== undefined && item.def !== null && (
-          <Stat icon={Shield} color="text-accent-blue" value={item.def} label="دفاع" />
-        )}
-        {item.energyBonus !== undefined && item.energyBonus !== null && item.energyBonus !== 0 && (
-          <Stat icon={Zap} color="text-accent-yellow" value={`+${item.energyBonus}`} label="طاقة" />
-        )}
-        {item.hpBonus !== undefined && item.hpBonus !== null && item.hpBonus !== 0 && (
-          <Stat icon={Heart} color="text-accent-green" value={`+${item.hpBonus}`} label="صحة" />
-        )}
-      </div>
-      <div className="flex items-center gap-2 text-sm mb-2">
-        <span className="text-hitman-400">الكمية:</span>
-        <span className="font-mono text-white text-base">{item.quantity}</span>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {onBuy && (
+            <button
+              onClick={onBuy}
+              disabled={buying}
+              className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs transition-all ${
+                buying 
+                  ? 'bg-hitman-700 text-hitman-400 cursor-not-allowed' 
+                  : 'bg-accent-red hover:bg-red-700 text-white'
+              }`}
+            >
+              {buying ? 'جاري الشراء...' : 'شراء'}
+            </button>
+          )}
+          {onPost && (
+            <button
+              onClick={onPost}
+              disabled={posting}
+              className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs transition-all ${
+                posting 
+                  ? 'bg-hitman-700 text-hitman-400 cursor-not-allowed' 
+                  : 'bg-accent-green hover:bg-green-700 text-white'
+              }`}
+            >
+              {posting ? 'جاري النشر...' : 'نشر إعلان'}
+            </button>
+          )}
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              disabled={canceling}
+              className={`flex-1 py-2 px-3 rounded-lg font-bold text-xs transition-all ${
+                canceling 
+                  ? 'bg-hitman-700 text-hitman-400 cursor-not-allowed' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
+              {canceling ? 'جاري الإلغاء...' : 'إلغاء'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -87,60 +186,77 @@ function InventoryCard({ item, selected, onClick }) {
 export default function BlackMarket() {
   const { stats, invalidateHud } = useHud();
   const { socket } = useSocket();
-  const [tab, setTab] = useState("available");
-  // Available listings
-  const [listings, setListings] = useState([]);
-  const [loadingListings, setLoadingListings] = useState(true);
-  const [errorListings, setErrorListings] = useState(null);
-  // My listings
-  const [myListings, setMyListings] = useState([]);
-  const [loadingMyListings, setLoadingMyListings] = useState(false);
-  const [errorMyListings, setErrorMyListings] = useState(null);
-  // Inventory
-  const [inventory, setInventory] = useState([]);
-  const [loadingInventory, setLoadingInventory] = useState(false);
-  const [errorInventory, setErrorInventory] = useState(null);
-  // Post ad form
-  const [selectedIndex, setSelectedIndex] = useState(null);
-  const [adPrice, setAdPrice] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [cancelingId, setCancelingId] = useState(null);
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState('available');
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [adPrice, setAdPrice] = useState('');
 
-  // Fetch all listings
-  useEffect(() => {
-    setLoadingListings(true);
-    setErrorListings(null);
-    axios
-      .get("/api/black-market/listings")
-      .then((res) => setListings(res.data))
-      .catch(() => setErrorListings("فشل في تحميل السوق السوداء"))
-      .finally(() => setLoadingListings(false));
-  }, []);
+  // Fetch available listings (user-to-user)
+  const { data: availableListings, isLoading: loadingAvailable, error: errorAvailable } = useQuery({
+    queryKey: ['blackMarket', 'listings'],
+    queryFn: () => axios.get('/api/black-market/listings').then(res => res.data),
+  });
 
-  // Fetch my listings and inventory when tab is 'my'
-  useEffect(() => {
-    if (tab !== "my") return;
-    setLoadingMyListings(true);
-    setErrorMyListings(null);
-    axios
-      .get("/api/black-market/listings/my")
-      .then((res) => setMyListings(res.data))
-      .catch(() => setErrorMyListings("فشل في تحميل إعلاناتك"))
-      .finally(() => setLoadingMyListings(false));
-    setLoadingInventory(true);
-    setErrorInventory(null);
-    axios
-      .get("/api/inventory", { headers: { Authorization: `Bearer ${localStorage.getItem("jwt")}` } })
-      .then((res) => {
-        // Only unequipped items with quantity > 0
-        setInventory((res.data.items || []).filter((i) => !i.equipped && i.quantity > 0));
-      })
-      .catch(() => setErrorInventory("فشل في تحميل الجرد"))
-      .finally(() => setLoadingInventory(false));
-  }, [tab, posting, cancelingId]);
+  // Fetch my listings
+  const { data: myListings, isLoading: loadingMyListings, error: errorMyListings } = useQuery({
+    queryKey: ['blackMarket', 'my'],
+    queryFn: () => axios.get('/api/black-market/listings/my').then(res => res.data),
+    enabled: tab === 'my',
+  });
 
-  // Real-time HUD updates
-  useEffect(() => {
+  // Fetch inventory for posting ads
+  const { data: inventory, isLoading: loadingInventory, error: errorInventory } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => axios.get('/api/inventory').then(res => res.data),
+    enabled: tab === 'my',
+  });
+
+  // Buy listing mutation
+  const buyListingMutation = useMutation({
+    mutationFn: ({ listingId }) => 
+      axios.post('/api/black-market/listings/buy', { listingId }),
+    onSuccess: (data) => {
+      toast.success('تم شراء العنصر بنجاح!');
+      invalidateHud?.();
+      queryClient.invalidateQueries(['blackMarket']);
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  // Post listing mutation
+  const postListingMutation = useMutation({
+    mutationFn: ({ itemType, itemId, price, quantity = 1 }) => 
+      axios.post('/api/black-market/listings', { itemType, itemId, price, quantity }),
+    onSuccess: (data) => {
+      toast.success('تم نشر الإعلان بنجاح!');
+      setSelectedItem(null);
+      setAdPrice('');
+      queryClient.invalidateQueries(['blackMarket']);
+      queryClient.invalidateQueries(['inventory']);
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  // Cancel listing mutation
+  const cancelListingMutation = useMutation({
+    mutationFn: ({ listingId }) => 
+      axios.post('/api/black-market/listings/cancel', { listingId }),
+    onSuccess: (data) => {
+      toast.success('تم إلغاء الإعلان واستعادة العنصر!');
+      queryClient.invalidateQueries(['blackMarket']);
+      queryClient.invalidateQueries(['inventory']);
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  // Real-time updates
+  React.useEffect(() => {
     if (!socket) return;
     const refetchHud = () => invalidateHud?.();
     socket.on('hud:update', refetchHud);
@@ -151,204 +267,234 @@ export default function BlackMarket() {
     };
   }, [socket, invalidateHud]);
 
-  // Post new ad
-  const handlePostAd = async (e) => {
-    e.preventDefault();
-    if (selectedIndex === null || !inventory[selectedIndex] || !adPrice || isNaN(adPrice) || Number(adPrice) < 1) {
-      toast.error("يرجى اختيار عنصر وتحديد سعر صحيح");
+  const handleBuyListing = (listing) => {
+    buyListingMutation.mutate({ listingId: listing.id });
+  };
+
+  const handlePostListing = (item) => {
+    if (!adPrice || isNaN(adPrice) || Number(adPrice) < 1) {
+      toast.error('يرجى تحديد سعر صحيح');
       return;
     }
-    setPosting(true);
-    try {
-      const item = inventory[selectedIndex];
-      await axios.post(
-        "/api/black-market/listings",
-        {
-          itemType: item.type,
-          itemId: item.itemId,
-          price: Number(adPrice),
-          quantity: 1,
-        },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("jwt")}` } }
-      );
-      toast.success("تم نشر الإعلان!");
-      setSelectedIndex(null);
-      setAdPrice("");
-    } catch (err) {
-      toast.error(err?.response?.data?.error || "فشل في نشر الإعلان");
-    } finally {
-      setPosting(false);
-    }
+    postListingMutation.mutate({
+      itemType: item.type,
+      itemId: item.itemId,
+      price: Number(adPrice),
+      quantity: 1,
+    });
   };
 
-  // Cancel ad
-  const handleCancelAd = async (listingId) => {
-    setCancelingId(listingId);
-    try {
-      await axios.post(
-        "/api/black-market/listings/cancel",
-        { listingId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("jwt")}` } }
-      );
-      toast.success("تم إلغاء الإعلان واستعادة العنصر!");
-      setMyListings((prev) => prev.filter((item) => item.id !== listingId));
-      // Refetch my listings and inventory to ensure UI is in sync
-      setLoadingMyListings(true);
-      setLoadingInventory(true);
-      axios.get("/api/black-market/listings/my")
-        .then((res) => setMyListings(res.data))
-        .catch(() => setMyListings([]))
-        .finally(() => setLoadingMyListings(false));
-      axios.get("/api/inventory", { headers: { Authorization: `Bearer ${localStorage.getItem("jwt")}` } })
-        .then((res) => {
-          setInventory((res.data.items || []).filter((i) => !i.equipped && i.quantity > 0));
-        })
-        .catch(() => setInventory([]))
-        .finally(() => setLoadingInventory(false));
-    } catch (err) {
-      toast.error(err?.response?.data?.error || "فشل في إلغاء الإعلان");
-    } finally {
-      setCancelingId(null);
-    }
+  const handleCancelListing = (listing) => {
+    cancelListingMutation.mutate({ listingId: listing.id });
   };
+
+  const availableInventory = inventory?.items?.filter(item => !item.equipped && item.quantity > 0) || [];
 
   return (
-    <section className="bg-black min-h-screen text-white p-4 space-y-8">
-      <h1 className="text-2xl font-bold text-red-600 mb-4">🖤 السوق السوداء</h1>
-      {/* Blackcoin Balance */}
-      <div className="flex items-center gap-2 mb-4">
-        <img 
-          src="/images/blackcoins-icon.png" 
-          alt="Blackcoin"
-          className="w-5 h-5 object-contain mr-1"
-        />
-        <span className="font-mono text-lg text-accent-red">{stats?.blackcoins?.toLocaleString() ?? 0}</span>
-        <span className="text-hitman-300">بلاك كوين</span>
-      </div>
-      {/* Tabs */}
-      <div className="flex gap-4 mb-6">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`px-6 py-2 rounded-t-lg font-bold border-b-4 transition-all duration-200 ${
-              tab === t.key
-                ? "border-red-600 bg-zinc-900 text-red-400"
-                : "border-transparent bg-zinc-800 text-white hover:text-red-400"
-            }`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {/* Tab content */}
-      {tab === "available" && (
-        <div>
-          {loadingListings && <div>جاري التحميل...</div>}
-          {errorListings && <div className="text-red-400">{errorListings}</div>}
-          {!loadingListings && !errorListings && listings.length === 0 && (
-            <div className="text-gray-400">لا توجد عناصر في السوق السوداء حالياً.</div>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {listings.map((item) => (
-              <div key={`listing-${item.id}`} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white">
-                <h3 className="font-bold text-lg text-red-500 mb-2">{item.name}</h3>
-                <p className="text-gray-300 mb-2">{item.description}</p>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>السعر:</span>
-                  <span className="text-red-400 font-mono">{item.price}$</span>
-                </div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>الكمية:</span>
-                  <span className="text-red-400 font-mono">{item.quantity}</span>
-                </div>
-                {/* TODO: Add buy button if needed */}
-              </div>
-            ))}
-          </div>
+    <div className="min-h-screen bg-black text-white p-4 pt-20">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent">
+            🖤 السوق السوداء
+          </h1>
+          <p className="text-zinc-400 text-lg">تداول العناصر مع اللاعبين الآخرين</p>
         </div>
-      )}
-      {tab === "my" && (
-        <div className="space-y-10">
-          {/* My Listings */}
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              className={`px-6 py-3 rounded-lg font-bold transition-all duration-200 ${
+                tab === t.key
+                  ? 'bg-accent-red text-white shadow-lg shadow-accent-red/30'
+                  : 'bg-hitman-800 text-hitman-300 hover:text-white hover:bg-hitman-700'
+              }`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {tab === 'available' && (
           <div>
-            <h2 className="text-xl font-bold text-red-400 mb-4">إعلاناتي النشطة</h2>
-            {loadingMyListings && <div>جاري التحميل...</div>}
-            {errorMyListings && <div className="text-red-400">{errorMyListings}</div>}
-            {!loadingMyListings && !errorMyListings && myListings.length === 0 && (
-              <div className="text-gray-400">لا توجد إعلانات نشطة.</div>
+            {loadingAvailable && (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red"></div>
+                <span className="mr-4 text-hitman-300">جاري تحميل السوق...</span>
+              </div>
             )}
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {myListings.filter(item => item.status === 'active').map((item) => (
-                <div key={`mylisting-${item.id}`} className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 text-white relative">
-                  <h3 className="font-bold text-lg text-red-500 mb-2">{item.name}</h3>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>السعر:</span>
-                    <span className="text-red-400 font-mono">{item.price}$</span>
-                  </div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>الكمية:</span>
-                    <span className="text-red-400 font-mono">{item.quantity}</span>
-                  </div>
-                  <button
-                    className={`w-full mt-2 py-2 rounded-lg font-bold bg-red-700 hover:bg-red-800 transition-all ${cancelingId === item.id ? "opacity-60 cursor-wait" : ""}`}
-                    onClick={() => handleCancelAd(item.id)}
-                    disabled={cancelingId === item.id}
-                  >
-                    {cancelingId === item.id ? "جاري الإلغاء..." : "إلغاء الإعلان واستعادة العنصر"}
-                  </button>
+            
+            {errorAvailable && (
+              <div className="text-center py-12">
+                <div className="bg-red-950/50 border border-red-700/50 rounded-lg p-6">
+                  <p className="text-red-400 text-lg mb-2">⚠️ فشل في تحميل السوق</p>
+                  <p className="text-zinc-400 text-sm">{extractErrorMessage(errorAvailable)}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-          {/* Post New Ad */}
-          <div>
-            <h2 className="text-xl font-bold text-red-400 mb-4">نشر إعلان جديد</h2>
-            {loadingInventory && <div>جاري تحميل الجرد...</div>}
-            {errorInventory && <div className="text-red-400">{errorInventory}</div>}
-            {!loadingInventory && !errorInventory && inventory.length === 0 && (
-              <div className="text-gray-400">لا توجد عناصر متاحة للنشر.</div>
+              </div>
             )}
-            {!loadingInventory && !errorInventory && inventory.length > 0 && (
-              <div>
-                <label className="block mb-3 font-bold">اختر عنصراً من الجرد:</label>
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
-                  {inventory.map((item, idx) => (
-                    <InventoryCard
-                      key={`inv-${item.type}-${item.itemId}-${idx}`}
+
+            {!loadingAvailable && !errorAvailable && (!availableListings || availableListings.length === 0) && (
+              <div className="text-center py-12">
+                <ShoppingBag className="w-16 h-16 text-hitman-600 mx-auto mb-4" />
+                <p className="text-hitman-400 text-lg">لا توجد إعلانات متاحة في السوق حالياً</p>
+              </div>
+            )}
+
+            {!loadingAvailable && !errorAvailable && availableListings && availableListings.length > 0 && (
+              <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {availableListings.map((listing) => (
+                  <BlackMarketItemCard
+                    key={listing.id}
+                    item={listing}
+                    onBuy={() => handleBuyListing(listing)}
+                    buying={buyListingMutation.isPending}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'my' && (
+          <div className="space-y-8">
+            {/* My Listings */}
+            <div>
+              <h2 className="text-2xl font-bold mb-6 flex items-center">
+                <TrendingUp className="w-6 h-6 ml-3 text-accent-red" />
+                إعلاناتي النشطة
+              </h2>
+              
+              {loadingMyListings && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red"></div>
+                  <span className="mr-4 text-hitman-300">جاري تحميل إعلاناتك...</span>
+                </div>
+              )}
+
+              {errorMyListings && (
+                <div className="text-center py-12">
+                  <div className="bg-red-950/50 border border-red-700/50 rounded-lg p-6">
+                    <p className="text-red-400 text-lg mb-2">⚠️ فشل في تحميل إعلاناتك</p>
+                    <p className="text-zinc-400 text-sm">{extractErrorMessage(errorMyListings)}</p>
+                  </div>
+                </div>
+              )}
+
+              {!loadingMyListings && !errorMyListings && (!myListings || myListings.length === 0) && (
+                <div className="text-center py-12">
+                  <ShoppingCart className="w-16 h-16 text-hitman-600 mx-auto mb-4" />
+                  <p className="text-hitman-400 text-lg">لا توجد إعلانات نشطة</p>
+                </div>
+              )}
+
+              {!loadingMyListings && !errorMyListings && myListings && myListings.length > 0 && (
+                <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {myListings.filter(item => item.status === 'active').map((item) => (
+                    <BlackMarketItemCard
+                      key={item.id}
                       item={item}
-                      selected={selectedIndex === idx}
-                      onClick={() => setSelectedIndex(idx)}
+                      isOwned={true}
+                      onCancel={() => handleCancelListing(item)}
+                      canceling={cancelListingMutation.isPending}
                     />
                   ))}
                 </div>
-                {selectedIndex !== null && inventory[selectedIndex] && (
-                  <form onSubmit={handlePostAd} className="space-y-4 max-w-lg mx-auto">
-                    <div>
-                      <label className="block mb-1">السعر ($):</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className="w-full p-2 rounded bg-zinc-800 text-white border border-zinc-700"
-                        value={adPrice}
-                        onChange={e => setAdPrice(e.target.value)}
-                        placeholder="حدد السعر بالدولار"
+              )}
+            </div>
+
+            {/* Post New Ad */}
+            <div>
+              <h2 className="text-2xl font-bold mb-6 flex items-center">
+                <Package className="w-6 h-6 ml-3 text-accent-green" />
+                نشر إعلان جديد
+              </h2>
+
+              {loadingInventory && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red"></div>
+                  <span className="mr-4 text-hitman-300">جاري تحميل الجرد...</span>
+                </div>
+              )}
+
+              {errorInventory && (
+                <div className="text-center py-12">
+                  <div className="bg-red-950/50 border border-red-700/50 rounded-lg p-6">
+                    <p className="text-red-400 text-lg mb-2">⚠️ فشل في تحميل الجرد</p>
+                    <p className="text-zinc-400 text-sm">{extractErrorMessage(errorInventory)}</p>
+                  </div>
+                </div>
+              )}
+
+              {!loadingInventory && !errorInventory && availableInventory.length === 0 && (
+                <div className="text-center py-12">
+                  <Package className="w-16 h-16 text-hitman-600 mx-auto mb-4" />
+                  <p className="text-hitman-400 text-lg">لا توجد عناصر متاحة للنشر</p>
+                </div>
+              )}
+
+              {!loadingInventory && !errorInventory && availableInventory.length > 0 && (
+                <div>
+                  <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-8">
+                    {availableInventory.map((item, idx) => (
+                      <BlackMarketItemCard
+                        key={`${item.type}-${item.itemId}-${idx}`}
+                        item={item}
+                        onPost={() => setSelectedItem(item)}
+                        posting={postListingMutation.isPending}
                       />
+                    ))}
+                  </div>
+
+                  {selectedItem && (
+                    <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-xl p-6 max-w-md mx-auto">
+                      <h3 className="text-lg font-bold mb-4 text-center">نشر إعلان لـ {selectedItem.name}</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">السعر:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            className="w-full p-3 rounded-lg bg-hitman-700 text-white border border-hitman-600 focus:border-accent-red focus:outline-none"
+                            value={adPrice}
+                            onChange={(e) => setAdPrice(e.target.value)}
+                            placeholder="حدد السعر"
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handlePostListing(selectedItem)}
+                            disabled={postListingMutation.isPending}
+                            className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${
+                              postListingMutation.isPending 
+                                ? 'bg-hitman-700 text-hitman-400 cursor-not-allowed' 
+                                : 'bg-accent-green hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            {postListingMutation.isPending ? 'جاري النشر...' : 'نشر الإعلان'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedItem(null);
+                              setAdPrice('');
+                            }}
+                            className="flex-1 py-3 px-4 rounded-lg font-bold bg-hitman-700 hover:bg-hitman-600 text-white transition-all"
+                          >
+                            إلغاء
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <button
-                      type="submit"
-                      className={`w-full py-2 rounded-lg font-bold bg-red-700 hover:bg-red-800 transition-all ${posting ? "opacity-60 cursor-wait" : ""}`}
-                      disabled={posting}
-                    >
-                      {posting ? "جاري النشر..." : "نشر الإعلان"}
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </div>
+    </div>
   );
 }

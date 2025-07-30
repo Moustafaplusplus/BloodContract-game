@@ -70,13 +70,11 @@ export default function CrimeResults() {
           </div>
           <div className={`${isInJail ? 'text-red-400' : 'text-blue-400'} text-sm`}>
             {isInJail 
-              ? `تكلفة الكفالة: ${confinementDetails.bailRate.toLocaleString()} دولار`
-              : `تكلفة العلاج: ${confinementDetails.healRate.toLocaleString()} دولار`
+              ? `تكلفة الكفالة: ${(confinementDetails.minutes * 100).toLocaleString()} دولار`
+              : `تكلفة العلاج: ${(confinementDetails.minutes * 100).toLocaleString()} دولار`
             }
           </div>
-          <div className="text-hitman-300 text-xs mt-2">
-            {new Date(confinementDetails.releaseAt).toLocaleString('ar-SA')}
-          </div>
+
         </div>
       )}
     </div>

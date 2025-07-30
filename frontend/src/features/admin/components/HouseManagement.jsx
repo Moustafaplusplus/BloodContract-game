@@ -13,7 +13,6 @@ export default function HouseManagement() {
     cost: 1000,
     defenseBonus: 0,
     hpBonus: 0,
-    energyRegen: 0,
     rarity: 'common',
     imageUrl: '',
     currency: 'money',
@@ -72,7 +71,6 @@ export default function HouseManagement() {
       cost: 1000,
       defenseBonus: 0,
       hpBonus: 0,
-      energyRegen: 0,
       rarity: 'common',
       imageUrl: '',
       currency: 'money',
@@ -130,7 +128,6 @@ export default function HouseManagement() {
       cost: house.cost,
       defenseBonus: house.defenseBonus,
       hpBonus: house.hpBonus,
-      energyRegen: house.energyRegen,
       rarity: house.rarity,
       imageUrl: house.imageUrl,
       currency: house.currency,
@@ -217,7 +214,6 @@ export default function HouseManagement() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-hitman-400">الدفاع:</span><span className="text-blue-400 font-bold">{house.defenseBonus}</span></div>
                   <div className="flex justify-between"><span className="text-hitman-400">الصحة:</span><span className="text-green-400 font-bold">+{house.hpBonus}</span></div>
-                  <div className="flex justify-between"><span className="text-hitman-400">تجديد الطاقة:</span><span className="text-yellow-400 font-bold">{house.energyRegen}</span></div>
                   <div className="flex justify-between"><span className="text-hitman-400">السعر:</span><span className="text-green-400 font-bold">{house.currency === 'blackcoin' ? (<span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-full bg-black border border-accent-red flex items-center justify-center"><span className="text-xs text-accent-red font-bold">ع</span></span>{house.cost}</span>) : (`$${house.cost}`)}</span></div>
                   <div className="flex justify-between"><span className="text-hitman-400">الندرة:</span><span className={`font-bold ${rarityColors[house.rarity]}`}>{rarityIcons[house.rarity]} {house.rarity}</span></div>
                   <div className="flex justify-between"><span className="text-hitman-400">العملة:</span><span className={`font-bold ${house.currency === 'blackcoin' ? 'text-accent-red' : 'text-green-400'}`}>{house.currency === 'blackcoin' ? 'عملة سوداء' : 'مال'}</span></div>
@@ -258,10 +254,6 @@ export default function HouseManagement() {
               <div>
                 <label className="block mb-1 text-sm text-hitman-300">الصحة</label>
                 <input name="hpBonus" type="number" min="0" value={form.hpBonus} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">تجديد الطاقة</label>
-                <input name="energyRegen" type="number" min="0" value={form.energyRegen} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
               </div>
               <div>
                 <label className="block mb-1 text-sm text-hitman-300">السعر <span className="text-red-400">*</span></label>

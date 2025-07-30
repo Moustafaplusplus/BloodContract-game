@@ -174,15 +174,15 @@ export default function Messages() {
   useEffect(() => {
     if (!userId) return;
     
-    axios.get('/api/character').then(res => {
-      setUserInfo({
-        username: res.data?.User?.username || res.data?.username || '',
-        avatarUrl: res.data?.User?.avatarUrl || res.data?.avatarUrl || '/avatars/default.png',
-        isAdmin: res.data?.User?.isAdmin || res.data?.isAdmin || false,
-        isVip: res.data?.User?.isVip || res.data?.isVip || false,
-      });
-    }).catch(() => {
-      setUserInfo({ username: '', avatarUrl: '/avatars/default.png', isAdmin: false, isVip: false });
+    axios.get('/api/profile').then(res => {
+              setUserInfo({
+          username: res.data?.username || '',
+          avatarUrl: res.data?.avatarUrl || '',
+          isAdmin: res.data?.isAdmin || false,
+          isVip: res.data?.isVip || false,
+        });
+      }).catch(() => {
+        setUserInfo({ username: '', avatarUrl: '', isAdmin: false, isVip: false });
     });
   }, [userId, token]);
 
@@ -364,9 +364,9 @@ export default function Messages() {
 
   // UI
   return (
-    <div className="flex flex-col md:flex-row h-[80vh] bg-black rounded-xl shadow-lg overflow-hidden border border-zinc-800 relative pt-36 sm:pt-44" style={{ minHeight: '100dvh' }}>
+    <div className="flex flex-col md:flex-row h-[80vh] bg-black rounded-xl shadow-lg overflow-hidden border border-zinc-800 relative pt-48 sm:pt-56" style={{ minHeight: '100dvh' }}>
       {/* Player Search Bar */}
-      <div className="absolute top-0 left-0 w-full z-30 bg-zinc-950 border-b border-zinc-800 flex items-center gap-2 px-4 py-3" style={{ minHeight: '56px' }}>
+      <div className="absolute top-32 left-0 w-full z-30 bg-zinc-950 border-b border-zinc-800 flex items-center gap-2 px-4 py-3" style={{ minHeight: '56px' }}>
         <Search className="w-5 h-5 text-accent-red" />
         <input
           type="text"
@@ -443,11 +443,13 @@ export default function Messages() {
                     />
                   ) : null}
                   {/* Fallback icon when no avatar or image fails to load */}
-                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-hitman-800 flex items-center justify-center ${getAvatarUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
-                    <User className="w-5 h-5 text-accent-red" />
+                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getAvatarUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
+                    <span className="text-sm font-bold text-accent-red">
+                      {(user.displayName || user.name || user.username || "?")[0]}
+                    </span>
                   </div>
                   <span className="font-semibold truncate">
-                    <Link to={`/dashboard/profile/${user.username}`} className="hover:underline text-inherit">{user.username}</Link>
+                    <VipName user={user} />
                   </span>
                   {unread[user.userId] && (
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-red animate-pulse" />
@@ -483,7 +485,7 @@ export default function Messages() {
                 <User className="w-5 h-5 text-accent-red" />
               </div>
               <span className="font-bold text-lg text-accent-red truncate">
-                <Link to={`/dashboard/profile/${selectedUser.username}`} className="hover:underline text-inherit">{selectedUser.username}</Link>
+                <VipName user={selectedUser} />
               </span>
               {/* Add Friend Button */}
               {selectedUser.userId && !friends.includes(selectedUser.userId) && (
@@ -518,9 +520,7 @@ export default function Messages() {
                         <div className="flex flex-row items-center flex-wrap gap-2">
                           {!isSelf && (
                             <span className="font-semibold text-accent-red flex items-center gap-1">
-                              <VipName isVIP={isVip} className="compact">
-                                {selectedUser.username}
-                              </VipName>
+                              <VipName user={selectedUser} />
                               {isAdmin && <Shield className="w-4 h-4 text-accent-red" title="مشرف" />}
                             </span>
                           )}
