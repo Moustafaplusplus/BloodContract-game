@@ -145,16 +145,6 @@ app.use(passport.session());
 // Configure passport strategies
 configurePassport();
 
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: sequelize.authenticate ? 'connected' : 'disconnected'
-  });
-});
-
 app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
 
 
