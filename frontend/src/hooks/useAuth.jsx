@@ -8,9 +8,9 @@ import {
 } from "react";
 import axios from "axios";
 
-// Set axios base URL
+// Set axios base URL - only set if VITE_API_URL is provided and we're not in development
 const API = import.meta.env.VITE_API_URL;
-if (API) {
+if (API && import.meta.env.MODE !== 'development') {
   axios.defaults.baseURL = API;
 }
 

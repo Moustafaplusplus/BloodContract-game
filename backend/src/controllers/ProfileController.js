@@ -35,14 +35,19 @@ export class ProfileController {
   static async getUserProfileByUsername(req, res) {
     try {
       const { username } = req.params;
+      console.log('[ProfileController] Request for username:', username);
+      console.log('[ProfileController] Request headers:', req.headers);
+      
       const profile = await ProfileService.getUserProfileByUsername(username);
+      console.log('[ProfileController] Successfully retrieved profile for:', username);
       res.json(profile);
     } catch (error) {
-      console.error('Get user profile by username error:', error);
+      console.error('[ProfileController] Get user profile by username error:', error);
+      console.error('[ProfileController] Error stack:', error.stack);
       if (error.message === 'User not found' || error.message === 'Character not found') {
         return res.status(404).json({ error: error.message });
       }
-      res.status(500).json({ error: 'Failed to get user profile' });
+      res.status(500).json({ error: 'Failed to get user profile', details: error.message });
     }
   }
 

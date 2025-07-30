@@ -57,30 +57,11 @@ export default function Character() {
   // Hospital status with real-time countdown
   const { data: hospitalStatus, error: hospitalError } = useQuery({
     queryKey: ["hospitalStatus", userId], // Include userId in query key
-    queryFn: async () => {
-      const token = localStorage.getItem("jwt")
-  
-      const res = await fetch("/api/confinement/hospital", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      
-      if (!res.ok) {
-        const errorText = await res.text()
-        
-        if (res.status === 401) {
-          // Token expired or invalid, don't retry
-          throw new Error("Authentication failed")
-        }
-        return {}
-      }
-      const data = await res.json()
-      
-      return data
-    },
+    queryFn: () => axios.get("/api/confinement/hospital").then((res) => res.data),
     staleTime: 0, // No stale time
     retry: (failureCount, error) => {
       // Don't retry on authentication errors
-      if (error.message === "Authentication failed") {
+      if (error.response?.status === 401) {
         return false
       }
       // Retry up to 3 times for other errors
@@ -139,6 +120,12 @@ export default function Character() {
     const file = e.target.files[0]
     if (!file) return
 
+    console.log('📁 Frontend: Starting avatar upload', {
+      filename: file.name,
+      size: file.size,
+      type: file.type
+    });
+
     setAvatarUploading(true)
     setAvatarError("")
 
@@ -146,6 +133,8 @@ export default function Character() {
       const formData = new FormData()
       formData.append("avatar", file)
       const token = localStorage.getItem("jwt")
+      
+      console.log('📤 Frontend: Sending to /api/avatar');
       const res = await axios.post("/api/avatar", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -153,13 +142,20 @@ export default function Character() {
         },
       })
 
+      console.log('✅ Frontend: Upload successful', res.data);
+      console.log('🔍 Frontend: URL analysis');
+      console.log('- Response avatarUrl:', res.data.avatarUrl);
+      console.log('- Is Firebase URL?', res.data.avatarUrl?.startsWith('https://storage.googleapis.com/'));
+      console.log('- URL length:', res.data.avatarUrl?.length);
       setAvatarUrl(res.data.avatarUrl)
       toast.success("تم تحديث الصورة الشخصية بنجاح!")
       // Refetch character data to update avatar
       queryClient.invalidateQueries(["character", userId])
-    } catch {
-      setAvatarError("فشل رفع الصورة. تأكد من أن الصورة أقل من 2MB وبصيغة صحيحة.")
-      toast.error("فشل رفع الصورة الشخصية")
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      const errorMessage = error.response?.data?.message || "فشل رفع الصورة. تأكد من أن الصورة أقل من 1MB وبصيغة صحيحة.";
+      setAvatarError(errorMessage);
+      toast.error("فشل رفع الصورة الشخصية");
     } finally {
       setAvatarUploading(false)
     }
@@ -295,10 +291,11 @@ export default function Character() {
               <div className="relative mb-4 sm:mb-6 flex flex-col items-center">
                 {avatarUrl ? (
                   <img
-                    src={avatarUrl?.startsWith("http") ? avatarUrl : backendUrl + avatarUrl}
+                    src={avatarUrl}
                     alt="avatar"
                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-red-500 bg-zinc-800 mx-auto shadow-lg"
                     onError={(e) => {
+                      console.error('Avatar image failed to load:', avatarUrl);
                       e.target.style.display = "none"
                       e.target.nextElementSibling.style.display = "flex"
                     }}
@@ -368,9 +365,11 @@ export default function Character() {
                             await axios.put("/api/profile", { quote: quoteInput })
                             toast.success("تم تحديث الاقتباس الشخصي بنجاح!")
                             setEditingQuote(false)
-                            queryClient.invalidateQueries(["character"])
-                          } catch {
-                            toast.error("فشل في تحديث الاقتباس")
+                            queryClient.invalidateQueries(["character", userId])
+                          } catch (error) {
+                            console.error('Quote update error:', error);
+                            const errorMessage = error.response?.data?.error || error.response?.data?.message || "فشل في تحديث الاقتباس";
+                            toast.error(errorMessage);
                           } finally {
                             setSavingQuote(false)
                           }

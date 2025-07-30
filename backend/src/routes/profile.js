@@ -5,7 +5,11 @@ import { validate } from '../middleware/validation.js';
 
 const router = express.Router();
 
-// Apply auth middleware to all profile routes
+// Public routes (no auth required) - these must come BEFORE the auth middleware
+router.get('/username/:username', ProfileController.getUserProfileByUsername);
+router.get('/:id', ProfileController.getUserProfileById);
+
+// Apply auth middleware to the remaining routes
 router.use(auth);
 
 // GET /api/profile - Get own profile
@@ -19,12 +23,6 @@ router.put('/', validate('updateProfile'), ProfileController.updateOwnProfile);
 
 // GET /api/profile/check-username - Check username availability
 router.get('/check-username', validate('checkUsername'), ProfileController.checkUsernameAvailability);
-
-// GET /api/profile/:id - Get user profile by ID
-router.get('/:id', ProfileController.getUserProfileById);
-
-// GET /api/profile/username/:username - Get user profile by username
-router.get('/username/:username', ProfileController.getUserProfileByUsername);
 
 // Ratings endpoints
 router.get('/:id/ratings', ProfileController.getProfileRatings);

@@ -1,23 +1,7 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { User } from '../models/User.js';
 import { UserService } from '../services/UserService.js';
 import { auth } from '../middleware/auth.js';
-
-// Multer setup for avatar uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = path.join(process.cwd(), 'public', 'avatars');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, `user_${req.user.id}_${Date.now()}${ext}`);
-  }
-});
-const upload = multer({ storage });
+import { uploadToFirebase } from '../config/firebase.js';
 
 export class UserController {
   static async signup(req, res) {
@@ -98,11 +82,48 @@ export class UserController {
       if (!req.file) return res.status(400).json({ message: 'لم يتم رفع أي صورة.' });
       const user = await User.findByPk(req.user.id);
       if (!user) return res.status(404).json({ message: 'المستخدم غير موجود.' });
-      // Save avatar URL (relative to /public)
-      user.avatarUrl = `/avatars/${req.file.filename}`;
+      
+      console.log('📁 File upload details:', {
+        originalname: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        userId: req.user.id
+      });
+      
+      // Generate filename with timestamp
+      const ext = req.file.originalname.split('.').pop();
+      const filename = `user_${req.user.id}_${Date.now()}.${ext}`;
+      
+      // Upload to Firebase Storage - NO FALLBACKS
+      console.log('📤 Uploading avatar to Firebase:', { filename, userId: req.user.id });
+      const result = await uploadToFirebase(req.file.buffer, 'avatars', filename);
+      
+      if (!result || !result.publicUrl) {
+        throw new Error('Firebase upload failed - no public URL returned');
+      }
+      
+      console.log('✅ Avatar uploaded successfully:', result.publicUrl);
+      console.log('🔍 URL validation:');
+      console.log('- Is Firebase URL?', result.publicUrl.startsWith('https://storage.googleapis.com/'));
+      console.log('- URL length:', result.publicUrl.length);
+      console.log('- Full URL:', result.publicUrl);
+      
+      // Update user with Firebase URL - ONLY Firebase URLs allowed
+      if (!result.publicUrl.startsWith('https://storage.googleapis.com/')) {
+        throw new Error('Invalid Firebase URL returned');
+      }
+      
+      console.log('💾 Saving to database...');
+      console.log('- Before save avatarUrl:', user.avatarUrl);
+      user.avatarUrl = result.publicUrl;
       await user.save();
-      res.json({ avatarUrl: user.avatarUrl });
+      console.log('- After save avatarUrl:', user.avatarUrl);
+      
+      console.log('📤 Sending response...');
+      console.log('- Response avatarUrl:', result.publicUrl);
+      res.json({ avatarUrl: result.publicUrl });
     } catch (error) {
+      console.error('❌ Avatar upload error:', error);
       res.status(500).json({ message: 'فشل رفع الصورة', error: error.message });
     }
   }

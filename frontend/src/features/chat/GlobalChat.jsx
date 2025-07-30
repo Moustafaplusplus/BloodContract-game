@@ -12,6 +12,7 @@ import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import VipName from '../profile/VipName.jsx';
 import '../profile/vipSparkle.css';
 import { jwtDecode } from 'jwt-decode';
+import { getImageUrl } from '@/utils/imageUtils.js';
 
 export default function GlobalChat() {
   const [messages, setMessages] = useState([]);
@@ -524,11 +525,7 @@ export default function GlobalChat() {
           messages.slice(-visibleCount).map((message) => {
             // Get user info for avatar and badges
             const user = message.User || message;
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
             let avatarUrl = user.avatarUrl || '';
-            if (avatarUrl.startsWith('/avatars/')) {
-              avatarUrl = backendUrl + avatarUrl;
-            }
             const isAdmin = user.isAdmin;
             const isVip = user.isVip;
             const isSelf = message.userId?.toString() === userId;
@@ -548,7 +545,7 @@ export default function GlobalChat() {
                   <>
                     {avatarUrl ? (
                       <img
-                        src={avatarUrl}
+                        src={getImageUrl(avatarUrl)}
                         alt={user.username}
                         className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2"
                         title={user.username}
@@ -742,7 +739,7 @@ export default function GlobalChat() {
                   <>
                     {avatarUrl ? (
                       <img
-                        src={avatarUrl}
+                        src={getImageUrl(avatarUrl)}
                         alt={user.username}
                         className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2"
                         title={user.username}

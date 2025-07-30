@@ -1,6 +1,7 @@
 import { sequelize } from './config/db.js';
 import { User } from './models/User.js';
 import { Character } from './models/Character.js';
+import { getDefaultAvatarUrl } from './config/defaultAvatars.js';
 
 import { Statistic } from './models/Statistic.js';
 import { Crime, CrimeLog } from './models/Crime.js';
@@ -87,6 +88,7 @@ async function seedTestData() {
       age: 25,
       gender: 'male',
       isAdmin: true,
+      avatarUrl: getDefaultAvatarUrl('male'),
     });
     
     // Create admin character
@@ -123,6 +125,7 @@ async function seedTestData() {
         age: 25,
         gender: 'male',
         isAdmin: false,
+        avatarUrl: getDefaultAvatarUrl('male'),
       })),
       { individualHooks: true }
     );

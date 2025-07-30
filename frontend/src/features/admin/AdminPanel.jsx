@@ -18,7 +18,6 @@ import {
   Package,
   DollarSign,
   BookOpen,
-  Bot,
   Gift
 } from 'lucide-react';
 import CharacterManagement from './components/CharacterManagement';
@@ -39,7 +38,7 @@ import MoneyPackageManagement from './components/MoneyPackageManagement';
 import VIPPackageManagement from './components/VIPPackageManagement';
 import SpecialItemManagement from './components/SpecialItemManagement';
 import MinistryMissionManagement from './components/MinistryMissionManagement';
-import BotManagement from './components/BotManagement';
+
 import GameNewsManagement from './components/GameNewsManagement';
 import LoginGiftManagement from './components/LoginGiftManagement';
 
@@ -62,7 +61,7 @@ const TABS = [
   { key: 'ips', label: 'إدارة عناوين IP', icon: Shield },
   { key: 'tasks', label: 'إدارة المهام', icon: Activity },
   { key: 'promotions', label: 'إدارة الرتب', icon: Award },
-  { key: 'bots', label: 'إدارة البوتات', icon: Bot },
+
   { key: 'game-news', label: 'أخبار اللعبة', icon: MessageSquare },
   { key: 'login-gift', label: 'مكافآت الدخول اليومية', icon: Gift },
 ];
@@ -149,7 +148,7 @@ export default function AdminPanel() {
         {activeTab === 'ips' && <IpManagement />}
         {activeTab === 'tasks' && <TasksManagement />}
         {activeTab === 'promotions' && <PromotionManagement />}
-        {activeTab === 'bots' && <BotManagement />}
+
         {activeTab === 'game-news' && <GameNewsManagement />}
         {activeTab === 'login-gift' && <LoginGiftManagement />}
       </div>

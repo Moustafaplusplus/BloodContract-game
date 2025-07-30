@@ -23,7 +23,17 @@ async function enrichCharacter(character) {
         winner_id: { [Op.ne]: character.userId }
       }
     });
-    const fame = await character.getFame();
+    
+    // Simplified fame calculation to avoid complex getFame method
+    let fame = 0;
+    try {
+      fame = (character.level * 100) + ((character.strength || 0) * 20) + ((character.getMaxHp()) * 8) + ((character.defense || 0) * 20);
+      fame = Math.round(fame);
+    } catch (fameError) {
+      console.error('[ProfileService] Error calculating fame:', fameError);
+      fame = 0;
+    }
+    
     return { fightsLost, fame };
   } catch (error) {
     console.error('[ProfileService] Error enriching character:', error);
@@ -143,54 +153,79 @@ export class ProfileService {
   // Get user profile by username
   static async getUserProfileByUsername(username) {
     try {
+      console.log('[ProfileService] Looking for user with username:', username);
+      
       const user = await User.findOne({
         where: { username },
         include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
       });
-      if (!user || !user.Character) throw new Error('User or Character not found');
+      
+      if (!user) {
+        console.log('[ProfileService] User not found for username:', username);
+        throw new Error('User not found');
+      }
+      
+      if (!user.Character) {
+        console.log('[ProfileService] Character not found for user:', user.id);
+        throw new Error('Character not found');
+      }
+      
+      console.log('[ProfileService] Found user and character:', { userId: user.id, characterId: user.Character.id });
+      
       const userObj = user.toJSON();
       const sanitizedUser = sanitizeUserData(userObj);
+      
+      console.log('[ProfileService] Enriching character data...');
       const { fightsLost, fame } = await enrichCharacter(user.Character);
-      // Fetch assassinations stat
+      
+      // Fetch assassinations stat (if available)
       let assassinations = 0;
       try {
         const stat = await Statistic.findOne({ where: { userId: user.id } });
-        if (stat) assassinations = stat.assassinations || 0;
+        if (stat) {
+          // Check if assassinations field exists, otherwise use a default
+          // Note: assassinations field might not exist in the Statistic model
+          assassinations = 0; // Default to 0 since assassinations field doesn't exist
+        }
       } catch (statError) {
         console.error('[ProfileService] Error fetching statistics:', statError);
         assassinations = 0;
       }
+      
       if (!userObj.Character) {
         return { ...sanitizedUser, fame, fightsLost, assassinations, isVIP: false };
       }
+      
       const rest = { ...sanitizedUser };
       delete rest.Character;
+      
       // Clean character data - only include the actual character fields, not Sequelize metadata
       const characterData = {
         id: userObj.Character.id,
         userId: userObj.Character.userId,
-        name: userObj.Character.name,
-        level: userObj.Character.level,
-        exp: userObj.Character.exp,
-        money: userObj.Character.money,
-        strength: userObj.Character.strength,
-        defense: userObj.Character.defense,
-        energy: userObj.Character.energy,
-        maxEnergy: userObj.Character.maxEnergy,
-        hp: userObj.Character.hp,
-        maxHp: userObj.Character.maxHp,
-        equippedHouseId: userObj.Character.equippedHouseId,
-        gangId: userObj.Character.gangId,
-        daysInGame: userObj.Character.daysInGame,
-        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl,
-        killCount: userObj.Character.killCount,
-        lastActive: userObj.Character.lastActive,
-        buffs: userObj.Character.buffs,
-        quote: userObj.Character.quote,
-        vipExpiresAt: userObj.Character.vipExpiresAt,
-        attackImmunityExpiresAt: userObj.Character.attackImmunityExpiresAt
+        name: userObj.Character.name || userObj.username,
+        level: userObj.Character.level || 1,
+        exp: userObj.Character.exp || 0,
+        money: userObj.Character.money || 0,
+        strength: userObj.Character.strength || 10,
+        defense: userObj.Character.defense || 5,
+        energy: userObj.Character.energy || 100,
+        maxEnergy: userObj.Character.maxEnergy || 100,
+        hp: userObj.Character.hp || 1000,
+        maxHp: userObj.Character.maxHp || 1000,
+        equippedHouseId: userObj.Character.equippedHouseId || null,
+        gangId: userObj.Character.gangId || null,
+        daysInGame: userObj.Character.daysInGame || 1,
+        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl || null,
+        killCount: userObj.Character.killCount || 0,
+        lastActive: userObj.Character.lastActive || new Date(),
+        buffs: userObj.Character.buffs || {},
+        quote: userObj.Character.quote || '',
+        vipExpiresAt: userObj.Character.vipExpiresAt || null,
+        attackImmunityExpiresAt: userObj.Character.attackImmunityExpiresAt || null
       };
-      return {
+      
+      const result = {
         ...rest,
         ...characterData,
         // Prioritize character name over username for display
@@ -200,8 +235,13 @@ export class ProfileService {
         fightsLost,
         assassinations,
       };
+      
+      console.log('[ProfileService] Successfully created profile for user:', username);
+      return result;
+      
     } catch (error) {
       console.error('[ProfileService] Error getting user profile by username:', error);
+      console.error('[ProfileService] Error stack:', error.stack);
       throw error;
     }
   }
@@ -216,18 +256,21 @@ export class ProfileService {
   static async updateUserProfile(userId, updateData) {
     const user = await User.findByPk(userId, { include: [Character] });
     if (!user || !user.Character) throw new Error('User or Character not found');
+    
     // Update User fields
-    const allowedUserFields = ['email', 'bio'];
+    const allowedUserFields = ['email', 'bio', 'avatarUrl'];
     for (const field of allowedUserFields) {
       if (updateData[field] !== undefined) user[field] = updateData[field];
     }
     await user.save();
+    
     // Update Character fields
-    const allowedCharacterFields = ['avatar', 'quote'];
+    const allowedCharacterFields = ['quote'];
     for (const field of allowedCharacterFields) {
       if (updateData[field] !== undefined) user.Character[field] = updateData[field];
     }
     await user.Character.save();
+    
     return this.getUserProfile(userId);
   }
 

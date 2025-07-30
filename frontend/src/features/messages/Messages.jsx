@@ -12,14 +12,8 @@ import VipName from '../profile/VipName.jsx';
 import '../profile/vipSparkle.css';
 import { jwtDecode } from 'jwt-decode';
 
-// Utility to get avatar URL (extracted from PlayerSearch)
-const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
-const getAvatarUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  if (url.startsWith('/')) return backendUrl + url;
-  return backendUrl + '/' + url;
-};
+// Import the centralized image utility
+import { getImageUrl } from '@/utils/imageUtils.js';
 
 export default function Messages() {
   const { socket } = useSocket();
@@ -431,9 +425,9 @@ export default function Messages() {
                   className={`w-full text-right px-4 py-3 hover:bg-zinc-800 transition-colors duration-150 flex items-center gap-3 ${selectedUser?.userId === user.userId ? 'bg-accent-red text-white' : 'text-zinc-200'}`}
                   onClick={e => { e.stopPropagation(); setSelectedUser(user); }}
                 >
-                  {getAvatarUrl(user.avatarUrl) ? (
+                  {getImageUrl(user.avatarUrl) ? (
                     <img
-                      src={getAvatarUrl(user.avatarUrl)}
+                      src={getImageUrl(user.avatarUrl)}
                       alt="avatar"
                       className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
                       onError={(e) => {
@@ -443,7 +437,7 @@ export default function Messages() {
                     />
                   ) : null}
                   {/* Fallback icon when no avatar or image fails to load */}
-                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getAvatarUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
+                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getImageUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
                     <span className="text-sm font-bold text-accent-red">
                       {(user.displayName || user.name || user.username || "?")[0]}
                     </span>
@@ -469,9 +463,9 @@ export default function Messages() {
               <button className="md:hidden text-accent-red mr-2" onClick={() => setSidebarOpen(true)} aria-label="رجوع للقائمة">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
               </button>
-              {getAvatarUrl(selectedUser.avatarUrl) ? (
+              {getImageUrl(selectedUser.avatarUrl) ? (
                 <img
-                  src={getAvatarUrl(selectedUser.avatarUrl)}
+                  src={getImageUrl(selectedUser.avatarUrl)}
                   alt="avatar"
                   className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
                   onError={(e) => {
@@ -481,7 +475,7 @@ export default function Messages() {
                 />
               ) : null}
               {/* Fallback icon when no avatar or image fails to load */}
-              <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-hitman-800 flex items-center justify-center ${getAvatarUrl(selectedUser.avatarUrl) ? 'hidden' : 'flex'}`}>
+              <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-hitman-800 flex items-center justify-center ${getImageUrl(selectedUser.avatarUrl) ? 'hidden' : 'flex'}`}>
                 <User className="w-5 h-5 text-accent-red" />
               </div>
               <span className="font-bold text-lg text-accent-red truncate">
@@ -514,7 +508,7 @@ export default function Messages() {
                   return (
                     <div key={msg.id} className={`flex w-full items-end gap-2 ${isSelf ? 'justify-end' : 'justify-start'}`} style={{ direction: 'rtl' }}>
                       {!isSelf && (
-                        <img src={getAvatarUrl(avatarUrl)} alt={selectedUser.username} className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2" title={selectedUser.username} />
+                        <img src={getImageUrl(avatarUrl)} alt={selectedUser.username} className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2" title={selectedUser.username} />
                       )}
                       <div className={`relative ${isSelf ? 'ml-auto' : 'mr-auto'} my-2 px-3 py-2 rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-200 max-w-[80%] shadow text-xs sm:text-sm inline-block align-bottom`} style={{ wordBreak: 'break-word', maxWidth: '75vw' }}>
                         <div className="flex flex-row items-center flex-wrap gap-2">
@@ -630,7 +624,7 @@ export default function Messages() {
                         </div>
                       </div>
                       {isSelf && (
-                        <img src={getAvatarUrl(avatarUrl)} alt={userInfo.username} className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2" title={userInfo.username} />
+                        <img src={getImageUrl(avatarUrl)} alt={userInfo.username} className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2" title={userInfo.username} />
                       )}
                     </div>
                   );

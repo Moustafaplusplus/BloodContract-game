@@ -4,21 +4,24 @@ import { auth } from '../middleware/auth.js';
 import { adminAuth } from '../middleware/admin.js';
 import multer from 'multer';
 import path from 'path';
+import { uploadToFirebase } from '../config/firebase.js';
 
 const router = express.Router();
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'public/missions/');
+// Configure multer for Firebase uploads (memory storage)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
-
-const upload = multer({ storage });
 
 // Get all missions list with user progress
 router.get('/list', auth, MinistryMissionController.getMissionsList);
@@ -39,19 +42,19 @@ router.put('/admin/:id', auth, adminAuth, MinistryMissionController.updateMissio
 router.delete('/admin/:id', auth, adminAuth, MinistryMissionController.deleteMission);
 
 // Admin: Upload mission image
-router.post('/admin/upload-image', auth, adminAuth, upload.single('image'), (req, res) => {
+router.post('/admin/upload-image', auth, adminAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // File uploaded successfully
-    const imageUrl = `/missions/${req.file.filename}`;
+    const filename = `mission-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    const result = await uploadToFirebase(req.file.buffer, 'missions', filename);
     
     res.json({
       success: true,
-      url: imageUrl,
-      filename: req.file.filename
+      url: result.publicUrl,
+      filename: result.filename
     });
   } catch (error) {
     console.error('[Mission Image Upload] Error:', error);

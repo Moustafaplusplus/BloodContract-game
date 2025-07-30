@@ -3,14 +3,14 @@
  */
 
 /**
- * Constructs a proper image URL that points to the backend server
+ * Constructs a proper image URL that handles both Firebase Storage and local URLs
  * @param {string} imageUrl - The image URL from the database
  * @returns {string|null} - The full URL to the image or null if no URL provided
  */
 export const getImageUrl = (imageUrl) => {
   if (!imageUrl) return null;
   
-  // If it's already a full URL, return as is
+  // If it's already a full URL (Firebase Storage or other CDN), return as is
   if (imageUrl.startsWith('http')) {
     return imageUrl;
   }

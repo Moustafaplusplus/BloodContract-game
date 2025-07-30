@@ -29,8 +29,8 @@ else
 fi
 
 # Optional: Seed the database (uncomment if needed)
-# echo "🌱 Seeding database..."
-# node src/resetAndSeed.js
+echo "🌱 Seeding database..."
+node src/resetAndSeed.js
 
 echo "🎉 Railway deployment completed successfully!"
 echo "🌐 Your application should now be running on Railway" 

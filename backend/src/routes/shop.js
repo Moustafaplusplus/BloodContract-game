@@ -1,91 +1,80 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { ShopController } from '../controllers/ShopController.js';
 import { auth } from '../middleware/auth.js';
 import { adminAuth } from '../middleware/admin.js';
 import { validate } from '../middleware/validation.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { uploadToFirebase } from '../config/firebase.js';
 
 const router = express.Router();
 
-// Set up multer storage for weapon images
-const weaponImageDir = path.join(__dirname, '..', '..', 'public', 'weapons');
-if (!fs.existsSync(weaponImageDir)) fs.mkdirSync(weaponImageDir, { recursive: true });
+// Ensure directories exist
+const weaponImageDir = 'public/weapons';
+const armorImageDir = 'public/armors';
 
-// Set up multer storage for armor images
-const armorImageDir = path.join(__dirname, '..', '..', 'public', 'armors');
-if (!fs.existsSync(armorImageDir)) fs.mkdirSync(armorImageDir, { recursive: true });
+if (!fs.existsSync(weaponImageDir)) {
+  fs.mkdirSync(weaponImageDir, { recursive: true });
+}
+if (!fs.existsSync(armorImageDir)) {
+  fs.mkdirSync(armorImageDir, { recursive: true });
+}
 
-// Helper function to sanitize filenames
+// Sanitize filename for safe storage
 const sanitizeFilename = (filename) => {
+  // Remove or replace problematic characters
   return filename
-    .replace(/[^a-zA-Z0-9.-]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toLowerCase();
+    .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
+    .replace(/_+/g, '_') // Replace multiple underscores with single
+    .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+    .toLowerCase(); // Convert to lowercase
 };
 
-const weaponStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, weaponImageDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const base = path.basename(file.originalname, ext);
-    const sanitizedBase = sanitizeFilename(base);
-    const timestamp = Date.now();
-    const unique = `${sanitizedBase}_${timestamp}${ext}`;
-    cb(null, unique);
+// Configure multer for Firebase uploads (memory storage)
+const weaponUpload = multer({ 
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
-const armorStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, armorImageDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const base = path.basename(file.originalname, ext);
-    const sanitizedBase = sanitizeFilename(base);
-    const timestamp = Date.now();
-    const unique = `${sanitizedBase}_${timestamp}${ext}`;
-    cb(null, unique);
+const armorUpload = multer({ 
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
-
-const weaponUpload = multer({ storage: weaponStorage });
-const armorUpload = multer({ storage: armorStorage });
 
 // POST /api/shop/upload-weapon-image - Upload a weapon image (admin only)
-router.post('/upload-weapon-image', auth, adminAuth, weaponUpload.single('image'), (req, res) => {
+router.post('/upload-weapon-image', auth, adminAuth, weaponUpload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({ 
-        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' 
-      });
-    }
-
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (req.file.size > maxSize) {
-      return res.status(400).json({ 
-        error: 'File too large. Maximum size is 5MB.' 
-      });
-    }
-
-    // Public URL for the uploaded image
-    const url = `/weapons/${req.file.filename}`;
+    const filename = `weapon-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    const result = await uploadToFirebase(req.file.buffer, 'weapons', filename);
+    
     res.json({ 
-      imageUrl: url,
-      filename: req.file.filename,
+      imageUrl: result.publicUrl,
+      filename: result.filename,
       size: req.file.size,
       mimetype: req.file.mimetype
     });
@@ -96,33 +85,18 @@ router.post('/upload-weapon-image', auth, adminAuth, weaponUpload.single('image'
 });
 
 // POST /api/shop/upload-armor-image - Upload an armor image (admin only)
-router.post('/upload-armor-image', auth, adminAuth, armorUpload.single('image'), (req, res) => {
+router.post('/upload-armor-image', auth, adminAuth, armorUpload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({ 
-        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' 
-      });
-    }
-
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (req.file.size > maxSize) {
-      return res.status(400).json({ 
-        error: 'File too large. Maximum size is 5MB.' 
-      });
-    }
-
-    // Public URL for the uploaded image
-    const url = `/armors/${req.file.filename}`;
+    const filename = `armor-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    const result = await uploadToFirebase(req.file.buffer, 'armors', filename);
+    
     res.json({ 
-      imageUrl: url,
-      filename: req.file.filename,
+      imageUrl: result.publicUrl,
+      filename: result.filename,
       size: req.file.size,
       mimetype: req.file.mimetype
     });

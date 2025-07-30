@@ -4,6 +4,7 @@ import { auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
+import { uploadToFirebase } from '../config/firebase.js';
 
 // Rate limiters
 const signupLimiter = rateLimit({
@@ -17,26 +18,28 @@ const loginLimiter = rateLimit({
   message: { error: 'تم تجاوز الحد المسموح لمحاولات الدخول. حاول لاحقاً.' }
 });
 
-// Use the same multer setup as in UserController
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, process.cwd() + '/public/avatars');
-  },
-  filename: function (req, file, cb) {
-    const ext = file.originalname.split('.').pop();
-    cb(null, `user_${req.user.id}_${Date.now()}.${ext}`);
-  }
-});
+// Configure multer for Firebase uploads (memory storage) - NO FALLBACKS
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
+    console.log('📁 File filter check:', { 
+      originalname: file.originalname, 
+      mimetype: file.mimetype, 
+      size: file.size 
+    });
+    
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowed.includes(file.mimetype)) {
+      console.log('❌ File type rejected:', file.mimetype);
       return cb(new Error('يُسمح فقط برفع صور من نوع jpeg, png, gif, webp'));
     }
+    
+    console.log('✅ File type accepted:', file.mimetype);
     cb(null, true);
   },
-  limits: { fileSize: 2 * 1024 * 1024 } // 2MB
+  limits: { 
+    fileSize: 1 * 1024 * 1024 // 1MB - STRICT LIMIT
+  }
 });
 
 const router = express.Router();
@@ -57,9 +60,21 @@ router.get('/users/active', UserController.getActiveUsers);
 router.get('/users/:id', UserController.getUserById);
 
 // POST /api/avatar - Upload user avatar
-router.post('/avatar', auth, upload.single('avatar'), (err, req, res, next) => {
-  if (err) {
-    return res.status(400).json({ error: err.message });
+router.post('/avatar', auth, (req, res, next) => {
+  console.log('🎯 Avatar upload endpoint hit!');
+  console.log('🎯 Request headers:', req.headers);
+  console.log('🎯 Request body keys:', Object.keys(req.body || {}));
+  next();
+}, upload.single('avatar'), (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        message: 'حجم الملف كبير جداً. الحد الأقصى هو 1 ميجابايت.' 
+      });
+    }
+    return res.status(400).json({ message: err.message });
+  } else if (err) {
+    return res.status(400).json({ message: err.message });
   }
   next();
 }, UserController.uploadAvatar);

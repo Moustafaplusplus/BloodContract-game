@@ -15,47 +15,57 @@ export default defineConfig({
     },
   },
   server: {
-    // Proxy /api/* requests to backend on port 5001
+    // Proxy /api/* requests to backend
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/cars': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/houses': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/dogs': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/weapons': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/armors': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/special-items': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/crimes': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/avatars': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
       '/missions': {
-        target: 'http://localhost:5001',
+        target: process.env.VITE_API_URL || 'https://bloodcontract-game-production.up.railway.app',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

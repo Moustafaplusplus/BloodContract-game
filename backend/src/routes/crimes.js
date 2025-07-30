@@ -1,24 +1,23 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { CrimeController } from '../controllers/CrimeController.js';
 import { auth } from '../middleware/auth.js';
 import { adminAuth } from '../middleware/admin.js';
 import { validate } from '../middleware/validation.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { Crime } from '../models/Crime.js';
+import { uploadToFirebase } from '../config/firebase.js';
 
 const router = express.Router();
 
-// Set up multer storage for crime images
-const crimeImageDir = path.join(__dirname, '..', '..', 'public', 'crimes');
-if (!fs.existsSync(crimeImageDir)) fs.mkdirSync(crimeImageDir, { recursive: true });
+// Ensure crime images directory exists
+const crimeImageDir = 'public/crimes';
+if (!fs.existsSync(crimeImageDir)) {
+  fs.mkdirSync(crimeImageDir, { recursive: true });
+}
 
-// Helper function to sanitize filenames
+// Sanitize filename for safe storage
 const sanitizeFilename = (filename) => {
   // Remove or replace problematic characters
   return filename
@@ -28,52 +27,38 @@ const sanitizeFilename = (filename) => {
     .toLowerCase(); // Convert to lowercase
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, crimeImageDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const base = path.basename(file.originalname, ext);
-    const sanitizedBase = sanitizeFilename(base);
-    const timestamp = Date.now();
-    const unique = `${sanitizedBase}_${timestamp}${ext}`;
-    cb(null, unique);
+// Configure multer for Firebase uploads (memory storage)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
-const upload = multer({ storage });
 
 // POST /api/crimes/upload-image - Upload a crime image (admin only)
-router.post('/upload-image', auth, adminAuth, upload.single('image'), (req, res) => {
+router.post('/upload-image', auth, adminAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({ 
-        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.' 
+          const filename = `crime-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'crimes', filename);
+      
+      res.json({ 
+        imageUrl: result.publicUrl,
+        filename: result.filename,
+        size: req.file.size,
+        mimetype: req.file.mimetype
       });
-    }
-
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (req.file.size > maxSize) {
-      return res.status(400).json({ 
-        error: 'File too large. Maximum size is 5MB.' 
-      });
-    }
-
-          // File uploaded successfully
-    
-    // Public URL for the uploaded image
-    const url = `/crimes/${req.file.filename}`;
-    res.json({ 
-      imageUrl: url,
-      filename: req.file.filename,
-      size: req.file.size,
-      mimetype: req.file.mimetype
-    });
   } catch (error) {
     console.error('[Crime Image Upload] Error:', error);
     res.status(500).json({ error: 'Failed to upload image' });

@@ -1,6 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import { sequelize } from '../config/db.js';
+import { getDefaultAvatarUrl } from '../config/defaultAvatars.js';
 
 export class User extends Model {
   async validPassword(password) {
@@ -46,9 +47,7 @@ User.init({
     async beforeCreate(user) {
       user.password = await bcrypt.hash(user.password, 10);
       if (!user.avatarUrl) {
-        user.avatarUrl = user.gender === 'female'
-          ? '/avatars/default_avatar_female.png'
-          : '/avatars/default_avatar_male.png';
+        user.avatarUrl = getDefaultAvatarUrl(user.gender);
       }
     },
     async beforeUpdate(user) {

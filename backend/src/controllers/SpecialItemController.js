@@ -1,4 +1,5 @@
 import { SpecialItemService } from '../services/SpecialItemService.js';
+import { uploadToFirebase } from '../config/firebase.js';
 
 export class SpecialItemController {
   static async getSpecialItems(req, res) {
@@ -137,8 +138,10 @@ export class SpecialItemController {
         return res.status(400).json({ error: 'No image file provided' });
       }
 
-      const imageUrl = `/special-items/${req.file.filename}`;
-      res.json({ imageUrl });
+      const filename = `special-item-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'special-items', filename);
+      
+      res.json({ imageUrl: result.publicUrl });
     } catch (error) {
       console.error('Upload special item image error:', error);
       res.status(500).json({ error: 'Failed to upload image' });

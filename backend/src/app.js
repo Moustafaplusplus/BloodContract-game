@@ -86,8 +86,7 @@ import { Task, UserTaskProgress } from './models/Task.js';
 import tasksRouter from './routes/tasks.js';
 import authRouter from './routes/auth.js';
 import notificationRouter from './routes/notifications.js';
-import botsRouter from './routes/bots.js';
-import botActivityService from './services/BotActivityService.js';
+
 import { configurePassport } from './config/passport.js';
 import gameNewsRouter from './routes/gameNews.js';
 import loginGiftRouter from './routes/loginGift.js';
@@ -114,15 +113,8 @@ import featuresRouter from './routes/features.js';
 /* ─────────── Express bootstrapping ─────────── */
 const app = express();
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, '..', 'public'), {
-  setHeaders: (res, path) => {
-    // Set CORS headers for all static files
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
-  }
-}));
+// Note: Static file serving removed - using Firebase Storage for image storage
+// Static files are no longer served from the backend since Railway's filesystem is ephemeral
 app.set('etag', false);                     // prevents 304 responses with empty body
 
 // CORS configuration
@@ -214,7 +206,7 @@ app.use('/api/global-chat', globalChatRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/notifications', notificationRouter);
-app.use('/api/bots', botsRouter);
+
 app.use('/api/game-news', gameNewsRouter);
 app.use('/api/login-gift', loginGiftRouter);
 app.use('/api/features', featuresRouter);
@@ -282,9 +274,7 @@ const startServer = async () => {
     startContractExpirationJob();
     console.log('⚙️  Background jobs started ✅');
 
-    // Start bot activity service
-    botActivityService.start();
-    console.log('🤖 Bot activity service started ✅');
+    
 
     // Start listening
     server.listen(PORT, () => {

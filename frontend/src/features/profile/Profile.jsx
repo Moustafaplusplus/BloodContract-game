@@ -37,6 +37,7 @@ import Modal from "@/components/Modal";
 import MoneyIcon from "@/components/MoneyIcon";
 import { useSocket } from "@/hooks/useSocket";
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
+import { getImageUrl } from '@/utils/imageUtils.js';
 
 function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   if (!fightResult) return null;
@@ -616,7 +617,7 @@ export default function Profile() {
                 <div className="relative mb-6">
                   {displayCharacter?.avatarUrl ? (
                     <img
-                      src={displayCharacter.avatarUrl?.startsWith('http') ? displayCharacter.avatarUrl : backendUrl + displayCharacter.avatarUrl}
+                      src={getImageUrl(displayCharacter.avatarUrl)}
                       alt="avatar"
                       className="w-32 h-32 rounded-full object-cover border-4 border-accent-red bg-hitman-800 mx-auto shadow-lg"
                       onError={(e) => {

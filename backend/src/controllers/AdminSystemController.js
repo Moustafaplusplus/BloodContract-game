@@ -13,83 +13,80 @@ import { AdminSystemService } from '../services/AdminSystemService.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { uploadToFirebase, deleteFromFirebase } from '../config/firebase.js';
 
-// Multer storage configurations
-const carStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'public/cars';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+// Multer memory storage configurations for Firebase upload
+const memoryStorage = multer.memoryStorage();
+
+const uploadCar = multer({ 
+  storage: memoryStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
     }
-    cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
-const houseStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'public/houses';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+const uploadHouse = multer({ 
+  storage: memoryStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
     }
-    cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
-const dogStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'public/dogs';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+const uploadDog = multer({ 
+  storage: memoryStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
     }
-    cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
-const weaponStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'public/weapons';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+const uploadWeapon = multer({ 
+  storage: memoryStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
     }
-    cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
-const armorStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = 'public/armors';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+const uploadArmor = multer({ 
+  storage: memoryStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
     }
-    cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
-
-const uploadCar = multer({ storage: carStorage });
-const uploadHouse = multer({ storage: houseStorage });
-const uploadDog = multer({ storage: dogStorage });
-const uploadWeapon = multer({ storage: weaponStorage });
-const uploadArmor = multer({ storage: armorStorage });
 
 export class AdminSystemController {
   // Toggle user ban
@@ -231,9 +228,18 @@ export class AdminSystemController {
     await car.destroy();
     res.json({ success: true });
   }
-  static uploadCarImage = [uploadCar.single('image'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ imageUrl: `/cars/${req.file.filename}` });
+  static uploadCarImage = [uploadCar.single('image'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      const filename = `car-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'cars', filename);
+      
+      res.json({ imageUrl: result.publicUrl });
+    } catch (error) {
+      console.error('Car image upload error:', error);
+      res.status(500).json({ error: 'Failed to upload image' });
+    }
   }];
 
   // --- House CRUD ---
@@ -257,9 +263,18 @@ export class AdminSystemController {
     await house.destroy();
     res.json({ success: true });
   }
-  static uploadHouseImage = [uploadHouse.single('image'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ imageUrl: `/houses/${req.file.filename}` });
+  static uploadHouseImage = [uploadHouse.single('image'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      const filename = `house-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'houses', filename);
+      
+      res.json({ imageUrl: result.publicUrl });
+    } catch (error) {
+      console.error('House image upload error:', error);
+      res.status(500).json({ error: 'Failed to upload image' });
+    }
   }];
 
   // --- Dog CRUD ---
@@ -283,9 +298,18 @@ export class AdminSystemController {
     await dog.destroy();
     res.json({ success: true });
   }
-  static uploadDogImage = [uploadDog.single('image'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    res.json({ imageUrl: `/dogs/${req.file.filename}` });
+  static uploadDogImage = [uploadDog.single('image'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      const filename = `dog-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'dogs', filename);
+      
+      res.json({ imageUrl: result.publicUrl });
+    } catch (error) {
+      console.error('Dog image upload error:', error);
+      res.status(500).json({ error: 'Failed to upload image' });
+    }
   }];
 
   // Weapon Management
@@ -368,7 +392,11 @@ export class AdminSystemController {
       if (!req.file) {
         return res.status(400).json({ message: 'لم يتم اختيار ملف' });
       }
-      res.json({ imageUrl: `/weapons/${req.file.filename}` });
+      
+      const filename = `weapon-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'weapons', filename);
+      
+      res.json({ imageUrl: result.publicUrl });
     } catch (error) {
       console.error('Upload weapon image error:', error);
       res.status(500).json({ message: 'فشل في رفع صورة السلاح' });
@@ -455,7 +483,11 @@ export class AdminSystemController {
       if (!req.file) {
         return res.status(400).json({ message: 'لم يتم اختيار ملف' });
       }
-      res.json({ imageUrl: `/armors/${req.file.filename}` });
+      
+      const filename = `armor-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+      const result = await uploadToFirebase(req.file.buffer, 'armors', filename);
+      
+      res.json({ imageUrl: result.publicUrl });
     } catch (error) {
       console.error('Upload armor image error:', error);
       res.status(500).json({ message: 'فشل في رفع صورة الدرع' });
