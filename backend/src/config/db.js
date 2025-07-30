@@ -2,37 +2,59 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Use DATABASE_URL if available (Railway), otherwise use individual parameters (local development)
 const dbConfig = {
-  url: process.env.DATABASE_URL,
   dialect: 'postgres',
   logging: false,
-  // Add connection pool configuration to prevent connection exhaustion
+  // Optimized connection pool for Railway
   pool: {
-    max: 10, // Reduced from 20 to prevent connection exhaustion
-    min: 2,  // Reduced from 5
-    acquire: 30000, // Reduced from 60000
-    idle: 5000, // Reduced from 10000
-    evict: 15000, // Reduced from 30000
+    max: 5, // Reduced for Railway limits
+    min: 1, // Reduced for Railway limits
+    acquire: 60000, // Increased for remote connection
+    idle: 10000, // Increased for remote connection
+    evict: 30000, // Increased for remote connection
   },
   // Add retry configuration for better connection stability
   retry: {
     max: 3, // Maximum number of retries
     timeout: 10000, // Timeout for each retry
   },
-  // Add dialect options for better connection handling
+  // Optimized dialect options for Railway
   dialectOptions: {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    connectTimeout: 30000, // Reduced from 60000
-    acquireTimeout: 30000, // Reduced from 60000
-    timeout: 30000, // Reduced from 60000
+    connectTimeout: 60000, // Increased for remote connection
+    acquireTimeout: 60000, // Increased for remote connection
+    timeout: 60000, // Increased for remote connection
     // Add statement timeout to prevent long-running queries
-    statement_timeout: 15000, // Reduced from 30000
+    statement_timeout: 30000, // Increased for remote connection
     // Add idle session timeout
-    idle_in_transaction_session_timeout: 15000, // Reduced from 30000
+    idle_in_transaction_session_timeout: 30000, // Increased for remote connection
   },
 };
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, dbConfig);
+// Create Sequelize instance based on available configuration
+let sequelize;
+
+if (process.env.DATABASE_URL) {
+  // Use DATABASE_URL (Railway/Production)
+  // If we're on Railway, use internal URL for better performance
+  const dbUrl = process.env.RAILWAY_ENVIRONMENT 
+    ? process.env.DATABASE_URL.replace('shuttle.proxy.rlwy.net', 'postgres.railway.internal')
+    : process.env.DATABASE_URL;
+  
+  sequelize = new Sequelize(dbUrl, dbConfig);
+} else {
+  // Use individual parameters (Local Development)
+  const localConfig = {
+    ...dbConfig,
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASS || null,
+    database: process.env.DB_NAME || 'blood_contract',
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: Number(process.env.DB_PORT) || 5432,
+  };
+  sequelize = new Sequelize(localConfig.database, localConfig.username, localConfig.password, localConfig);
+}
 
 // Connection event handlers (logs removed to reduce console spam)
 sequelize.addHook('beforeConnect', async (config) => {

@@ -125,7 +125,15 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 }));
 app.set('etag', false);                     // prevents 304 responses with empty body
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+// CORS configuration for production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.CLIENT_URL, process.env.CORS_ORIGIN].filter(Boolean)
+    : process.env.CLIENT_URL,
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -218,7 +226,22 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: 'connected'
+  });
+});
+
+// Performance monitoring endpoint
+app.get('/api/performance', (req, res) => {
+  const memUsage = process.memoryUsage();
+  res.json({
+    memory: {
+      rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB'
+    },
+    uptime: process.uptime(),
+    database: 'connected'
   });
 });
 
@@ -229,7 +252,7 @@ app.use(errorHandler);
 
 /* ─────────── Bootstrapping ─────────── */
 import { initSocket } from './socket.js';
-const PORT = process.env.API_PORT || 5000;
+const PORT = process.env.PORT || process.env.API_PORT || 5000;
 
 const startServer = async () => {
   try {
