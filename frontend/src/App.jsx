@@ -13,6 +13,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { BackgroundMusicProvider } from "@/contexts/BackgroundMusicContext";
+import { NotificationSoundProvider } from "@/contexts/NotificationSoundContext";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import HUD from "@/components/HUD";
 import AdminReturnButton from "@/components/AdminReturnButton";
@@ -64,6 +66,7 @@ const GoogleCallback = lazy(() => import("@/features/auth/GoogleCallback"));
 const LoginGift = lazy(() => import("@/features/loginGift/LoginGift"));
 const IntroVideo = lazy(() => import("@/components/IntroVideo"));
 const IntroDemo = lazy(() => import("@/pages/IntroDemo"));
+const Settings = lazy(() => import("@/features/settings/Settings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -152,112 +155,117 @@ export default function App() {
         <AuthProvider>
           <ModalProvider>
             <SocketProvider>
-                              <FamePopupProvider>
-                  <NotificationProvider>
-                  <Suspense
-                fallback={
-                  <div className="h-screen flex items-center justify-center bg-black">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
-                      <p className="text-gray-400">جاري التحميل…</p>
-                    </div>
-                  </div>
-                }
-              >
-                <Routes>
-                  {/* Landing page is bare */}
-                  <Route path="/" element={<LandingPage />} />
-                  {/* Login and Signup are also bare */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/auth/callback" element={<GoogleCallback />} />
-                  {/* Privacy Policy and Terms pages (bare) */}
-                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/terms" element={<TermsAndConditions />} />
-                  {/* Intro Video routes */}
-                  <Route path="/intro" element={<IntroVideo onComplete={() => window.location.href = '/dashboard'} />} />
-                  <Route path="/intro-demo" element={<IntroDemo />} />
-                  {/* All other pages use main layout and HUD */}
-                  <Route
-                    path="*"
-                    element={
-                      <>
-                        <HUDWrapper />
-                        <DashboardLayout>
-                          <AdminReturnButton />
-                          <Routes>
-                            <Route path="/players" element={<PlayerSearch />} />
-                            <Route path="/hospital" element={<Navigate to="/dashboard/hospital" replace />} />
-                            <Route path="/jail" element={<Navigate to="/dashboard/jail" replace />} />
-                            <Route path="/dashboard/black-market" element={<BlackMarket />} />
-                            <Route path="/dashboard/suggestions" element={<Suggestions />} />
-                            <Route path="/dashboard/ministry-mission" element={<MinistryMission />} />
-                            <Route path="/dashboard/blood-contracts" element={<BloodContracts />} />
-                            <Route path="/notifications" element={<Notifications />} />
-                            <Route path="/gangs/:id" element={<GangDetailsWrapper />} />
-                            <Route path="/admin/panel" element={<AdminPanel />} />
-                            <Route path="/dashboard/*" element={
-                              <PrivateRoute>
-                                <Routes>
-                                  <Route index element={<HomeWrapper />} />
-                                  <Route path="character" element={<Overview />} />
-                                  <Route path="crimes" element={<Crimes />} />
-                                  <Route path="crime-result" element={<CrimeResults />} />
-                                  <Route path="gym" element={<Gym />} />
-                                  <Route path="active-users" element={<ActiveUsers />} />
-                                  <Route path="fight-result" element={<FightResults />} />
-                                  <Route path="hospital" element={<Hospital />} />
-                                  <Route path="jail" element={<Jail />} />
-                                  <Route path="bank" element={<Bank />} />
-                                  <Route path="bank/history" element={<Navigate to="/dashboard/bank" replace />} />
-                                  <Route path="inventory" element={<Inventory />} />
-                                  <Route path="shop" element={<Shop />} />
-                                  <Route path="special-shop" element={<SpecialShop />} />
-                                  <Route path="houses" element={<Houses />} />
-                                  <Route path="cars" element={<Cars />} />
-                                  <Route path="dogs" element={<Dogs />} />
-                                  <Route path="gangs" element={<Gangs />} />
-                                  <Route path="friends" element={<Friendship />} />
-                                  <Route path="messages" element={<Messages />} />
-                                  <Route path="global-chat" element={<GlobalChat />} />
-                                  <Route path="profile" element={<Profile />} />
-                                  <Route path="profile/:username" element={<Profile />} />
-                                  <Route path="jobs" element={<Jobs />} />
-                                  <Route path="tasks" element={<Tasks />} />
-                                  <Route path="login-gift" element={<LoginGift />} />
-                                  <Route path="ranking" element={<Ranking />} />
-                                  <Route path="*" element={<NotFound />} />
-                                </Routes>
-                              </PrivateRoute>
-                            } />
-                            <Route path="*" element={<NotFound />} />
-                          </Routes>
-                        </DashboardLayout>
-                      </>
-                    }
+              <FamePopupProvider>
+                <NotificationProvider>
+                  <BackgroundMusicProvider>
+                    <NotificationSoundProvider>
+                      <Suspense
+                      fallback={
+                        <div className="h-screen flex items-center justify-center bg-black">
+                          <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
+                            <p className="text-gray-400">جاري التحميل…</p>
+                          </div>
+                        </div>
+                      }
+                    >
+                    <Routes>
+                      {/* Landing page is bare */}
+                      <Route path="/" element={<LandingPage />} />
+                      {/* Login and Signup are also bare */}
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      <Route path="/auth/callback" element={<GoogleCallback />} />
+                      {/* Privacy Policy and Terms pages (bare) */}
+                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                      <Route path="/terms" element={<TermsAndConditions />} />
+                      {/* Intro Video routes */}
+                      <Route path="/intro" element={<IntroVideo onComplete={() => window.location.href = '/dashboard'} />} />
+                      <Route path="/intro-demo" element={<IntroDemo />} />
+                      {/* All other pages use main layout and HUD */}
+                      <Route
+                        path="*"
+                        element={
+                          <>
+                            <HUDWrapper />
+                            <DashboardLayout>
+                              <AdminReturnButton />
+                              <Routes>
+                                <Route path="/players" element={<PlayerSearch />} />
+                                <Route path="/hospital" element={<Navigate to="/dashboard/hospital" replace />} />
+                                <Route path="/jail" element={<Navigate to="/dashboard/jail" replace />} />
+                                <Route path="/dashboard/black-market" element={<BlackMarket />} />
+                                <Route path="/dashboard/suggestions" element={<Suggestions />} />
+                                <Route path="/dashboard/ministry-mission" element={<MinistryMission />} />
+                                <Route path="/dashboard/blood-contracts" element={<BloodContracts />} />
+                                <Route path="/dashboard/settings" element={<Settings />} />
+                                <Route path="/notifications" element={<Notifications />} />
+                                <Route path="/gangs/:id" element={<GangDetailsWrapper />} />
+                                <Route path="/admin/panel" element={<AdminPanel />} />
+                                <Route path="/dashboard/*" element={
+                                  <PrivateRoute>
+                                    <Routes>
+                                      <Route index element={<HomeWrapper />} />
+                                      <Route path="character" element={<Overview />} />
+                                      <Route path="crimes" element={<Crimes />} />
+                                      <Route path="crime-result" element={<CrimeResults />} />
+                                      <Route path="gym" element={<Gym />} />
+                                      <Route path="active-users" element={<ActiveUsers />} />
+                                      <Route path="fight-result" element={<FightResults />} />
+                                      <Route path="hospital" element={<Hospital />} />
+                                      <Route path="jail" element={<Jail />} />
+                                      <Route path="bank" element={<Bank />} />
+                                      <Route path="bank/history" element={<Navigate to="/dashboard/bank" replace />} />
+                                      <Route path="inventory" element={<Inventory />} />
+                                      <Route path="shop" element={<Shop />} />
+                                      <Route path="special-shop" element={<SpecialShop />} />
+                                      <Route path="houses" element={<Houses />} />
+                                      <Route path="cars" element={<Cars />} />
+                                      <Route path="dogs" element={<Dogs />} />
+                                      <Route path="gangs" element={<Gangs />} />
+                                      <Route path="friends" element={<Friendship />} />
+                                      <Route path="messages" element={<Messages />} />
+                                      <Route path="global-chat" element={<GlobalChat />} />
+                                      <Route path="profile" element={<Profile />} />
+                                      <Route path="profile/:username" element={<Profile />} />
+                                      <Route path="jobs" element={<Jobs />} />
+                                      <Route path="tasks" element={<Tasks />} />
+                                      <Route path="login-gift" element={<LoginGift />} />
+                                      <Route path="ranking" element={<Ranking />} />
+                                      <Route path="*" element={<NotFound />} />
+                                    </Routes>
+                                  </PrivateRoute>
+                                } />
+                                <Route path="*" element={<NotFound />} />
+                              </Routes>
+                            </DashboardLayout>
+                          </>
+                        }
+                      />
+                    </Routes>
+                  </Suspense>
+                  <ToastContainer
+                    position="bottom-center"
+                    autoClose={4000}
+                    hideProgressBar={false}
+                    newestOnTop={false}
+                    closeOnClick
+                    rtl
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                    theme="dark"
+                    toastClassName="Toastify__toast"
+                    bodyClassName="Toastify__toast-body"
                   />
-                </Routes>
-              </Suspense>
-              <ToastContainer
-                position="bottom-center"
-                autoClose={4000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="dark"
-                toastClassName="Toastify__toast"
-                bodyClassName="Toastify__toast-body"
-              />
-                          </NotificationProvider>
-                </FamePopupProvider>
-            </SocketProvider>
-          </ModalProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  );
+                </NotificationSoundProvider>
+              </BackgroundMusicProvider>
+            </NotificationProvider>
+          </FamePopupProvider>
+        </SocketProvider>
+      </ModalProvider>
+    </AuthProvider>
+  </ThemeProvider>
+</QueryClientProvider>
+);
 }

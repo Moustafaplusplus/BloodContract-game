@@ -27,6 +27,7 @@ User.init({
   money:     { type: DataTypes.INTEGER, defaultValue: 0 },
   blackcoins:{ type: DataTypes.INTEGER, defaultValue: 0 },
   isAdmin:   { type: DataTypes.BOOLEAN, defaultValue: false },
+  isGuest:   { type: DataTypes.BOOLEAN, defaultValue: false },
   // IP blocking fields
   isBanned:  { type: DataTypes.BOOLEAN, defaultValue: false },
   banReason: { type: DataTypes.TEXT, defaultValue: '' },
@@ -45,13 +46,16 @@ User.init({
   timestamps: false,
   hooks: {
     async beforeCreate(user) {
-      user.password = await bcrypt.hash(user.password, 10);
+      // Only hash password if it's not a guest user
+      if (!user.isGuest && user.password) {
+        user.password = await bcrypt.hash(user.password, 10);
+      }
       if (!user.avatarUrl) {
         user.avatarUrl = getDefaultAvatarUrl(user.gender);
       }
     },
     async beforeUpdate(user) {
-      if (user.changed('password')) user.password = await bcrypt.hash(user.password, 10);
+      if (user.changed('password') && !user.isGuest) user.password = await bcrypt.hash(user.password, 10);
     },
   },
 }); 

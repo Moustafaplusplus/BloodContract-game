@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Eye, EyeOff, User, Lock, Target, Shield } from "lucide-react";
+import { useBackgroundMusicContext } from "@/contexts/BackgroundMusicContext";
+import { Eye, EyeOff, User, Lock, Target, Shield, UserCheck } from "lucide-react";
 import Modal from "@/components/Modal";
 import { extractErrorMessage } from "@/utils/errorHandler";
 import { jwtDecode } from "jwt-decode";
@@ -13,10 +14,12 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info" });
 
   const { setToken, isAuthed, tokenLoaded, validating } = useAuth();
+  const { play } = useBackgroundMusicContext();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,7 +69,10 @@ export default function Login() {
         message: "تم تسجيل الدخول بنجاح",
         type: "success"
       });
-      setTimeout(() => navigate("/dashboard"), 1500);
+      // Start background music after successful login (will wait for user interaction)
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
     } catch (err) {
       const errorMessage = extractErrorMessage(err);
       setModal({
@@ -77,6 +83,35 @@ export default function Login() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      const { data } = await axios.post("/api/auth/guest");
+      setToken(data.token);
+      localStorage.removeItem('userId');
+      setModal({
+        isOpen: true,
+        title: "تم تسجيل الدخول كضيف",
+        message: "تم إنشاء حساب ضيف بنجاح. يمكنك التسجيل لاحقاً لحفظ تقدمك",
+        type: "success"
+      });
+      // Start background music after successful guest login (will wait for user interaction)
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+    } catch (err) {
+      const errorMessage = extractErrorMessage(err);
+      setModal({
+        isOpen: true,
+        title: "فشل تسجيل الدخول كضيف",
+        message: errorMessage,
+        type: "error"
+      });
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -209,6 +244,26 @@ export default function Login() {
                     <span className="px-2 bg-gray-900 text-gray-400">أو</span>
                   </div>
                 </div>
+
+                {/* Guest Login Button */}
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  disabled={guestLoading}
+                  className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-800 hover:bg-gray-700 transition-colors duration-200 group mb-4"
+                >
+                  {guestLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="submit-spinner"></div>
+                      <span className="mr-3">جاري إنشاء حساب ضيف…</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <UserCheck className="w-5 h-5 ml-3" />
+                      <span>دخول كضيف</span>
+                    </div>
+                  )}
+                </button>
 
                 {/* Google Sign In Button */}
                 <button

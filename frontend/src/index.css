@@ -939,3 +939,45 @@
 .animate-pulse-red {
   animation: pulseRed 1s ease-in-out infinite;
 }
+
+/* Volume Slider Styles */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #dc2626;
+  cursor: pointer;
+  border: 2px solid #1f2937;
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #ef4444;
+  transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #dc2626;
+  cursor: pointer;
+  border: 2px solid #1f2937;
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #ef4444;
+  transform: scale(1.1);
+}

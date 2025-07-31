@@ -69,17 +69,31 @@ export class ConfinementController {
 
   static async healOut(req, res) {
     try {
+      console.log('[ConfinementController] healOut called for user:', req.user.id);
       const result = await ConfinementService.healOut(req.user.id);
+      console.log('[ConfinementController] healOut successful, result:', result);
       res.json(result);
     } catch (error) {
-      console.error('Heal error:', error);
+      console.error('[ConfinementController] Heal error:', error);
+      console.error('[ConfinementController] Error stack:', error.stack);
+      
       if (error.message === 'Not in hospital') {
         return res.status(400).json({ error: error.message });
       }
       if (error.message === 'Insufficient funds') {
         return res.status(400).json({ error: error.message });
       }
-      res.status(500).json({ error: "Heal failed" });
+      if (error.message === 'Character not found') {
+        return res.status(404).json({ error: error.message });
+      }
+      
+      // Log the full error for debugging
+      console.error('[ConfinementController] Full error object:', error);
+      res.status(500).json({ 
+        error: "Heal failed", 
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
 

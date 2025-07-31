@@ -161,12 +161,17 @@ export class ConfinementService {
   static async healOut(userId, fullHeal = true) {
     const t = await sequelize.transaction();
     try {
+      console.log('[ConfinementService] Starting healOut for userId:', userId);
+      
       // First get the character ID for this user
       const character = await Character.findOne({ where: { userId }, transaction: t });
       if (!character) {
+        console.log('[ConfinementService] Character not found for userId:', userId);
         await t.rollback();
         throw new Error("Character not found");
       }
+      
+      console.log('[ConfinementService] Found character:', character.id);
       
       const rec = await Hospital.findOne({ 
         where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
@@ -175,45 +180,60 @@ export class ConfinementService {
       });
       
       if (!rec) {
+        console.log('[ConfinementService] No active hospital record found for userId:', userId);
         await t.rollback();
         throw new Error("Not in hospital");
       }
+      
+      console.log('[ConfinementService] Found hospital record:', rec.id);
       
       const remainingSeconds = this.secondsLeft(rec.releasedAt);
       const minutesLeft = Math.ceil(remainingSeconds / 60);
       // Fixed heal cost: 100 money per minute
       const cost = minutesLeft * 100;
       
+      console.log('[ConfinementService] Heal cost:', cost, 'Character money:', character.money);
+      
       if (character.money < cost) {
+        console.log('[ConfinementService] Insufficient funds for heal');
         await t.rollback();
         throw new Error("Insufficient funds");
       }
 
       character.money -= cost;
+      
       // Restore 100% HP if paid heal, 80% if natural
       const maxHp = typeof character.getMaxHp === 'function' ? character.getMaxHp() : character.maxHp;
       character.hp = fullHeal ? maxHp : Math.floor(maxHp * 0.8);
+      
+      console.log('[ConfinementService] Updated character - Money:', character.money, 'HP:', character.hp);
+      
       await character.save({ transaction: t });
       await rec.destroy({ transaction: t });
 
+      console.log('[ConfinementService] Committing transaction...');
       await t.commit();
+      console.log('[ConfinementService] Transaction committed successfully');
       
       // Emit hospital leave event
       if (io) {
         io.to(`user:${userId}`).emit('hospital:leave');
       }
 
-      // Create notification for hospital release
+      // Create notification for hospital release (optional - don't fail if this fails)
       try {
         const notification = await NotificationService.createOutOfHospitalNotification(userId);
         emitNotification(userId, notification);
+        console.log('[ConfinementService] Hospital notification created successfully');
       } catch (notificationError) {
-        console.error('[ConfinementService] Notification error:', notificationError);
-        // Continue even if notifications fail
+        console.error('[ConfinementService] Notification error (non-critical):', notificationError);
+        // Continue even if notifications fail - this should not break the heal process
       }
       
       return { success: true, newCash: character.money, hp: character.hp };
     } catch (err) {
+      console.error('[ConfinementService] Error in healOut:', err);
+      console.error('[ConfinementService] Error stack:', err.stack);
       await t.rollback();
       throw err;
     }

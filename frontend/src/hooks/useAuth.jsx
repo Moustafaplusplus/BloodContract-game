@@ -7,6 +7,7 @@ import {
   useCallback,
 } from "react";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 // Set axios base URL - only set if VITE_API_URL is provided and we're not in development
 const API = import.meta.env.VITE_API_URL;
@@ -22,6 +23,19 @@ export function AuthProvider({ children }) {
   const [isAuthed, setIsAuthed] = useState(false);
   const [validating, setValidating] = useState(false); // Changed to false initially
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
+
+  // Decode token to get user info
+  const decodeToken = useCallback((jwt) => {
+    try {
+      const decoded = jwtDecode(jwt);
+      return decoded;
+    } catch (error) {
+      console.error('Failed to decode JWT token:', error);
+      return null;
+    }
+  }, []);
 
   // Load token from localStorage on mount
   useEffect(() => {
@@ -31,12 +45,21 @@ export function AuthProvider({ children }) {
       setIsAuthed(true);
       setTokenLoaded(true);
       setValidating(false);
+      
+      // Decode token to check if user is guest
+      const decoded = decodeToken(saved);
+      if (decoded) {
+        setIsGuest(decoded.isGuest || false);
+        setUserInfo(decoded);
+      }
     } else {
       setTokenLoaded(true);
       setIsAuthed(false);
       setValidating(false);
+      setIsGuest(false);
+      setUserInfo(null);
     }
-  }, []);
+  }, [decodeToken]);
 
   // Update axios interceptor when token changes
   useEffect(() => {
@@ -58,6 +81,8 @@ export function AuthProvider({ children }) {
           setTokenState(null);
           setIsAuthed(false);
           setIsAdmin(false);
+          setIsGuest(false);
+          setUserInfo(null);
           // Dispatch custom event for SocketContext to react to auth changes
           window.dispatchEvent(new CustomEvent('auth-change'));
         }
@@ -119,6 +144,13 @@ export function AuthProvider({ children }) {
     setTokenState(jwt);
     setIsAuthed(true);
     
+    // Decode token to check if user is guest
+    const decoded = decodeToken(jwt);
+    if (decoded) {
+      setIsGuest(decoded.isGuest || false);
+      setUserInfo(decoded);
+    }
+    
     // Dispatch custom event for SocketContext to react to auth changes
     window.dispatchEvent(new CustomEvent('auth-change'));
     
@@ -138,13 +170,15 @@ export function AuthProvider({ children }) {
         // Don't set admin status on error
       }
     }, 100); // 100ms delay to ensure interceptor is set
-  }, []);
+  }, [decodeToken]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("jwt");
     setTokenState(null);
     setIsAuthed(false);
     setIsAdmin(false);
+    setIsGuest(false);
+    setUserInfo(null);
     
     // Dispatch custom event for SocketContext to react to auth changes
     window.dispatchEvent(new CustomEvent('auth-change'));
@@ -159,6 +193,8 @@ export function AuthProvider({ children }) {
     validating,
     isAdmin,
     setIsAdmin,
+    isGuest,
+    userInfo,
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

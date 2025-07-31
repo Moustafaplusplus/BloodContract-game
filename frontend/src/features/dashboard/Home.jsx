@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { FeatureProgressCard, FeatureUnlockList } from "@/components/FeatureUnlockNotification";
+import GuestSyncNotification from "@/components/GuestSyncNotification";
 
 // Helper function to format time
 const formatTime = (seconds) => {
@@ -598,6 +599,11 @@ export default function Home() {
                 عرض الملف الشخصي
               </Link>
             </div>
+          </div>
+
+          {/* Guest Sync Notification - Now at the bottom */}
+          <div className="mt-8">
+            <GuestSyncNotification />
           </div>
         </div>
       </div>

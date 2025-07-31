@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useBackgroundMusicContext } from '@/contexts/BackgroundMusicContext';
 import { Target } from 'lucide-react';
 
 export default function GoogleCallback() {
   const [searchParams] = useSearchParams();
   const { setToken } = useAuth();
+  const { play } = useBackgroundMusicContext();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -15,6 +17,8 @@ export default function GoogleCallback() {
     if (token) {
       // Store the token
       setToken(token);
+      
+      // Background music will start after user interaction
       
       // Redirect based on whether user is new or existing
       if (isNewUser) {

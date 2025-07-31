@@ -12,6 +12,94 @@ export class UserService {
     return { userId: user.id, name: user.username };
   }
 
+  // Create a guest user
+  static async createGuestUser() {
+    const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const guestUsername = `ضيف_${Math.random().toString(36).substr(2, 6)}`;
+    
+    // Create guest user
+    const user = await User.create({ 
+      username: guestUsername,
+      email: `${guestId}@guest.local`,
+      password: guestId, // This will be ignored for guest users
+      age: 18,
+      gender: 'male',
+      isGuest: true
+    });
+    
+    // Create character for guest
+    const character = await Character.create({ 
+      userId: user.id, 
+      name: guestUsername 
+    });
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, characterId: character.id, isGuest: true }, 
+      this.SECRET, 
+      { expiresIn: '30d' } // Longer expiry for guests
+    );
+    
+    return { 
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        isGuest: true
+      },
+      message: 'تم إنشاء حساب ضيف بنجاح'
+    };
+  }
+
+  // Sync guest account to registered account
+  static async syncGuestToRegistered(guestUserId, registrationData) {
+    const { username, email, password, age, gender } = registrationData;
+    
+    // Check if email or username already exists
+    if (await User.findOne({ where: { email } })) {
+      throw new Error('البريد مستخدم مسبقاً');
+    }
+    if (await User.findOne({ where: { username } })) {
+      throw new Error('اسم المستخدم مستخدم مسبقاً');
+    }
+    
+    // Get guest user and character
+    const guestUser = await User.findByPk(guestUserId);
+    if (!guestUser || !guestUser.isGuest) {
+      throw new Error('المستخدم الضيف غير موجود');
+    }
+    
+    const guestCharacter = await Character.findOne({ where: { userId: guestUserId } });
+    if (!guestCharacter) {
+      throw new Error('شخصية المستخدم الضيف غير موجودة');
+    }
+    
+    // Update guest user to registered user
+    guestUser.username = username;
+    guestUser.email = email;
+    guestUser.password = password;
+    guestUser.age = age;
+    guestUser.gender = gender;
+    guestUser.isGuest = false;
+    await guestUser.save();
+    
+    // Update character name to match new username
+    guestCharacter.name = username;
+    await guestCharacter.save();
+    
+    // Generate new token for registered user
+    const token = jwt.sign(
+      { id: guestUser.id, characterId: guestCharacter.id }, 
+      this.SECRET, 
+      { expiresIn: '7d' }
+    );
+    
+    return { 
+      token,
+      message: 'تم ربط الحساب الضيف بنجاح'
+    };
+  }
+
   // Sign up a new user
   static async signup(userData) {
     const { username, email, password, age, gender } = userData;

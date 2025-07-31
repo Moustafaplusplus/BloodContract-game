@@ -4,6 +4,39 @@ import { auth } from '../middleware/auth.js';
 import { uploadToFirebase } from '../config/firebase.js';
 
 export class UserController {
+  static async guestLogin(req, res) {
+    try {
+      const result = await UserService.createGuestUser();
+      res.json(result);
+    } catch (error) {
+      console.error('🔥 خطأ في تسجيل الدخول كضيف:', error);
+      res.status(500).json({ message: 'فشل تسجيل الدخول كضيف', error: error.message });
+    }
+  }
+
+  static async syncGuestAccount(req, res) {
+    try {
+      const { username, email, password, age, gender } = req.body;
+      const guestUserId = req.user.id;
+      
+      const result = await UserService.syncGuestToRegistered(guestUserId, {
+        username,
+        email,
+        password,
+        age,
+        gender
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error('🔥 خطأ في ربط الحساب الضيف:', error);
+      if (error.message === 'البريد مستخدم مسبقاً' || error.message === 'اسم المستخدم مستخدم مسبقاً') {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: 'فشل ربط الحساب الضيف', error: error.message });
+    }
+  }
+
   static async signup(req, res) {
     try {
       const { username, email, password, age, gender } = req.body;
@@ -67,6 +100,7 @@ export class UserController {
       res.json({ 
         id: user.id, 
         username: user.username,
+        isGuest: user.isGuest,
         character: character ? {
           name: character.name,
           level: character.level

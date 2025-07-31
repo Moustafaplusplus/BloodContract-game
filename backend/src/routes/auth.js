@@ -1,8 +1,15 @@
 import express from 'express';
 import passport from 'passport';
 import { UserController } from '../controllers/UserController.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Guest login route
+router.post('/guest', UserController.guestLogin);
+
+// Sync guest account to registered account
+router.post('/sync-guest', auth, UserController.syncGuestAccount);
 
 // Google OAuth routes
 router.get('/google', (req, res) => {

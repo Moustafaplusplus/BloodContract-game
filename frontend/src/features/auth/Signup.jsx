@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useBackgroundMusicContext } from "@/contexts/BackgroundMusicContext";
 import Modal from "@/components/Modal";
 import { extractErrorMessage, validateForm, validationRules } from "@/utils/errorHandler";
 import {
@@ -33,6 +34,7 @@ export default function Signup() {
   const [modal, setModal] = useState({ isOpen: false, title: "", message: "", type: "info" });
 
   const { setToken, isAuthed, tokenLoaded, validating } = useAuth();
+  const { play } = useBackgroundMusicContext();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -98,7 +100,10 @@ export default function Signup() {
         message: "تم إنشاء الحساب بنجاح",
         type: "success"
       });
-      setTimeout(() => navigate("/intro"), 1500);
+      // Start background music after successful signup (will wait for user interaction)
+      setTimeout(() => {
+        navigate("/intro");
+      }, 1500);
     } catch (err) {
       console.error(err);
       const errorMessage = extractErrorMessage(err);

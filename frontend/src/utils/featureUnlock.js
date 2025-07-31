@@ -13,6 +13,7 @@ export const FEATURE_UNLOCKS = {
   gym: { level: 1, name: "النادي الرياضي" },
   jobs: { level: 1, name: "الوظائف" },
   suggestions: { level: 1, name: "الاقتراحات" },
+  settings: { level: 1, name: "الإعدادات" },
 
   // Social & Combat (Level 6-10)
   fights: { level: 6, name: "اللاعبون النشطون" },
