@@ -24,7 +24,8 @@ export class UserService {
       password: guestId, // This will be ignored for guest users
       age: 18,
       gender: 'male',
-      isGuest: true
+      isGuest: true,
+      hasSeenIntro: false // New users haven't seen intro
     });
     
     // Create character for guest
@@ -45,10 +46,24 @@ export class UserService {
       user: {
         id: user.id,
         username: user.username,
-        isGuest: true
+        isGuest: true,
+        hasSeenIntro: false
       },
       message: 'تم إنشاء حساب ضيف بنجاح'
     };
+  }
+
+  // Mark intro as seen
+  static async markIntroAsSeen(userId) {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('المستخدم غير موجود');
+    }
+    
+    user.hasSeenIntro = true;
+    await user.save();
+    
+    return { message: 'تم تحديث حالة العرض التقديمي' };
   }
 
   // Sync guest account to registered account

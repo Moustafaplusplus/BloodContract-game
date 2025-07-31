@@ -37,6 +37,17 @@ export class UserController {
     }
   }
 
+  static async markIntroAsSeen(req, res) {
+    try {
+      const userId = req.user.id;
+      await UserService.markIntroAsSeen(userId);
+      res.json({ message: 'تم تحديث حالة العرض التقديمي' });
+    } catch (error) {
+      console.error('🔥 خطأ في تحديث حالة العرض التقديمي:', error);
+      res.status(500).json({ message: 'فشل تحديث حالة العرض التقديمي', error: error.message });
+    }
+  }
+
   static async signup(req, res) {
     try {
       const { username, email, password, age, gender } = req.body;

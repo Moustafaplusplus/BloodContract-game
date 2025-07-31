@@ -92,6 +92,48 @@ function PrivateRoute({ children }) {
   return isAuthed ? children : <Navigate to="/" replace />;
 }
 
+function IntroCheckWrapper({ children }) {
+  const { token, isAuthed } = useAuth();
+  const [shouldShowIntro, setShouldShowIntro] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!isAuthed || !token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode(token);
+      // For new users (especially guests), show intro
+      // We'll assume all users should see intro for now
+      // In a real implementation, you'd check hasSeenIntro from the backend
+      setShouldShowIntro(true);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      setLoading(false);
+    }
+  }, [token, isAuthed]);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-black">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
+          <p className="text-gray-400">جاري التحميل…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldShowIntro) {
+    return <IntroVideo onComplete={() => setShouldShowIntro(false)} />;
+  }
+
+  return children;
+}
+
 function HUDWrapper() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
@@ -186,60 +228,62 @@ export default function App() {
                       <Route
                         path="*"
                         element={
-                          <>
-                            <HUDWrapper />
-                            <DashboardLayout>
-                              <AdminReturnButton />
-                              <Routes>
-                                <Route path="/players" element={<PlayerSearch />} />
-                                <Route path="/hospital" element={<Navigate to="/dashboard/hospital" replace />} />
-                                <Route path="/jail" element={<Navigate to="/dashboard/jail" replace />} />
-                                <Route path="/dashboard/black-market" element={<BlackMarket />} />
-                                <Route path="/dashboard/suggestions" element={<Suggestions />} />
-                                <Route path="/dashboard/ministry-mission" element={<MinistryMission />} />
-                                <Route path="/dashboard/blood-contracts" element={<BloodContracts />} />
-                                <Route path="/dashboard/settings" element={<Settings />} />
-                                <Route path="/notifications" element={<Notifications />} />
-                                <Route path="/gangs/:id" element={<GangDetailsWrapper />} />
-                                <Route path="/admin/panel" element={<AdminPanel />} />
-                                <Route path="/dashboard/*" element={
-                                  <PrivateRoute>
-                                    <Routes>
-                                      <Route index element={<HomeWrapper />} />
-                                      <Route path="character" element={<Overview />} />
-                                      <Route path="crimes" element={<Crimes />} />
-                                      <Route path="crime-result" element={<CrimeResults />} />
-                                      <Route path="gym" element={<Gym />} />
-                                      <Route path="active-users" element={<ActiveUsers />} />
-                                      <Route path="fight-result" element={<FightResults />} />
-                                      <Route path="hospital" element={<Hospital />} />
-                                      <Route path="jail" element={<Jail />} />
-                                      <Route path="bank" element={<Bank />} />
-                                      <Route path="bank/history" element={<Navigate to="/dashboard/bank" replace />} />
-                                      <Route path="inventory" element={<Inventory />} />
-                                      <Route path="shop" element={<Shop />} />
-                                      <Route path="special-shop" element={<SpecialShop />} />
-                                      <Route path="houses" element={<Houses />} />
-                                      <Route path="cars" element={<Cars />} />
-                                      <Route path="dogs" element={<Dogs />} />
-                                      <Route path="gangs" element={<Gangs />} />
-                                      <Route path="friends" element={<Friendship />} />
-                                      <Route path="messages" element={<Messages />} />
-                                      <Route path="global-chat" element={<GlobalChat />} />
-                                      <Route path="profile" element={<Profile />} />
-                                      <Route path="profile/:username" element={<Profile />} />
-                                      <Route path="jobs" element={<Jobs />} />
-                                      <Route path="tasks" element={<Tasks />} />
-                                      <Route path="login-gift" element={<LoginGift />} />
-                                      <Route path="ranking" element={<Ranking />} />
-                                      <Route path="*" element={<NotFound />} />
-                                    </Routes>
-                                  </PrivateRoute>
-                                } />
-                                <Route path="*" element={<NotFound />} />
-                              </Routes>
-                            </DashboardLayout>
-                          </>
+                          <IntroCheckWrapper>
+                            <>
+                              <HUDWrapper />
+                              <DashboardLayout>
+                                <AdminReturnButton />
+                                <Routes>
+                                  <Route path="/players" element={<PlayerSearch />} />
+                                  <Route path="/hospital" element={<Navigate to="/dashboard/hospital" replace />} />
+                                  <Route path="/jail" element={<Navigate to="/dashboard/jail" replace />} />
+                                  <Route path="/dashboard/black-market" element={<BlackMarket />} />
+                                  <Route path="/dashboard/suggestions" element={<Suggestions />} />
+                                  <Route path="/dashboard/ministry-mission" element={<MinistryMission />} />
+                                  <Route path="/dashboard/blood-contracts" element={<BloodContracts />} />
+                                  <Route path="/dashboard/settings" element={<Settings />} />
+                                  <Route path="/notifications" element={<Notifications />} />
+                                  <Route path="/gangs/:id" element={<GangDetailsWrapper />} />
+                                  <Route path="/admin/panel" element={<AdminPanel />} />
+                                  <Route path="/dashboard/*" element={
+                                    <PrivateRoute>
+                                      <Routes>
+                                        <Route index element={<HomeWrapper />} />
+                                        <Route path="character" element={<Overview />} />
+                                        <Route path="crimes" element={<Crimes />} />
+                                        <Route path="crime-result" element={<CrimeResults />} />
+                                        <Route path="gym" element={<Gym />} />
+                                        <Route path="active-users" element={<ActiveUsers />} />
+                                        <Route path="fight-result" element={<FightResults />} />
+                                        <Route path="hospital" element={<Hospital />} />
+                                        <Route path="jail" element={<Jail />} />
+                                        <Route path="bank" element={<Bank />} />
+                                        <Route path="bank/history" element={<Navigate to="/dashboard/bank" replace />} />
+                                        <Route path="inventory" element={<Inventory />} />
+                                        <Route path="shop" element={<Shop />} />
+                                        <Route path="special-shop" element={<SpecialShop />} />
+                                        <Route path="houses" element={<Houses />} />
+                                        <Route path="cars" element={<Cars />} />
+                                        <Route path="dogs" element={<Dogs />} />
+                                        <Route path="gangs" element={<Gangs />} />
+                                        <Route path="friends" element={<Friendship />} />
+                                        <Route path="messages" element={<Messages />} />
+                                        <Route path="global-chat" element={<GlobalChat />} />
+                                        <Route path="profile" element={<Profile />} />
+                                        <Route path="profile/:username" element={<Profile />} />
+                                        <Route path="jobs" element={<Jobs />} />
+                                        <Route path="tasks" element={<Tasks />} />
+                                        <Route path="login-gift" element={<LoginGift />} />
+                                        <Route path="ranking" element={<Ranking />} />
+                                        <Route path="*" element={<NotFound />} />
+                                      </Routes>
+                                    </PrivateRoute>
+                                  } />
+                                  <Route path="*" element={<NotFound />} />
+                                </Routes>
+                              </DashboardLayout>
+                            </>
+                          </IntroCheckWrapper>
                         }
                       />
                     </Routes>

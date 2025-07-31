@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './IntroVideo.css';
+import { useIntroStatus } from '@/hooks/useIntroStatus';
 
 const IntroVideo = ({ onComplete }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSkipButton, setShowSkipButton] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const videoRef = useRef(null);
+  const { markIntroAsSeen } = useIntroStatus();
 
   useEffect(() => {
     // Show skip button after 3 seconds
@@ -30,17 +32,24 @@ const IntroVideo = ({ onComplete }) => {
     };
   }, []);
 
-  const handleVideoEnd = () => {
+  const handleVideoEnd = async () => {
+    // Mark intro as seen
+    await markIntroAsSeen();
+    
     // Video ended - show black screen for 2 seconds then complete
     setTimeout(() => {
       onComplete && onComplete();
     }, 2000);
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (videoRef.current) {
       videoRef.current.pause();
     }
+    
+    // Mark intro as seen even when skipped
+    await markIntroAsSeen();
+    
     onComplete && onComplete();
   };
 

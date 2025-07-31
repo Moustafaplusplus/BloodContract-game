@@ -7,8 +7,8 @@ import { initiateGoogleOAuth } from '@/utils/testGoogleOAuth';
 import axios from 'axios';
 
 export default function Settings() {
-  const { isPlaying, volume, toggle, setVolume, userInteracted } = useBackgroundMusicContext();
-  const { isMuted: notificationMuted, volume: notificationVolume, toggleMute, setVolume: setNotificationVolume, playNotification } = useNotificationSoundContext();
+  const { isPlaying, volume, toggle, setVolume, userInteracted, isMuted, toggleMute } = useBackgroundMusicContext();
+  const { isMuted: notificationMuted, volume: notificationVolume, toggleMute: toggleNotificationMute, setVolume: setNotificationVolume, playNotification } = useNotificationSoundContext();
   const { token, setToken } = useAuth();
   const [activeTab, setActiveTab] = useState('audio');
   const [accountModal, setAccountModal] = useState({ isOpen: false, type: '' });
@@ -93,6 +93,7 @@ export default function Settings() {
 
   const getVolumeIcon = () => {
     if (!userInteracted) return VolumeX;
+    if (isMuted) return VolumeX;
     if (!isPlaying) return VolumeX;
     if (volume === 0) return VolumeX;
     if (volume < 0.3) return Volume;
@@ -124,9 +125,42 @@ export default function Settings() {
             <div className="flex items-center gap-2">
               <VolumeIcon className="w-5 h-5" />
               <span className="text-sm text-gray-400">
-                {!userInteracted ? 'غير مفعلة' : (isPlaying ? 'تعمل' : 'متوقفة')}
+                {!userInteracted ? 'غير مفعلة' : isMuted ? 'مكتومة' : (isPlaying ? 'تعمل' : 'متوقفة')}
               </span>
             </div>
+          </div>
+
+          {/* Mute/Unmute Button */}
+          <div className="flex items-center justify-between">
+            <span className="text-gray-300">كتم/إلغاء كتم الصوت</span>
+            <button
+              onClick={toggleMute}
+              disabled={!userInteracted}
+              className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${
+                !userInteracted
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : isMuted
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
+              {!userInteracted ? (
+                <>
+                  <VolumeX className="w-4 h-4" />
+                  <span>انقر لتفعيل</span>
+                </>
+              ) : isMuted ? (
+                <>
+                  <Volume2 className="w-4 h-4" />
+                  <span>إلغاء الكتم</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-4 h-4" />
+                  <span>كتم الصوت</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Play/Pause Button */}
@@ -134,9 +168,9 @@ export default function Settings() {
             <span className="text-gray-300">تشغيل/إيقاف</span>
             <button
               onClick={toggle}
-              disabled={!userInteracted}
+              disabled={!userInteracted || isMuted}
               className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${
-                !userInteracted
+                !userInteracted || isMuted
                   ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                   : isPlaying
                   ? 'bg-red-600 hover:bg-red-700 text-white'
@@ -147,6 +181,11 @@ export default function Settings() {
                 <>
                   <VolumeX className="w-4 h-4" />
                   <span>انقر لتفعيل</span>
+                </>
+              ) : isMuted ? (
+                <>
+                  <VolumeX className="w-4 h-4" />
+                  <span>مكتوم</span>
                 </>
               ) : isPlaying ? (
                 <>
@@ -176,9 +215,9 @@ export default function Settings() {
                 step="0.1"
                 value={volume}
                 onChange={(e) => setVolume(parseFloat(e.target.value))}
-                disabled={!userInteracted}
+                disabled={!userInteracted || isMuted}
                 className={`w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider ${
-                  !userInteracted ? 'opacity-50 cursor-not-allowed' : ''
+                  !userInteracted || isMuted ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 style={{
                   background: `linear-gradient(to right, #dc2626 0%, #dc2626 ${volume * 100}%, #374151 ${volume * 100}%, #374151 100%)`
@@ -192,6 +231,15 @@ export default function Settings() {
             <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3">
               <p className="text-sm text-blue-300">
                 💡 انقر على أي مكان في الصفحة لتفعيل الموسيقى الخلفية
+              </p>
+            </div>
+          )}
+
+          {/* Mute Info */}
+          {isMuted && userInteracted && (
+            <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3">
+              <p className="text-sm text-yellow-300">
+                🔇 الموسيقى مكتومة. انقر على "إلغاء الكتم" لتشغيلها مرة أخرى
               </p>
             </div>
           )}
@@ -319,7 +367,7 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <span className="text-gray-300">إيقاف/تشغيل الصوت</span>
             <button
-              onClick={toggleMute}
+              onClick={toggleNotificationMute}
               className={`px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2 ${
                 notificationMuted
                   ? 'bg-green-600 hover:bg-green-700 text-white'

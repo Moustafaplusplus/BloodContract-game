@@ -77,10 +77,18 @@ const MinistryMission = () => {
     }
   };
 
+  // Parse missionData if it's a string
+  let parsedMissionData = null;
+  if (selectedMission && selectedMission.missionData) {
+    parsedMissionData = typeof selectedMission.missionData === 'string'
+      ? JSON.parse(selectedMission.missionData)
+      : selectedMission.missionData;
+  }
+
   const handleOptionClick = async (nextPage) => {
           if (nextPage.startsWith("ending_")) {
         // Mission completed
-        const ending = selectedMission.missionData.endings[nextPage];
+        const ending = parsedMissionData.endings[nextPage];
         
         try {
           // Send completion to backend
@@ -357,7 +365,7 @@ const MinistryMission = () => {
   }
 
   // Active mission screen
-  if (!selectedMission || !selectedMission.missionData || !selectedMission.missionData.pages) {
+  if (!selectedMission || !parsedMissionData || !parsedMissionData.pages) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -368,7 +376,7 @@ const MinistryMission = () => {
     );
   }
   
-  const currentPageData = selectedMission.missionData.pages[currentPage];
+  const currentPageData = parsedMissionData.pages[currentPage];
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -428,7 +436,7 @@ const MinistryMission = () => {
 
         {/* Options */}
         <div className="space-y-3">
-          {currentPageData.options.map((option, index) => (
+          {currentPageData.options && currentPageData.options.map((option, index) => (
             <button
               key={index}
               onClick={() => handleOptionClick(option.next)}

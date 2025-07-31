@@ -24,7 +24,10 @@ export const BackgroundMusicProvider = ({ children }) => {
                            currentPath === '/notifications' ||
                            currentPath === '/admin/panel';
       
-      if (isOnDashboard && !musicControls.isPlaying && musicControls.userInteracted) {
+      // Don't play music on intro/demo pages
+      const isOnIntroPage = currentPath.includes('/intro') || currentPath.includes('/demo');
+      
+      if (isOnDashboard && !isOnIntroPage && !musicControls.isPlaying && musicControls.userInteracted && !musicControls.isMuted) {
         // Small delay to ensure the page has loaded
         setTimeout(() => {
           musicControls.play();
@@ -61,7 +64,7 @@ export const BackgroundMusicProvider = ({ children }) => {
       history.pushState = originalPushState;
       history.replaceState = originalReplaceState;
     };
-  }, [musicControls.isPlaying, musicControls.userInteracted, musicControls.play]);
+  }, [musicControls.isPlaying, musicControls.userInteracted, musicControls.isMuted, musicControls.play]);
 
   return (
     <BackgroundMusicContext.Provider value={musicControls}>

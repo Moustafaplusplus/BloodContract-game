@@ -5,6 +5,23 @@ export const useNotificationSound = () => {
   const [volume, setVolume] = useState(0.5); // Default volume at 50%
   const audioRef = useRef(null);
 
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedVolume = localStorage.getItem('notificationSoundVolume');
+      const savedMuted = localStorage.getItem('notificationSoundMuted');
+      
+      if (savedVolume !== null) {
+        setVolume(parseFloat(savedVolume));
+      }
+      if (savedMuted !== null) {
+        setIsMuted(JSON.parse(savedMuted));
+      }
+    } catch (error) {
+      console.error('Failed to load notification sound settings:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Create audio element for notification sound
     audioRef.current = new Audio('/notification.mp3');
@@ -24,6 +41,16 @@ export const useNotificationSound = () => {
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
+
+  // Save settings to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('notificationSoundVolume', volume.toString());
+      localStorage.setItem('notificationSoundMuted', isMuted.toString());
+    } catch (error) {
+      console.error('Failed to save notification sound settings:', error);
     }
   }, [volume, isMuted]);
 
