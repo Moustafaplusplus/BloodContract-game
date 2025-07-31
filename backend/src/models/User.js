@@ -61,6 +61,63 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  // Google OAuth fields
+  googleId: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: true
+  },
+  // Ban/IP blocking fields
+  isBanned: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  banReason: {
+    type: DataTypes.TEXT,
+    defaultValue: ''
+  },
+  bannedAt: {
+    type: DataTypes.DATE,
+    defaultValue: null
+  },
+  isIpBanned: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  ipBanReason: {
+    type: DataTypes.TEXT,
+    defaultValue: ''
+  },
+  ipBannedAt: {
+    type: DataTypes.DATE,
+    defaultValue: null
+  },
+  lastIpAddress: {
+    type: DataTypes.STRING,
+    defaultValue: null
+  },
+  // Chat moderation fields
+  chatMutedUntil: {
+    type: DataTypes.DATE,
+    defaultValue: null
+  },
+  chatBannedUntil: {
+    type: DataTypes.DATE,
+    defaultValue: null
+  },
+  // Additional fields that might be needed
+  bio: {
+    type: DataTypes.TEXT,
+    defaultValue: ''
+  },
+  money: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  blackcoins: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
@@ -84,11 +141,27 @@ const User = sequelize.define('User', {
   }
 });
 
+// Add the missing validPassword method
+User.prototype.validPassword = async function(password) {
+  if (this.isGuest) {
+    return false; // Guest users can't use password comparison
+  }
+  return bcrypt.compare(password, this.password);
+};
+
+// Keep the comparePassword method for compatibility
 User.prototype.comparePassword = async function(candidatePassword) {
   if (this.isGuest) {
     return false; // Guest users can't use password comparison
   }
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Add toJSON method to exclude password from serialization
+User.prototype.toJSON = function() {
+  const values = { ...this.get() };
+  delete values.password;
+  return values;
 };
 
 export { User }; 
