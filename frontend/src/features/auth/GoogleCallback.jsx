@@ -22,15 +22,12 @@ export default function GoogleCallback() {
       
       // Redirect based on whether user is new or existing
       if (isNewUser) {
-        console.log('🆕 New user from Google OAuth, redirecting to intro');
         navigate('/intro');
       } else {
-        console.log('👤 Existing user from Google OAuth, redirecting to dashboard');
         navigate('/dashboard');
       }
     } else {
       // No token received, redirect to login
-      console.log('❌ No token received from Google OAuth');
       navigate('/login');
     }
   }, [searchParams, setToken, navigate]);

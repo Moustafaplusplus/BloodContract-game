@@ -1,7 +1,4 @@
-/* ========================================================================
- *  Bank.jsx – synced with new backend (balance + money)
- *  Enhanced UI for mobile-first responsiveness and dark theme polish
- * =======================================================================*/
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import MoneyIcon from '@/components/MoneyIcon';
 import { useUnclaimedTasks } from '@/hooks/useUnclaimedTasks';
+import { toast } from 'react-toastify';
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -51,7 +52,8 @@ export default function Tasks() {
   async function collectReward(taskId) {
     setCollecting(taskId);
     try {
-      const res = await axios.post('/api/tasks/collect', { taskId });
+      const res = await axios.post(`/api/tasks/${taskId}/collect`);
+      toast.success('تم جمع المكافأة بنجاح!');
       // Update promotion status if it was included in response
       if (res.data.promotionStatus) {
         setPromotionStatus(res.data.promotionStatus);
@@ -59,7 +61,7 @@ export default function Tasks() {
       fetchTasks(); // Refresh to update collected status
       refetchUnclaimedCount(); // Refresh navigation badge
     } catch (error) {
-      // TODO: Show error message
+      toast.error(error.response?.data?.error || 'فشل في جمع المكافأة');
     } finally {
       setCollecting(null);
     }
@@ -69,11 +71,11 @@ export default function Tasks() {
     setClaimingDaily(true);
     try {
       const res = await axios.post('/api/tasks/daily/claim');
+      toast.success('تم المطالبة بالمهمة اليومية بنجاح!');
       fetchDailyTaskStatus(); // Refresh daily task status
       refetchUnclaimedCount(); // Refresh navigation badge
-      // TODO: Show success message with rewards
     } catch (error) {
-      // TODO: Show error message
+      toast.error(error.response?.data?.error || 'فشل في المطالبة بالمهمة اليومية');
     } finally {
       setClaimingDaily(false);
     }

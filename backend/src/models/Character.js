@@ -77,7 +77,7 @@ Character.prototype.toSafeJSON = async function () {
     hospitalStatus = await ConfinementService.getHospitalStatus(this.userId);
     jailStatus = await ConfinementService.getJailStatus(this.userId);
   } catch (error) {
-    console.error('Error getting confinement status:', error);
+    // Silently handle confinement status errors
   }
 
   // Fetch active dog
@@ -148,12 +148,10 @@ Character.prototype.toSafeJSON = async function () {
     bio: this.User.bio
   } : {};
 
-  // Calculate total fights
   const crimesCommitted = stats?.crimes || 0;
   const fightsWonCount = stats?.wins ?? fightsWon ?? 0;
   const fightsLostCount = stats?.losses ?? fightsLost ?? 0;
   const fightsTotalCount = fightsWonCount + fightsLostCount;
-  // Use the accurate fightsTotal from above
 
   const fame = await this.getFame();
 
@@ -185,7 +183,6 @@ Character.prototype.toSafeJSON = async function () {
     fightsWon: fightsWonCount,
     fightsTotal: fightsTotalCount,
     fame,
-    // Equipment info for frontend
     equippedWeapon1: weapon1,
     equippedWeapon2: weapon2,
     equippedArmor:   armor,
@@ -193,19 +190,15 @@ Character.prototype.toSafeJSON = async function () {
     activeDog:       activeDog,
     vipExpiresAt:    this.vipExpiresAt,
     attackImmunityExpiresAt: this.attackImmunityExpiresAt,
-    // Calculate cooldowns for frontend
     crimeCooldown: this.crimeCooldown && this.crimeCooldown > Date.now() 
       ? Math.floor((this.crimeCooldown - Date.now()) / 1000) 
       : 0,
     gymCooldown: this.gymCooldown && this.gymCooldown > Date.now() 
       ? Math.floor((this.gymCooldown - Date.now()) / 1000) 
       : 0,
-    // Hospital and jail status
     hospitalStatus,
     jailStatus,
-    // User data for admin checks
     User: userData,
-    // Level-up rewards (if any)
     levelUpRewards: this._levelUpRewards || null,
     levelsGained: this._levelsGained || 0,
   };
@@ -214,22 +207,17 @@ Character.prototype.toSafeJSON = async function () {
   // The frontend is responsible for clearing them after processing
 };
 
-// Instance method for EXP calculation
 Character.prototype.expNeeded = function() {
   if (this.level <= 20) {
-    // Steep exponential scaling for early game: 200 * 1.15^(level-1)
     return Math.floor(200 * Math.pow(1.15, this.level - 1));
   } else if (this.level <= 50) {
-    // Moderate exponential scaling for mid game: baseExp * 1.12^(level-20)
-    const baseExp = Math.floor(200 * Math.pow(1.15, 19)); // exp needed for level 20
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19));
     return Math.floor(baseExp * Math.pow(1.12, this.level - 20));
   } else if (this.level <= 80) {
-    // Steep linear scaling for late game: baseExp + (level-50) * 15000
-    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)); // exp needed for level 50
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30));
     return baseExp + (this.level - 50) * 15000;
   } else {
-    // Very steep linear scaling for end game: baseExp + (level-80) * 25000
-    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000); // exp needed for level 80
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000);
     return baseExp + (this.level - 80) * 25000;
   }
 }; 
@@ -239,9 +227,7 @@ Character.prototype.isVip = function() {
   return this.vipExpiresAt && new Date(this.vipExpiresAt) > new Date();
 };
 
-// Fame calculation method
 Character.prototype.getFame = async function () {
-  // Gather all bonuses as in toSafeJSON
   const [weapon1, weapon2, armor, stats, equippedHouse, activeDog] = await Promise.all([
     this.equippedWeapon1Id ? Weapon.findByPk(this.equippedWeapon1Id) : null,
     this.equippedWeapon2Id ? Weapon.findByPk(this.equippedWeapon2Id) : null,
@@ -270,7 +256,6 @@ Character.prototype.getFame = async function () {
   const bonusDef = (armor?.def ?? 0) + (equippedHouse?.defenseBonus ?? 0);
   const totalDefense = (this.defense || 0) + bonusDef;
 
-  // Fame formula
   const fame = (this.level * 100) + (totalStrength * 20) + (totalHp * 8) + (totalDefense * 20);
   return Math.round(fame);
 }; 

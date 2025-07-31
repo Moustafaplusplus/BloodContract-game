@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 
 export const useBackgroundMusic = () => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.3); // Default volume at 30%
+  const [volume, setVolume] = useState(0.3);
   const [userInteracted, setUserInteracted] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); // New state for mute
+  const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef(null);
 
   // Load settings from localStorage on mount
@@ -33,7 +33,6 @@ export const useBackgroundMusic = () => {
 
     // Listen for user interaction to enable audio
     const handleUserInteraction = () => {
-      console.log('User interaction detected, enabling audio...');
       setUserInteracted(true);
       // Remove listeners after first interaction
       document.removeEventListener('click', handleUserInteraction);
@@ -76,30 +75,24 @@ export const useBackgroundMusic = () => {
   }, [volume, isMuted]);
 
   const play = () => {
-    console.log('Play called, userInteracted:', userInteracted, 'isPlaying:', isPlaying, 'isMuted:', isMuted);
     if (!userInteracted) {
-      console.log('Waiting for user interaction before playing music...');
       return;
     }
 
     // Don't play if muted
     if (isMuted) {
-      console.log('Music is muted, not playing');
       return;
     }
 
     // Check if we're on intro page and don't play music
     const currentPath = window.location.pathname;
     if (currentPath.includes('/intro') || currentPath.includes('/demo')) {
-      console.log('On intro page, not playing background music');
       return;
     }
 
     if (audioRef.current && !isPlaying) {
-      console.log('Attempting to play music...');
       audioRef.current.play()
         .then(() => {
-          console.log('Music started successfully');
           setIsPlaying(true);
         })
         .catch((error) => {
@@ -111,11 +104,9 @@ export const useBackgroundMusic = () => {
   };
 
   const pause = () => {
-    console.log('Pause called, isPlaying:', isPlaying);
     if (audioRef.current && isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
-      console.log('Music paused');
     }
   };
 
@@ -130,11 +121,9 @@ export const useBackgroundMusic = () => {
   const setMusicVolume = (newVolume) => {
     const clampedVolume = Math.max(0, Math.min(1, newVolume));
     setVolume(clampedVolume);
-    console.log('Volume set to:', clampedVolume);
   };
 
   const toggleMute = () => {
-    console.log('Toggle mute called, isMuted:', isMuted);
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
     
@@ -152,10 +141,8 @@ export const useBackgroundMusic = () => {
   };
 
   const toggle = () => {
-    console.log('Toggle called, userInteracted:', userInteracted, 'isPlaying:', isPlaying, 'isMuted:', isMuted);
     if (!userInteracted) {
       // If user hasn't interacted yet, this interaction will enable audio
-      console.log('Enabling audio through user interaction...');
       setUserInteracted(true);
       setTimeout(() => {
         if (isMuted) {

@@ -10,8 +10,6 @@ import {
   RefreshCw,
   Target,
   Shield,
-  DollarSign,
-  Coins,
   Ban,
   Globe,
   Package
@@ -69,7 +67,6 @@ export default function CharacterManagement() {
             });
             counts[character.User.id] = response.data.totalItems || 0;
           } catch (error) {
-            console.error(`Error fetching inventory count for user ${character.User.id}:`, error);
             counts[character.User.id] = 0;
           }
         }
@@ -77,7 +74,7 @@ export default function CharacterManagement() {
       
       setInventoryCounts(counts);
     } catch (error) {
-      console.error('Error fetching inventory counts:', error);
+      // Silently handle inventory count errors
     }
   };
 
@@ -161,7 +158,6 @@ export default function CharacterManagement() {
   // Login as user mutation
   const loginAsUserMutation = useMutation({
     mutationFn: ({ userId }) => {
-      console.log('Login as user - userId:', userId); // Debug log
       const token = localStorage.getItem('jwt');
       return axios.post(`/api/admin/users/${userId}/login-token`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -188,7 +184,6 @@ export default function CharacterManagement() {
       window.location.reload();
     },
     onError: (error) => {
-      console.error('Login as user error:', error); // Debug log
       toast.error(error.response?.data?.error || 'فشل في تسجيل الدخول كالمستخدم');
     },
   });
@@ -202,11 +197,9 @@ export default function CharacterManagement() {
       });
     },
     onSuccess: (data) => {
-      console.log('Inventory data received:', data.data); // Debug log
       setInventoryData(data.data);
     },
     onError: (error) => {
-      console.error('Inventory fetch error:', error); // Debug log
       toast.error(error.response?.data?.error || 'فشل في جلب مخزون المستخدم');
     },
   });

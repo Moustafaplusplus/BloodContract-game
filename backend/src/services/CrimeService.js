@@ -9,12 +9,10 @@ import { TaskService } from './TaskService.js';
 
 
 export class CrimeService {
-  // Utility helpers
   static randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  // Get available crimes for a character
   static async getAvailableCrimes(userLevel = 1) {
     const crimes = await Crime.findAll({ where: { isEnabled: true } });
     return crimes.filter(c => c.req_level <= userLevel).map(c => ({
@@ -32,7 +30,6 @@ export class CrimeService {
     }));
   }
 
-  // Get all crimes for admin
   static async getAllCrimes() {
     const crimes = await Crime.findAll();
     return crimes.map(c => ({
@@ -54,7 +51,6 @@ export class CrimeService {
     }));
   }
 
-  // Get a specific crime by ID
   static async getCrimeById(crimeId) {
     const crime = await Crime.findByPk(crimeId);
     if (!crime) return null;
@@ -78,7 +74,6 @@ export class CrimeService {
     };
   }
 
-  // Generate narrative for crime execution
   static generateCrimeNarrative(character, crime, success, payout, expGain, redirect) {
     const levelDiff = character.level - crime.req_level;
     const isHighLevelCrime = levelDiff < 0;
@@ -121,7 +116,6 @@ export class CrimeService {
     return narrative;
   }
 
-  // Execute a crime
   static async executeCrime(userId, crimeId) {
     const tx = await sequelize.transaction();
     try {
@@ -156,11 +150,9 @@ export class CrimeService {
         throw { status: 429, msg: "Crime on cooldown", meta: { cooldownLeft: secLeft } };
       }
 
-      // Core outcome calculation
       const success = Math.random() < Number(crime.successRate);
       let payout = success ? this.randInt(crime.minReward, crime.maxReward) : 0;
       let expGain = success ? crime.expReward : Math.round(crime.expReward * 0.3);
-      // VIP bonus
       if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
         payout = Math.round(payout * 1.5);
         expGain = Math.round(expGain * 1.5);
@@ -171,22 +163,19 @@ export class CrimeService {
       character.exp += expGain;
       const levelUpRewards = await CharacterService.maybeLevelUp(character);
 
-      // Handle failure consequences with fixed durations from crime configuration
       let redirect = null;
       let confinementDetails = null;
       if (!success) {
-        // Decide outcome: 50% jail, 50% hospital, never both
         let possibleOutcomes = [];
         if (crime.failOutcome === "jail" || crime.failOutcome === "both") possibleOutcomes.push("jail");
         if (crime.failOutcome === "hospital" || crime.failOutcome === "both") possibleOutcomes.push("hospital");
-        // If both are possible, pick one randomly
         let chosenOutcome = possibleOutcomes.length === 2 ? (Math.random() < 0.5 ? "jail" : "hospital") : possibleOutcomes[0];
         if (chosenOutcome === "jail") {
-          const jailMinutes = crime.jailMinutes || 30; // Default 30 minutes if not set
+          const jailMinutes = crime.jailMinutes || 30;
           const jailRecord = await Jail.create({
             userId: userId,
             minutes: jailMinutes,
-            bailRate: 200, // Not used anymore but kept for compatibility
+            bailRate: 200,
             releasedAt: new Date(nowMs + jailMinutes * 60_000),
           }, { transaction: tx });
           if (io) {
@@ -202,13 +191,13 @@ export class CrimeService {
             releaseAt: jailRecord.releasedAt
           };
         } else if (chosenOutcome === "hospital") {
-          const hospitalMinutes = crime.hospitalMinutes || 30; // Default 30 minutes if not set
-          const hpLoss = crime.hpLoss || 50; // Default HP loss if not set
+          const hospitalMinutes = crime.hospitalMinutes || 30;
+          const hpLoss = crime.hpLoss || 50;
           const hospitalRecord = await Hospital.create({
             userId: userId,
             minutes: hospitalMinutes,
             hpLoss: hpLoss,
-            healRate: 200, // Not used anymore but kept for compatibility
+            healRate: 200,
             releasedAt: new Date(nowMs + hospitalMinutes * 60_000),
           }, { transaction: tx });
           if (io) {
@@ -227,15 +216,12 @@ export class CrimeService {
         }
       }
 
-      // Update character state
       character.energy -= crime.energyCost;
       character.crimeCooldown = nowMs + crime.cooldown * 1000;
       await character.save({ transaction: tx });
 
-      // Increment crimes stat
       await CharacterService.addStat(userId, "crimes", 1, tx);
 
-      // Audit log
       await CrimeLog.create({
         userId: userId,
         crimeId: crime.id,
@@ -245,16 +231,13 @@ export class CrimeService {
 
       await tx.commit();
       
-      // Generate narrative
       const narrative = this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect);
       
-      // Send immediate HUD update if level-up occurred
       if (levelUpRewards.length > 0 && io) {
         const hudData = await character.toSafeJSON();
         io.to(String(userId)).emit('hud:update', hudData);
       }
       
-      // After successful crime execution (success === true):
       if (success) {
         await TaskService.updateProgress(userId, 'crimes_committed', 1);
       }
@@ -329,9 +312,7 @@ export class CrimeService {
     return true;
   }
 
-  // Seed crimes data
   static async seedCrimes() {
-    // No crimes are seeded by default
     await Crime.destroy({ where: {} });
     console.log('✅ Crimes cleared, none seeded');
   }

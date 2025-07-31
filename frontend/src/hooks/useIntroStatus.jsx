@@ -15,17 +15,24 @@ export const useIntroStatus = () => {
       return;
     }
 
-    try {
-      const decoded = jwtDecode(token);
-      // For now, we'll assume new users haven't seen intro
-      // In a real implementation, you might want to check this from the backend
-      setHasSeenIntro(false);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      setHasSeenIntro(false);
-      setLoading(false);
-    }
+    const checkIntroStatus = async () => {
+      try {
+        const response = await axios.get('/api/auth/intro-status', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setHasSeenIntro(response.data.hasSeenIntro || false);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking intro status:', error);
+        // Default to false if we can't check
+        setHasSeenIntro(false);
+        setLoading(false);
+      }
+    };
+
+    checkIntroStatus();
   }, [token]);
 
   const markIntroAsSeen = async () => {

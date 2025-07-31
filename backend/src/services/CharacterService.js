@@ -6,13 +6,6 @@ import { emitNotification } from '../socket.js';
 
 export class CharacterService {
   // EXP and leveling logic
-  static ACTIONS = {
-    // Actions removed
-  };
-
-  static EXP_RULES = {
-    // Rules removed
-  };
 
   // Static method to calculate exp needed for any level (balanced progression system)
   static calculateExpNeeded(level) {
@@ -35,9 +28,7 @@ export class CharacterService {
   }
 
   static async giveReward({ character, action }, tx = null) {
-    let xp;
-    // Daily login logic removed
-    xp = this.EXP_RULES[action] ?? 0;
+    let xp = 0;
     if (xp) {
       character.exp += xp;
       await this.maybeLevelUp(character);
@@ -166,18 +157,15 @@ export class CharacterService {
     // Increment daysInGame if lastActive is from a previous day
     const now = new Date();
     const lastActive = char.lastActive ? new Date(char.lastActive) : null;
-    // Daily login reward logic removed
     if (!lastActive || now.toDateString() !== lastActive.toDateString()) {
       char.daysInGame = (char.daysInGame || 0) + 1;
       char.lastActive = now;
-      // Daily login reward logic removed
       await char.save();
       await TaskService.updateProgress(char.userId, 'days_in_game', char.daysInGame);
     }
     // Fame update (snapshot)
     const fame = await char.getFame();
     await TaskService.updateProgress(char.userId, 'fame', fame);
-    // Daily login reward info removed
     return char;
   }
 

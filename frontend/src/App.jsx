@@ -103,17 +103,8 @@ function IntroCheckWrapper({ children }) {
       return;
     }
 
-    try {
-      const decoded = jwtDecode(token);
-      // For new users (especially guests), show intro
-      // We'll assume all users should see intro for now
-      // In a real implementation, you'd check hasSeenIntro from the backend
-      setShouldShowIntro(true);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      setLoading(false);
-    }
+    // Don't automatically show intro - let user choose
+    setLoading(false);
   }, [token, isAuthed]);
 
   if (loading) {

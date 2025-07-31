@@ -1,4 +1,3 @@
-// Crimes.jsx – واجهة الجرائم مع تبريد عالمي ورسائل عربية مفصّلة
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -28,7 +27,6 @@ import {
   ImageIcon,
 } from "lucide-react";
 
-// Helper to format seconds as mm:ss
 function formatCooldown(sec) {
   const m = Math.floor((sec || 0) / 60);
   const s = (sec || 0) % 60;
@@ -197,25 +195,11 @@ export default function Crimes() {
     },
   });
 
-  // Mock data for design purposes when backend is not available
-  const mockCrimes = [
-    {
-      id: 0,
-      name: "لا توجد جرائم متاحة",
-      description: "لم يتم إضافة أي جرائم بعد. يرجى مراجعة الإدارة.",
-      chance: 0,
-      minReward: 0,
-      maxReward: 0,
-      expGain: 0,
-      levelRequirement: 0,
-      image: null,
-    },
-  ];
 
-  // Map backend req_level to levelRequirement for dynamic crimes
-  const displayCrimes = (crimes.length > 0
+
+  const displayCrimes = crimes.length > 0
     ? crimes.map(c => ({ ...c, levelRequirement: c.req_level }))
-    : mockCrimes);
+    : [];
 
   if (isLoading) {
     return (
@@ -246,19 +230,7 @@ export default function Crimes() {
     );
   }
 
-  const getRiskColor = (chance) => {
-    if (chance >= 80) return "text-accent-green";
-    if (chance >= 60) return "text-accent-yellow";
-    if (chance >= 40) return "text-accent-orange";
-    return "text-accent-red";
-  };
 
-  const getRiskLevel = (chance) => {
-    if (chance >= 80) return "منخفض";
-    if (chance >= 60) return "متوسط";
-    if (chance >= 40) return "عالي";
-    return "شديد الخطورة";
-  };
 
 
 
@@ -403,8 +375,12 @@ export default function Crimes() {
             const isCooling = cooldownLeft > 0;
             const isBusy =
               mutation.isLoading && mutation.variables === crime.id;
-            const riskColor = getRiskColor(crime.chance);
-            const riskLevel = getRiskLevel(crime.chance);
+            const riskColor = crime.chance >= 80 ? "text-accent-green" : 
+                             crime.chance >= 60 ? "text-accent-yellow" : 
+                             crime.chance >= 40 ? "text-accent-orange" : "text-accent-red";
+            const riskLevel = crime.chance >= 80 ? "منخفض" : 
+                             crime.chance >= 60 ? "متوسط" : 
+                             crime.chance >= 40 ? "عالي" : "شديد الخطورة";
 
             return (
               <div

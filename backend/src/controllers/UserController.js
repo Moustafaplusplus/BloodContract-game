@@ -48,6 +48,17 @@ export class UserController {
     }
   }
 
+  static async getIntroStatus(req, res) {
+    try {
+      const userId = req.user.id;
+      const hasSeenIntro = await UserService.getIntroStatus(userId);
+      res.json({ hasSeenIntro });
+    } catch (error) {
+      console.error('🔥 خطأ في جلب حالة العرض التقديمي:', error);
+      res.status(500).json({ message: 'فشل جلب حالة العرض التقديمي', error: error.message });
+    }
+  }
+
   static async signup(req, res) {
     try {
       const { username, email, password, age, gender } = req.body;

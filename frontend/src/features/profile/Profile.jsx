@@ -3,9 +3,7 @@ import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
-  User,
   Star,
-  DollarSign,
   Trophy,
   Target,
   Shield,
@@ -14,11 +12,9 @@ import {
   Clock,
   Users,
   Home as HomeIcon,
-  Edit3,
   Award,
   Activity,
   Zap,
-  Heart,
   Sword,
   X,
   UserPlus,
@@ -112,14 +108,7 @@ function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   );
 }
 
-function SparkleText({ children }) {
-  return (
-    <span className="vip-sparkle-text relative inline-block">
-      {children}
-      <span className="vip-sparkle-anim" aria-hidden="true"></span>
-    </span>
-  );
-}
+
 
 export default function Profile() {
   // All hooks at the top level
@@ -161,37 +150,8 @@ export default function Profile() {
     retry: false,
   });
 
-  // Mock data for design purposes when backend is not available
-  const mockCharacter = {
-    username: "Agent_47",
-            email: "agent@bloodcontract.com",
-    level: 15,
-    exp: 2750,
-    nextLevelExp: 3000,
-    hp: 95,
-    maxHp: 100,
-    energy: 80,
-    maxEnergy: 100,
-    money: 125000,
 
-    quote: "الصمت هو أقوى الأسلحة",
-    daysInGame: 42,
-    killCount: 89,
-    lastActive: new Date().toISOString(),
-    crimesCommitted: 156,
-    fightsWon: 73,
-    gangId: "Shadow Syndicate",
-    equippedHouseId: "Luxury Penthouse",
-    // ...removed rank...
-    buffs: ["Stealth Master", "Combat Expert", "Money Magnet"],
-    strength: 120,
-    defense: 85,
-  };
 
-  // Fame compatibility: support both top-level and nested fame
-  let fame = character?.fame;
-  if (!fame && character?.character?.fame) fame = character.character.fame;
-  
   const isOwnProfile = !username;
   const userId = character?.userId;
   
@@ -199,10 +159,10 @@ export default function Profile() {
   // For own profile, use HUD data which is more up-to-date
   const displayCharacter = isOwnProfile && hudStats ? {
     ...hudStats,
-    fame: fame ?? 0,
+    fame: character?.fame ?? 0,
   } : {
-    ...(character || mockCharacter),
-    fame: fame ?? 0,
+    ...(character || {}),
+    fame: character?.fame ?? 0,
   };
   
   // Check if this is the current user (for self-attack prevention)
@@ -246,7 +206,7 @@ export default function Profile() {
         setRemainingTime(0);
       }
     } catch (error) {
-      console.error("Hospital fetch error:", error);
+      // Silently handle hospital fetch errors
     }
   };
 
@@ -443,9 +403,7 @@ export default function Profile() {
     ? (displayCharacter.hp / displayCharacter.maxHp) * 100
     : 0;
 
-  const achievements = [
-    // ...removed achievements...
-  ];
+
 
   // Unified stat extraction from backend fields
   const fightsLost = displayCharacter.fightsLost ?? 0;
@@ -586,10 +544,9 @@ export default function Profile() {
     setAttacking(false);
   };
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 
-  // After fetching character/user data and before rendering the name:
-  const isVIP = character?.vipExpiresAt && new Date(character.vipExpiresAt) > new Date();
+
+
 
   // Add this function for sending a message
   const handleSendMessage = () => {
@@ -838,24 +795,7 @@ export default function Profile() {
                   ))}
                 </div>
               </div>
-              {/* Achievements */}
-              <div className="bg-hitman-800/40 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-accent-red mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5" /> الإنجازات
-                </h3>
-                <div className="flex flex-wrap gap-4">
-                  {achievements.map((ach, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 bg-hitman-900/60 border border-accent-red/30 rounded-lg px-4 py-2"
-                    >
-                      <ach.icon className="w-5 h-5 text-accent-red" />
-                      <span className="font-bold text-white">{ach.name}</span>
-                      <span className="text-xs text-hitman-300">{ach.description}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+
               {/* Likes/Dislikes Section */}
               <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-accent-yellow rounded-xl p-6 mb-6 flex flex-col items-center">
                 <h3 className="text-lg font-bold mb-2 text-accent-yellow flex items-center gap-2">

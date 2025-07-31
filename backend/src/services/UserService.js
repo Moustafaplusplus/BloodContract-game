@@ -66,6 +66,16 @@ export class UserService {
     return { message: 'تم تحديث حالة العرض التقديمي' };
   }
 
+  // Get intro status
+  static async getIntroStatus(userId) {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('المستخدم غير موجود');
+    }
+    
+    return user.hasSeenIntro || false;
+  }
+
   // Sync guest account to registered account
   static async syncGuestToRegistered(guestUserId, registrationData) {
     const { username, email, password, age, gender } = registrationData;

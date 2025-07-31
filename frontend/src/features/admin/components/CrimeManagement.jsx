@@ -14,8 +14,7 @@ import {
 export default function CrimeManagement() {
   const queryClient = useQueryClient();
   
-  // Crime management state
-  const [crimeViewMode, setCrimeViewMode] = useState('list'); // 'list', 'create', 'edit'
+  const [crimeViewMode, setCrimeViewMode] = useState('list');
   const [crimeForm, setCrimeForm] = useState({
     name: '',
     description: '',
@@ -36,14 +35,12 @@ export default function CrimeManagement() {
   const [crimeImageUploading, setCrimeImageUploading] = useState(false);
   const [crimeImagePreview, setCrimeImagePreview] = useState('');
 
-  // Fetch all crimes for admin
   const { data: crimes = [], isLoading: crimesLoading } = useQuery({
     queryKey: ['admin-crimes'],
     queryFn: () => axios.get('/api/crimes/admin').then(res => res.data),
     staleTime: 30 * 1000,
   });
 
-  // Crime mutations
   const createCrimeMutation = useMutation({
     mutationFn: (data) => axios.post('/api/crimes', data).then(res => res.data),
     onSuccess: () => {
@@ -81,7 +78,6 @@ export default function CrimeManagement() {
     },
   });
 
-  // Crime management helper functions
   const resetCrimeForm = () => {
     setCrimeForm({
       name: '',

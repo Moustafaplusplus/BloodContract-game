@@ -22,7 +22,6 @@ const IntroVideo = ({ onComplete }) => {
           setIsPlaying(true);
         })
         .catch(e => {
-          console.log('Video autoplay blocked');
           setIsPlaying(false);
         });
     }

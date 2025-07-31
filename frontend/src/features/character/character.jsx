@@ -1,8 +1,7 @@
 /* -------- src/features/character/character.jsx ---------- */
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import { useState, useEffect, useRef } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { useSocket } from "@/hooks/useSocket"
 import { useAuth } from "@/hooks/useAuth"
 import { jwtDecode } from "jwt-decode"
@@ -11,6 +10,7 @@ import { toast } from "react-hot-toast"
 import "../profile/vipSparkle.css"
 import VipName from "../profile/VipName.jsx"
 import LoadingOrErrorPlaceholder from "@/components/LoadingOrErrorPlaceholder"
+import { TIME, UI } from "@/utils/constants"
 
 export default function Character() {
   const { token } = useAuth()
@@ -33,16 +33,12 @@ export default function Character() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["character", userId], // Include userId in query key
+    queryKey: ["character", userId],
     queryFn: () => axios.get("/api/character").then((res) => res.data),
-    staleTime: 0, // No stale time - always fetch fresh data
+    staleTime: 0,
     retry: false,
-    enabled: !!userId, // Only run query when we have a userId
+    enabled: !!userId,
   })
-
-  // Fame compatibility: support both top-level and nested fame
-  let fame = character?.fame
-  if (!fame && character?.character?.fame) fame = character.character.fame
 
   // Map 'name' to 'username' if needed
   const normalizedCharacter =
@@ -51,24 +47,22 @@ export default function Character() {
   // When constructing displayCharacter, inject fame
   const displayCharacter = {
     ...normalizedCharacter,
-    fame: fame ?? 0,
+    fame: character?.fame ?? 0,
   }
 
   // Hospital status with real-time countdown
-  const { data: hospitalStatus, error: hospitalError } = useQuery({
-    queryKey: ["hospitalStatus", userId], // Include userId in query key
+  const { data: hospitalStatus } = useQuery({
+    queryKey: ["hospitalStatus", userId],
     queryFn: () => axios.get("/api/confinement/hospital").then((res) => res.data),
-    staleTime: 0, // No stale time
+    staleTime: 0,
     retry: (failureCount, error) => {
-      // Don't retry on authentication errors
       if (error.response?.status === 401) {
         return false
       }
-      // Retry up to 3 times for other errors
-      return failureCount < 3
+      return failureCount < UI.MAX_RETRY_ATTEMPTS
     },
-    retryDelay: 1000,
-    enabled: !!userId, // Only run query when we have a userId
+    retryDelay: TIME.RETRY_DELAY,
+    enabled: !!userId,
   })
 
   // Real-time countdown for hospital time
@@ -77,7 +71,6 @@ export default function Character() {
   // Invalidate cache when user changes
   useEffect(() => {
     if (userId) {
-
       queryClient.invalidateQueries(["character"])
       queryClient.invalidateQueries(["hospitalStatus"])
     }
@@ -94,7 +87,7 @@ export default function Character() {
           }
           return prev - 1
         })
-      }, 1000)
+      }, TIME.SECOND)
       return () => clearInterval(interval)
     }
   }, [hospitalStatus?.inHospital, hospitalStatus?.remainingSeconds])
@@ -120,12 +113,6 @@ export default function Character() {
     const file = e.target.files[0]
     if (!file) return
 
-    console.log('📁 Frontend: Starting avatar upload', {
-      filename: file.name,
-      size: file.size,
-      type: file.type
-    });
-
     setAvatarUploading(true)
     setAvatarError("")
 
@@ -134,7 +121,6 @@ export default function Character() {
       formData.append("avatar", file)
       const token = localStorage.getItem("jwt")
       
-      console.log('📤 Frontend: Sending to /api/avatar');
       const res = await axios.post("/api/avatar", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -142,20 +128,13 @@ export default function Character() {
         },
       })
 
-      console.log('✅ Frontend: Upload successful', res.data);
-      console.log('🔍 Frontend: URL analysis');
-      console.log('- Response avatarUrl:', res.data.avatarUrl);
-      console.log('- Is Firebase URL?', res.data.avatarUrl?.startsWith('https://storage.googleapis.com/'));
-      console.log('- URL length:', res.data.avatarUrl?.length);
       setAvatarUrl(res.data.avatarUrl)
       toast.success("تم تحديث الصورة الشخصية بنجاح!")
-      // Refetch character data to update avatar
       queryClient.invalidateQueries(["character", userId])
     } catch (error) {
-      console.error('Avatar upload error:', error);
-      const errorMessage = error.response?.data?.message || "فشل رفع الصورة. تأكد من أن الصورة أقل من 1MB وبصيغة صحيحة.";
-      setAvatarError(errorMessage);
-      toast.error("فشل رفع الصورة الشخصية");
+      const errorMessage = error.response?.data?.message || "فشل رفع الصورة. تأكد من أن الصورة أقل من 1MB وبصيغة صحيحة."
+      setAvatarError(errorMessage)
+      toast.error("فشل رفع الصورة الشخصية")
     } finally {
       setAvatarUploading(false)
     }
@@ -167,25 +146,20 @@ export default function Character() {
 
     const refetchAll = () => {
       queryClient.invalidateQueries(["character", userId])
-      // Only invalidate hospital status if there's no error
-      if (!hospitalError) {
-        queryClient.invalidateQueries(["hospitalStatus", userId])
-      }
+      queryClient.invalidateQueries(["hospitalStatus", userId])
     }
 
     socket.on("hud:update", refetchAll)
     socket.on("hospital:update", refetchAll)
-    // Increase polling interval to reduce server load
-    const pollInterval = setInterval(refetchAll, 30000) // 30 seconds instead of 10
+    const pollInterval = setInterval(refetchAll, TIME.POLL_INTERVAL)
 
     return () => {
       socket.off("hud:update", refetchAll)
       socket.off("hospital:update", refetchAll)
       clearInterval(pollInterval)
     }
-  }, [socket, queryClient, hospitalError, userId])
+  }, [socket, queryClient, userId])
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"
   const isVIP = displayCharacter.vipExpiresAt && new Date(displayCharacter.vipExpiresAt) > new Date()
 
   // Unified stat extraction from backend fields
@@ -256,12 +230,7 @@ export default function Character() {
 
   return (
     <div className="min-h-screen bg-black text-white p-2 sm:p-4 pt-20 overflow-x-hidden" dir="rtl">
-      {/* Hospital status message */}
-      {hospitalError && (
-        <div className="bg-black border-2 border-yellow-600/50 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
-          <p>⚠️ فشل في تحميل حالة المستشفى</p>
-        </div>
-      )}
+
 
       {hospitalStatus?.inHospital && (
         <div className="bg-black border-2 border-red-600/50 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
@@ -295,7 +264,6 @@ export default function Character() {
                     alt="avatar"
                     className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-red-500 bg-zinc-800 mx-auto shadow-lg"
                     onError={(e) => {
-                      console.error('Avatar image failed to load:', avatarUrl);
                       e.target.style.display = "none"
                       e.target.nextElementSibling.style.display = "flex"
                     }}
@@ -351,7 +319,7 @@ export default function Character() {
                       className="bg-black border border-red-500/40 text-white rounded-lg px-3 py-2 w-full text-center focus:outline-none focus:ring-2 focus:ring-red-500 transition placeholder:text-zinc-500 text-xs sm:text-sm"
                       value={quoteInput}
                       onChange={(e) => setQuoteInput(e.target.value)}
-                      maxLength={120}
+                      maxLength={UI.MAX_QUOTE_LENGTH}
                       rows={2}
                       placeholder="اكتب اقتباسك الشخصي هنا..."
                       disabled={savingQuote}
@@ -367,14 +335,13 @@ export default function Character() {
                             setEditingQuote(false)
                             queryClient.invalidateQueries(["character", userId])
                           } catch (error) {
-                            console.error('Quote update error:', error);
-                            const errorMessage = error.response?.data?.error || error.response?.data?.message || "فشل في تحديث الاقتباس";
-                            toast.error(errorMessage);
+                            const errorMessage = error.response?.data?.error || error.response?.data?.message || "فشل في تحديث الاقتباس"
+                            toast.error(errorMessage)
                           } finally {
                             setSavingQuote(false)
                           }
                         }}
-                        disabled={savingQuote || quoteInput.length > 120}
+                        disabled={savingQuote || quoteInput.length > UI.MAX_QUOTE_LENGTH}
                       >
                         حفظ
                       </button>
@@ -520,13 +487,4 @@ function formatTime(seconds) {
   const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")
   const s = String(seconds % 60).padStart(2, "0")
   return `${h}:${m}:${s}`
-}
-
-function SparkleText({ children }) {
-  return (
-    <span className="vip-sparkle-text relative inline-block">
-      {children}
-      <span className="vip-sparkle-anim" aria-hidden="true"></span>
-    </span>
-  )
 }

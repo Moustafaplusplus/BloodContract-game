@@ -9,7 +9,6 @@ export class CharacterController {
         return res.status(404).json({ error: 'Character not found' });
       }
       const safeChar = await char.toSafeJSON();
-      // Daily login info removed
       return res.json(safeChar);
     } catch (error) {
       console.error('Error getting character:', error);

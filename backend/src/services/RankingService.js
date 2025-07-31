@@ -9,10 +9,8 @@ const CHARACTER_ATTRIBUTES = [
 ];
 
 export class RankingService {
-  // Get top ranked users by a given stat (default: fame)
   static async getTopRanked({ sort = 'fame', limit = 50 } = {}) {
     let users;
-    // Fame: compute and sort in JS
     if (sort === 'fame') {
       users = await User.findAll({
         include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }],
@@ -44,7 +42,6 @@ export class RankingService {
           criteria: item.criteria 
         }));
     }
-    // Kills
     if (sort === 'killCount') {
       users = await User.findAll({
         include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }],
@@ -62,7 +59,6 @@ export class RankingService {
           criteria: user.Character.killCount ?? 0,
         }));
     }
-    // Level
     if (sort === 'level') {
       users = await User.findAll({
         include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }],
@@ -80,7 +76,6 @@ export class RankingService {
           criteria: user.Character.level ?? 0,
         }));
     }
-    // Money
     if (sort === 'money') {
       users = await User.findAll({
         include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }],
@@ -98,7 +93,6 @@ export class RankingService {
           criteria: user.Character.money ?? 0,
         }));
     }
-    // Crimes
     if (sort === 'crimesCommitted') {
       users = await User.findAll({
         include: [
@@ -110,7 +104,6 @@ export class RankingService {
         ],
         limit: 200,
       });
-      // Get crimesCommitted from stats
       const enriched = users.map(user => {
         const userObj = user.toJSON();
         if (!userObj.Character) return null;
@@ -137,7 +130,6 @@ export class RankingService {
           criteria: item.criteria 
         }));
     }
-    // Default fallback
     return [];
   }
 }

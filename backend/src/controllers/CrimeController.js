@@ -63,7 +63,6 @@ export class CrimeController {
 
   static async createCrime(req, res) {
     try {
-      // Basic validation (expand as needed)
       const requiredFields = [
         'name', 'description', 'req_level', 'energyCost', 'successRate',
         'minReward', 'maxReward', 'cooldown', 'failOutcome', 'jailMinutes',
@@ -89,7 +88,6 @@ export class CrimeController {
         return res.status(400).json({ error: "Invalid crime ID" });
       }
 
-      // Basic validation (expand as needed)
       const requiredFields = [
         'name', 'description', 'req_level', 'energyCost', 'successRate',
         'minReward', 'maxReward', 'cooldown', 'failOutcome', 'jailMinutes',

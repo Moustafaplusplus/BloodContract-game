@@ -27,8 +27,6 @@ export function FamePopupProvider({ children }) {
       const difference = currentFame - previousFame;
       const isIncrease = difference > 0;
 
-      console.log(`Fame changed: ${previousFame} -> ${currentFame} (${isIncrease ? '+' : '-'}${Math.abs(difference)})`);
-
       setFamePopup({
         value: currentFame,
         difference: Math.abs(difference),

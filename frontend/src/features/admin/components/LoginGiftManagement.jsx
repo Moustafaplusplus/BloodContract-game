@@ -136,10 +136,6 @@ const LoginGiftManagement = () => {
 
   const { data: config } = configData || {};
   const { data: items } = itemsData || {};
-  
-  // Debug logging
-  console.log('Items data:', items);
-  console.log('Config data:', config);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">

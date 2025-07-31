@@ -14,6 +14,9 @@ router.post('/sync-guest', auth, UserController.syncGuestAccount);
 // Mark intro as seen
 router.post('/mark-intro-seen', auth, UserController.markIntroAsSeen);
 
+// Get intro status
+router.get('/intro-status', auth, UserController.getIntroStatus);
+
 // Google OAuth routes
 router.get('/google', (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {

@@ -6,6 +6,7 @@ import { useSocket } from "@/hooks/useSocket"
 import { useAuth } from "@/hooks/useAuth"
 import { jwtDecode } from "jwt-decode"
 import { useQueryClient } from "@tanstack/react-query"
+import { useIntroStatus } from "@/hooks/useIntroStatus"
 import {
   Target,
   Zap,
@@ -24,6 +25,8 @@ import {
   Dumbbell,
   TrendingUp,
   Users,
+  X,
+  Play,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { FeatureProgressCard, FeatureUnlockList } from "@/components/FeatureUnlockNotification";
@@ -41,6 +44,8 @@ export default function Home() {
   const { token } = useAuth()
   const { socket } = useSocket()
   const queryClient = useQueryClient()
+  const { hasSeenIntro, loading: introLoading } = useIntroStatus()
+  const [showIntroNotification, setShowIntroNotification] = React.useState(false)
 
   // Get userId from token for cache invalidation
   const userId = token
@@ -53,6 +58,13 @@ export default function Home() {
         }
       })()
     : null
+
+  // Show intro notification if user hasn't seen intro and not loading
+  React.useEffect(() => {
+    if (!introLoading && !hasSeenIntro) {
+      setShowIntroNotification(true)
+    }
+  }, [hasSeenIntro, introLoading])
 
   // Reset all state when user changes
   const [key, setKey] = React.useState(0)
@@ -391,6 +403,46 @@ export default function Home() {
             </h1>
             <p className="text-zinc-400 text-lg">جاهز لبدء يوم جديد في عالم الجريمة؟</p>
           </div>
+
+          {/* Intro Notification */}
+          {showIntroNotification && (
+            <div className="mb-6 bg-gradient-to-r from-pink-900/30 to-purple-900/30 border border-pink-500/50 rounded-xl p-6 backdrop-blur-sm animate-slide-up">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="bg-pink-600/20 rounded-full p-3">
+                    <Play className="w-6 h-6 text-pink-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-pink-300 mb-2">شاهد قصة اللعبة</h3>
+                    <p className="text-pink-200 text-sm mb-4">
+                      اكتشف عالم Blood Contract من خلال قصة تفاعلية مثيرة. تعرف على الشخصيات والأحداث التي شكلت هذا العالم المظلم.
+                    </p>
+                    <div className="flex gap-3">
+                      <Link
+                        to="/intro"
+                        className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                      >
+                        <Play className="w-4 h-4" />
+                        شاهد القصة
+                      </Link>
+                      <button
+                        onClick={() => setShowIntroNotification(false)}
+                        className="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 px-4 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        لاحقاً
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowIntroNotification(false)}
+                  className="text-zinc-400 hover:text-zinc-300 transition-colors p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Status Indicators Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
