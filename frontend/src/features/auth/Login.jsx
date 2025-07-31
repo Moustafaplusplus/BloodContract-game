@@ -7,6 +7,7 @@ import { Eye, EyeOff, User, Lock, Target, Shield } from "lucide-react";
 import Modal from "@/components/Modal";
 import { extractErrorMessage } from "@/utils/errorHandler";
 import { jwtDecode } from "jwt-decode";
+import { initiateGoogleOAuth } from '@/utils/testGoogleOAuth';
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -213,28 +214,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => {
-                    // Check if Google OAuth is available
-                    fetch('/api/auth/google')
-                      .then(response => {
-                        if (response.ok) {
-                          window.location.href = '/api/auth/google';
-                        } else {
-                          setModal({
-                            isOpen: true,
-                            title: "غير متاح",
-                            message: "تسجيل الدخول بحساب جوجل غير متاح حالياً. يرجى استخدام البريد الإلكتروني وكلمة المرور.",
-                            type: "info"
-                          });
-                        }
-                      })
-                      .catch(() => {
-                        setModal({
-                          isOpen: true,
-                          title: "خطأ في الاتصال",
-                          message: "لا يمكن الاتصال بالخادم. يرجى المحاولة لاحقاً.",
-                          type: "error"
-                        });
-                      });
+                    initiateGoogleOAuth(setToken, setModal);
                   }}
                   className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-800 hover:bg-gray-700 transition-colors duration-200 group"
                 >

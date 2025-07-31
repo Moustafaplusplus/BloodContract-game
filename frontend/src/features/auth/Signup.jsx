@@ -17,6 +17,7 @@ import {
   UserPlus,
   Shield,
 } from "lucide-react";
+import { initiateGoogleOAuth } from '@/utils/testGoogleOAuth';
 
 export default function Signup() {
   const [form, setForm] = useState({
@@ -333,34 +334,11 @@ export default function Signup() {
                 </div>
 
                 {/* Google Sign Up Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Check if Google OAuth is available
-                    fetch('/api/auth/google')
-                      .then(response => {
-                        if (response.ok) {
-                          window.location.href = '/api/auth/google';
-                        } else {
-                          setModal({
-                            isOpen: true,
-                            title: "غير متاح",
-                            message: "إنشاء حساب بحساب جوجل غير متاح حالياً. يرجى استخدام النموذج أعلاه.",
-                            type: "info"
-                          });
-                        }
-                      })
-                      .catch(() => {
-                        setModal({
-                          isOpen: true,
-                          title: "خطأ في الاتصال",
-                          message: "لا يمكن الاتصال بالخادم. يرجى المحاولة لاحقاً.",
-                          type: "error"
-                        });
-                      });
-                  }}
-                  className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-800 hover:bg-gray-700 transition-colors duration-200 group"
-                >
+                                  <button
+                    type="button"
+                    onClick={() => initiateGoogleOAuth(setToken, setModal)}
+                    className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-800 hover:bg-gray-700 transition-colors duration-200 group"
+                  >
                   <svg className="w-5 h-5 ml-3" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
