@@ -29,9 +29,9 @@ router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false, failureRedirect: '/login' })(req, res, next);
 }, (req, res) => {
   try {
-    // Redirect to frontend with token
-    const { token } = req.user;
-    const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/callback?token=${token}`;
+    // Redirect to frontend with token and new user status
+    const { token, isNewUser } = req.user;
+    const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/callback?token=${token}&isNewUser=${isNewUser}`;
     console.log('✅ Google OAuth successful, redirecting to:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {

@@ -10,13 +10,23 @@ export default function GoogleCallback() {
 
   useEffect(() => {
     const token = searchParams.get('token');
+    const isNewUser = searchParams.get('isNewUser') === 'true';
     
     if (token) {
-      // Store the token and redirect to dashboard
+      // Store the token
       setToken(token);
-      navigate('/dashboard');
+      
+      // Redirect based on whether user is new or existing
+      if (isNewUser) {
+        console.log('🆕 New user from Google OAuth, redirecting to intro');
+        navigate('/intro');
+      } else {
+        console.log('👤 Existing user from Google OAuth, redirecting to dashboard');
+        navigate('/dashboard');
+      }
     } else {
       // No token received, redirect to login
+      console.log('❌ No token received from Google OAuth');
       navigate('/login');
     }
   }, [searchParams, setToken, navigate]);

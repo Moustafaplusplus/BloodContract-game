@@ -78,8 +78,12 @@ export function configurePassport() {
           { expiresIn: '7d' }
         );
 
+        // Check if this is a new user (no Google ID was set before)
+        const isNewUser = !user.googleId || user.googleId === profile.id;
+
         console.log('🎫 JWT token generated for user:', user.id);
-        return done(null, { user, token });
+        console.log('🆕 Is new user:', isNewUser);
+        return done(null, { user, token, isNewUser });
       } catch (error) {
         console.error('❌ Google OAuth error:', error);
         return done(error, null);
