@@ -15,7 +15,7 @@ export function configurePassport() {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.NODE_ENV === 'production' 
-        ? `${process.env.CLIENT_URL}/api/auth/google/callback`
+        ? "https://bloodcontract-game-production.up.railway.app/api/auth/google/callback"
         : "http://localhost:3000/api/auth/google/callback",
       scope: ['profile', 'email']
     }, async (accessToken, refreshToken, profile, done) => {
