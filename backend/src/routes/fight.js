@@ -1,6 +1,7 @@
 import express from 'express';
 import { FightController } from '../controllers/FightController.js';
 import { auth } from '../middleware/auth.js';
+import { checkConfinementAccess } from '../middleware/confinement.js';
 
 const router = express.Router();
 
@@ -14,6 +15,6 @@ router.get('/challenges', FightController.getChallengeablePlayers);
 router.get('/search', FightController.searchPlayers);
 
 // POST /api/fight/:defenderId - Attack another player
-router.post('/:defenderId', FightController.attackPlayer);
+router.post('/:defenderId', checkConfinementAccess, FightController.attackPlayer);
 
 export default router; 

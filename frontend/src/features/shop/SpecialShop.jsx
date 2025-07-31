@@ -375,7 +375,7 @@ function MoneyPackageCard({ pkg, onBuy, stats }) {
       {/* Money Image Container */}
       <div className="relative h-32 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
         <img 
-          src="/images/money.png" 
+          src="/images/money.jpeg" 
           alt="Money Package"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
@@ -724,7 +724,7 @@ export default function SpecialShop() {
                 {/* VIP Image Container */}
                 <div className="relative h-32 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
                   <img 
-                    src="/images/VIP.png" 
+                    src="/images/VIP.jpeg" 
                     alt="VIP Package"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
@@ -793,7 +793,7 @@ export default function SpecialShop() {
                 {/* Blackcoin Image Container */}
                 <div className="relative h-32 bg-gradient-to-br from-hitman-700 to-hitman-800 overflow-hidden">
                   <img 
-                    src="/images/Blackcoins.png" 
+                    src="/images/Blackcoins.jpeg" 
                     alt="Blackcoin Package"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {

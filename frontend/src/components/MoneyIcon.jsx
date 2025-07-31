@@ -10,9 +10,9 @@ const MoneyIcon = ({ className = "w-6 h-6", alt = "Money" }) => {
     
     // Try alternative image sources
     if (currentImage === '/images/money-icon.png') {
-      setCurrentImage('/images/money.png');
+      setCurrentImage('/images/money.jpeg');
       setImageError(false);
-    } else if (currentImage === '/images/money.png') {
+    } else if (currentImage === '/images/money.jpeg') {
       setCurrentImage('/images/blackcoins-icon.png');
       setImageError(false);
     } else {

@@ -2,6 +2,7 @@
 import express from 'express';
 const router = express.Router();
 import { auth } from '../middleware/auth.js';
+import { checkConfinementAccess } from '../middleware/confinement.js';
 import { User, BloodContract } from '../models/index.js';
 import { Op } from 'sequelize';
 import { Character } from '../models/Character.js';
@@ -13,7 +14,7 @@ import { Statistic } from '../models/Statistic.js';
 import { NotificationService } from '../services/NotificationService.js';
 import { emitNotification } from '../socket.js';
 // Ghost Assassin: Instantly hospitalize a target for 5 black coins
-router.post('/ghost-assassin', auth, async (req, res) => {
+router.post('/ghost-assassin', auth, checkConfinementAccess, async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const userId = req.user.id;
@@ -87,7 +88,7 @@ router.post('/ghost-assassin', auth, async (req, res) => {
 });
 
 // Create a new blood contract
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, checkConfinementAccess, async (req, res) => {
   try {
     const posterId = req.user.id;
     const { targetId, price } = req.body;

@@ -6,6 +6,7 @@ import { CrimeController } from '../controllers/CrimeController.js';
 import { auth } from '../middleware/auth.js';
 import { adminAuth } from '../middleware/admin.js';
 import { validate } from '../middleware/validation.js';
+import { checkConfinementAccess } from '../middleware/confinement.js';
 import { Crime } from '../models/Crime.js';
 import { uploadToFirebase } from '../config/firebase.js';
 
@@ -84,7 +85,7 @@ router.put('/:id', auth, adminAuth, CrimeController.updateCrime);
 router.delete('/:id', auth, adminAuth, CrimeController.deleteCrime);
 
 // POST /api/crimes/execute/:crimeId - Execute a specific crime (auth required)
-router.post('/execute/:crimeId', auth, validate('executeCrime'), CrimeController.executeCrime);
+router.post('/execute/:crimeId', auth, checkConfinementAccess, validate('executeCrime'), CrimeController.executeCrime);
 
 // GET /api/crimes/debug/:id - Debug endpoint to view crime data (admin only)
 router.get('/debug/:id', auth, adminAuth, async (req, res) => {

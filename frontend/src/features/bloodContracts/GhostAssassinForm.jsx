@@ -87,7 +87,7 @@ const GhostAssassinForm = () => {
             {/* Ghost Assassin Avatar - Full Width */}
             <div className="w-full h-48 md:h-64 rounded-2xl border-4 md:border-0 border-red-600 bg-gradient-to-br from-red-900 to-red-700 md:bg-transparent p-2 md:p-0 shadow-2xl md:shadow-none shadow-red-500/50 overflow-hidden">
               <img
-                src="/images/ghostassasin.png"
+                src="/images/ghostassasin.jpeg"
                 alt="Ghost Assassin"
                 className="w-full h-full object-contain rounded-xl"
                 onError={(e) => {

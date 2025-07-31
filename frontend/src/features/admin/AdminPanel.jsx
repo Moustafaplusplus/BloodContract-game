@@ -18,8 +18,10 @@ import {
   Package,
   DollarSign,
   BookOpen,
-  Gift
+  Gift,
+  Calculator
 } from 'lucide-react';
+import LevelCalculator from '../../components/LevelCalculator';
 import CharacterManagement from './components/CharacterManagement';
 import CrimeManagement from './components/CrimeManagement';
 import WeaponManagement from './components/WeaponManagement';
@@ -68,6 +70,7 @@ const TABS = [
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showCalculator, setShowCalculator] = useState(false);
   const { isAuthed, isAdmin, token } = useAuth();
   const navigate = useNavigate();
 
@@ -108,24 +111,35 @@ export default function AdminPanel() {
         </div>
 
         {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-hitman-800/50 rounded-lg p-1 flex overflow-x-auto max-w-full">
-            <div className="flex min-w-max">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-md transition-all ${
-                    activeTab === tab.key
-                      ? 'bg-accent-red text-white'
-                      : 'text-hitman-300 hover:text-white hover:bg-hitman-700'
-                  }`}
-                >
-                  <tab.icon className="w-5 h-5" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        <div className="mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 max-w-6xl mx-auto">
+            {TABS.map((tab) => {
+              const hasCalculator = ['crimes', 'weapons', 'armors', 'houses', 'dogs', 'cars', 'tasks', 'ministry-missions', 'promotions'].includes(tab.key);
+              return (
+                <div key={tab.key} className="relative">
+                  <button
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`w-full flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 ${
+                      activeTab === tab.key
+                        ? 'bg-gradient-to-br from-accent-red to-red-600 text-white shadow-lg shadow-red-500/25'
+                        : 'bg-hitman-800/50 text-hitman-300 hover:text-white hover:bg-hitman-700/70 border border-hitman-700 hover:border-hitman-600'
+                    }`}
+                  >
+                    <tab.icon className={`w-6 h-6 ${activeTab === tab.key ? 'text-white' : 'text-hitman-400'}`} />
+                    <span className="text-sm font-medium text-center leading-tight">{tab.label}</span>
+                  </button>
+                  {hasCalculator && (
+                    <button
+                      onClick={() => setShowCalculator(true)}
+                      className="absolute -top-2 -right-2 p-1.5 text-accent-red hover:text-red-300 transition-colors bg-hitman-900 border border-accent-red rounded-full shadow-lg hover:shadow-red-500/25"
+                      title="حاسبة المستوى"
+                    >
+                      <Calculator className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -152,6 +166,12 @@ export default function AdminPanel() {
         {activeTab === 'game-news' && <GameNewsManagement />}
         {activeTab === 'login-gift' && <LoginGiftManagement />}
       </div>
+      
+      {/* Level Calculator Modal */}
+      <LevelCalculator 
+        isOpen={showCalculator} 
+        onClose={() => setShowCalculator(false)} 
+      />
     </div>
   );
 } 
