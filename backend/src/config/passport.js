@@ -29,6 +29,8 @@ export function configurePassport() {
           } 
         });
 
+        let isNewUser = false;
+        
         if (user) {
           console.log('👤 Existing user found, linking Google account');
           // User exists, check if they have Google ID
@@ -37,6 +39,8 @@ export function configurePassport() {
             user.googleId = profile.id;
             await user.save();
             console.log('✅ Existing account linked to Google');
+            // This is an existing user linking their account, not new
+            isNewUser = false;
           }
         } else {
           console.log('🆕 Creating new user from Google OAuth');
@@ -68,6 +72,7 @@ export function configurePassport() {
           });
           
           console.log('✅ New user created successfully');
+          isNewUser = true;
         }
 
         // Generate JWT token
@@ -79,7 +84,8 @@ export function configurePassport() {
         );
 
         // Check if this is a new user (no Google ID was set before)
-        const isNewUser = !user.googleId || user.googleId === profile.id;
+        // const wasNewUser = !user.googleId; // This line is no longer needed
+        // const isNewUser = wasNewUser; // This line is no longer needed
 
         console.log('🎫 JWT token generated for user:', user.id);
         console.log('🆕 Is new user:', isNewUser);
