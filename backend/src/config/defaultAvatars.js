@@ -4,8 +4,8 @@
  */
 
 export const DEFAULT_AVATARS = {
-  MALE: process.env.DEFAULT_AVATAR_MALE_URL || 'https://storage.googleapis.com/bloodcontractgame.firebasestorage.app/bloodcontract/avatars/default_avatar_male',
-  FEMALE: process.env.DEFAULT_AVATAR_FEMALE_URL || 'https://storage.googleapis.com/bloodcontractgame.firebasestorage.app/bloodcontract/avatars/default_avatar_female'
+  MALE: process.env.DEFAULT_AVATAR_MALE_URL || 'https://storage.googleapis.com/bloodcontractgame.firebasestorage.app/bloodcontract/avatars/default_avatar_mal.jpeg',
+  FEMALE: process.env.DEFAULT_AVATAR_FEMALE_URL || 'https://storage.googleapis.com/bloodcontractgame.firebasestorage.app/bloodcontract/avatars/default_avatar_femal.jpeg'
 };
 
 /**
@@ -27,6 +27,6 @@ export const isDefaultAvatar = (avatarUrl) => {
   
   return avatarUrl === DEFAULT_AVATARS.MALE || 
          avatarUrl === DEFAULT_AVATARS.FEMALE ||
-         avatarUrl.includes('default_avatar_male') ||
-         avatarUrl.includes('default_avatar_female');
+         avatarUrl.includes('default_avatar_mal') ||
+         avatarUrl.includes('default_avatar_femal');
 }; 

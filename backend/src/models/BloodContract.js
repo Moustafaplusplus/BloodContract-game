@@ -40,7 +40,7 @@ const BloodContract = (sequelize) => {
     tableName: 'blood_contracts',
     timestamps: true,
     createdAt: 'createdAt',
-    updatedAt: false,
+    updatedAt: 'updatedAt',
   });
 
   Model.associate = (models) => {

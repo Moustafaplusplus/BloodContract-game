@@ -62,7 +62,7 @@ const Tasks = lazy(() => import("@/features/tasks/Tasks"));
 const Notifications = lazy(() => import("@/features/notifications/Notifications"));
 const GoogleCallback = lazy(() => import("@/features/auth/GoogleCallback"));
 const LoginGift = lazy(() => import("@/features/loginGift/LoginGift"));
-const IntroSlideshow = lazy(() => import("@/components/IntroSlideshow"));
+const IntroVideo = lazy(() => import("@/components/IntroVideo"));
 const IntroDemo = lazy(() => import("@/pages/IntroDemo"));
 
 const queryClient = new QueryClient({
@@ -174,8 +174,8 @@ export default function App() {
                   {/* Privacy Policy and Terms pages (bare) */}
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsAndConditions />} />
-                  {/* Intro Slideshow routes */}
-                  <Route path="/intro" element={<IntroSlideshow onComplete={() => window.location.href = '/dashboard'} />} />
+                  {/* Intro Video routes */}
+                  <Route path="/intro" element={<IntroVideo onComplete={() => window.location.href = '/dashboard'} />} />
                   <Route path="/intro-demo" element={<IntroDemo />} />
                   {/* All other pages use main layout and HUD */}
                   <Route

@@ -8,6 +8,7 @@
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
     "verify": "node verify-deployment.js",
+    "test:google": "node test-google-oauth.js",
 
     "reset:db": "node src/resetAndSeed.js",
     "cleanup:images": "node cleanupCrimeImages.js"

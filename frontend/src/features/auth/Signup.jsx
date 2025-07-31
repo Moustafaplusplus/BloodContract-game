@@ -97,7 +97,7 @@ export default function Signup() {
         message: "تم إنشاء الحساب بنجاح",
         type: "success"
       });
-      setTimeout(() => navigate("/dashboard"), 1500);
+      setTimeout(() => navigate("/intro"), 1500);
     } catch (err) {
       console.error(err);
       const errorMessage = extractErrorMessage(err);

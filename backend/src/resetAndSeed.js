@@ -1,34 +1,46 @@
 import { sequelize } from './config/db.js';
-import { User } from './models/User.js';
-import { Character } from './models/Character.js';
 import { getDefaultAvatarUrl } from './config/defaultAvatars.js';
+import { Gang } from './models/Gang.js';
 
-import { Statistic } from './models/Statistic.js';
-import { Crime, CrimeLog } from './models/Crime.js';
-import { Jail, Hospital } from './models/Confinement.js';
-import { Fight } from './models/Fight.js';
-import { BankAccount, BankTxn } from './models/Bank.js';
-import { InventoryItem } from './models/Inventory.js';
-import { Car } from './models/Car.js';
-import { House } from './models/House.js';
-import { Gang, GangMember, GangJoinRequest } from './models/Gang.js';
-import { Job, JobHistory } from './models/Job.js';
-import { JobDefinition } from './models/JobDefinition.js';
-import { BlackMarketListing } from './models/BlackMarketListing.js';
-import { BlackcoinTransaction, BlackcoinPackage } from './models/Blackcoin.js';
-import { MoneyPackage } from './models/MoneyPackage.js';
-import { Dog, UserDog } from './models/Dog.js';
-import { Message } from './models/Message.js';
-import { Friendship } from './models/Friendship.js';
-import { IpTracking } from './models/IpTracking.js';
-import { MinistryMission, UserMinistryMission } from './models/MinistryMission.js';
-import { Suggestion } from './models/Suggestion.js';
-import { GlobalMessage } from './models/GlobalMessage.js';
-import BloodContractFactory from './models/BloodContract.js';
-import { ProfileRating } from './models/ProfileRating.js';
-import { Task, UserTaskProgress } from './models/Task.js';
-import { Notification } from './models/Notification.js';
-import { SpecialItem } from './models/SpecialItem.js';
+// Import all models from the index file to ensure proper registration
+import {
+  User,
+  Character,
+  Statistic,
+  Crime,
+  CrimeLog,
+  Jail,
+  Hospital,
+  Fight,
+  BankAccount,
+  BankTxn,
+  InventoryItem,
+  Car,
+  House,
+  GangMember,
+  GangJoinRequest,
+  Job,
+  JobHistory,
+  BlackMarketListing,
+  BlackcoinTransaction,
+  BlackcoinPackage,
+  MoneyPackage,
+  Dog,
+  UserDog,
+  Message,
+  Friendship,
+  IpTracking,
+  MinistryMission,
+  UserMinistryMission,
+  Suggestion,
+  GlobalMessage,
+  BloodContract,
+  ProfileRating,
+  Task,
+  UserTaskProgress,
+  Notification,
+  SpecialItem
+} from './models/index.js';
 
 console.log('🚀 Starting complete database reset and seeding process...');
 
@@ -68,6 +80,18 @@ async function createAllTables() {
     
     // Force sync all models to create tables
     await sequelize.sync({ force: true });
+    
+    // Verify that BloodContract table was created
+    const queryInterface = sequelize.getQueryInterface();
+    const tables = await queryInterface.showAllTables();
+    const normalizedTables = tables.map(t => (typeof t === 'object' ? t.tableName : t)).map(t => t.toLowerCase());
+    
+    if (normalizedTables.includes('blood_contracts')) {
+      console.log('✅ BloodContract table created successfully');
+    } else {
+      console.warn('⚠️  BloodContract table not found in created tables');
+      console.log('📋 Created tables:', normalizedTables);
+    }
     
     console.log('✅ All tables created successfully');
   } catch (error) {

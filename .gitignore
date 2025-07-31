@@ -6,7 +6,7 @@ pnpm-lock.yaml
 # dotenv secrets
 .env
 
-# Docker volumes
+# Database data (if using local development)
 db_data/
 
 # VS Code settings

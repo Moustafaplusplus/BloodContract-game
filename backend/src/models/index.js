@@ -52,6 +52,11 @@ Statistic.belongsTo(Character, { foreignKey: 'userId' });
 User.hasMany(Suggestion, { foreignKey: 'userId' });
 Suggestion.belongsTo(User, { foreignKey: 'userId' });
 
+// BloodContract associations
+User.hasMany(BloodContract, { foreignKey: 'posterId', as: 'postedContracts' });
+User.hasMany(BloodContract, { foreignKey: 'targetId', as: 'targetedContracts' });
+User.hasMany(BloodContract, { foreignKey: 'assassinId', as: 'fulfilledContracts' });
+
 // After all models are initialized, set up associations
 if (BloodContract.associate) {
   BloodContract.associate({ User });
@@ -88,6 +93,8 @@ export {
   BankTxn,
   InventoryItem,
   Car,
+  House,
+  Gang,
   Job,
   JobHistory,
   BlackMarketListing,

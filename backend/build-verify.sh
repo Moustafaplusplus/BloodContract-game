@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build verification script for Docker
+# Build verification script for Railway deployment
 
 echo "🔍 Verifying build files..."
 
