@@ -26,7 +26,7 @@ const FEATURE_REQUIREMENTS = {
   cars: 18,
   blackMarket: 20,
   dogs: 21,
-  tasks: 23,
+  tasks: 1,
   ranking: 30,
 };
 

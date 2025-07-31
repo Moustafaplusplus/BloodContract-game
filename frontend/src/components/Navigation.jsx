@@ -315,7 +315,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
                         if (!isUnlocked) {
                           e.preventDefault();
                           // You can add a toast notification here
-                          alert(`هذه الميزة تتطلب المستوى ${item.feature === 'bloodContracts' ? 6 : item.feature === 'fights' ? 6 : item.feature === 'friends' ? 1 : item.feature === 'messages' ? 1 : item.feature === 'gangs' ? 10 : item.feature === 'ministryMissions' ? 5 : item.feature === 'bank' ? 11 : item.feature === 'specialShop' ? 1 : item.feature === 'houses' ? 16 : item.feature === 'cars' ? 18 : item.feature === 'blackMarket' ? 20 : item.feature === 'dogs' ? 21 : item.feature === 'tasks' ? 23 : item.feature === 'suggestions' ? 1 : item.feature === 'ranking' ? 30 : 1}`);
+                          alert(`هذه الميزة تتطلب المستوى ${item.feature === 'bloodContracts' ? 6 : item.feature === 'fights' ? 6 : item.feature === 'friends' ? 1 : item.feature === 'messages' ? 1 : item.feature === 'gangs' ? 10 : item.feature === 'ministryMissions' ? 5 : item.feature === 'bank' ? 11 : item.feature === 'specialShop' ? 1 : item.feature === 'houses' ? 16 : item.feature === 'cars' ? 18 : item.feature === 'blackMarket' ? 20 : item.feature === 'dogs' ? 21 : item.feature === 'tasks' ? 1 : item.feature === 'suggestions' ? 1 : item.feature === 'ranking' ? 30 : 1}`);
                         } else {
                           setIsOpen(false);
                         }

@@ -74,7 +74,7 @@ const CreateContract = ({ currentUserId, onContractCreated }) => {
         setPrice('');
         if (onContractCreated) onContractCreated();
       }
-    } catch {
+    } catch (error) {
       setError('حدث خطأ أثناء الاتصال بالخادم.');
     } finally {
       setLoading(false);

@@ -1,5 +1,13 @@
 // Utility function to extract error messages from API responses
 export const extractErrorMessage = (error) => {
+  // Handle confinement errors (403 status with specific error types)
+  if (error.response?.status === 403) {
+    const data = error.response.data;
+    if (data.type === 'hospital' || data.type === 'jail') {
+      return data.message || 'لا يمكن تنفيذ هذا الإجراء أثناء وجودك في المستشفى/السجن';
+    }
+  }
+  
   // Handle validation errors (new format)
   if (error.response?.data?.error === 'Validation failed' && error.response?.data?.details) {
     return error.response.data.details.join('\n');
@@ -34,6 +42,44 @@ export const handleApiError = (error, toast) => {
   const message = extractErrorMessage(error);
   toast.error(message);
   console.error('API Error:', error);
+};
+
+// Utility function to handle confinement errors specifically
+export const handleConfinementError = (error, toast) => {
+  if (error.response?.status === 403) {
+    const data = error.response.data;
+    if (data.type === 'hospital' || data.type === 'jail') {
+      // Show confinement-specific error with more details
+      const confinementMessage = data.type === 'hospital' 
+        ? 'لا يمكن تنفيذ هذا الإجراء أثناء وجودك في المستشفى'
+        : 'لا يمكن تنفيذ هذا الإجراء أثناء وجودك في السجن';
+      
+      toast.error(confinementMessage, {
+        duration: 5000,
+        position: 'top-center',
+        style: {
+          background: '#1f2937',
+          color: '#f87171',
+          border: '1px solid #dc2626'
+        }
+      });
+      
+      // Return confinement info for potential UI updates
+      return {
+        isConfinementError: true,
+        type: data.type,
+        message: data.message,
+        remainingSeconds: data.remainingSeconds,
+        cost: data.cost
+      };
+    }
+  }
+  
+  // Handle other errors normally
+  const message = extractErrorMessage(error);
+  toast.error(message);
+  console.error('API Error:', error);
+  return { isConfinementError: false };
 };
 
 // Enhanced email validation function

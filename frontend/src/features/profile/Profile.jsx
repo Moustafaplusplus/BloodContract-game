@@ -38,6 +38,7 @@ import MoneyIcon from "@/components/MoneyIcon";
 import { useSocket } from "@/hooks/useSocket";
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import { getImageUrl } from '@/utils/imageUtils.js';
+import { handleConfinementError } from '@/utils/errorHandler';
 
 function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   if (!fightResult) return null;
@@ -523,16 +524,24 @@ export default function Profile() {
           try {
             const data = await res.json();
             errorMsg = data.error || errorMsg;
-          } catch {
+            // Create error object with response data for confinement handling
+            const error = new Error(errorMsg);
+            error.response = { status: res.status, data: data };
+            throw error;
+          } catch (parseError) {
             let text = await res.text();
             try {
               const data = JSON.parse(text);
               errorMsg = data.error || errorMsg;
+              const error = new Error(errorMsg);
+              error.response = { status: res.status, data: data };
+              throw error;
             } catch {
-              errorMsg = text;
+              const error = new Error(errorMsg);
+              error.response = { status: res.status, data: { message: text } };
+              throw error;
             }
           }
-          throw new Error(errorMsg);
         }
         
         const result = await res.json();
@@ -551,16 +560,19 @@ export default function Profile() {
         
         // If it's the last attempt, show the error
         if (attempt === maxRetries) {
-          if (error.message?.includes("لا يمكنك الهجوم وأنت في المستشفى")) {
-            toast.error("لا يمكنك الهجوم وأنت في المستشفى. يجب عليك الانتظار حتى خروجك.");
-          } else if (error.message?.includes("لا يمكنك مهاجمة لاعب في المستشفى")) {
-            toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً.");
-          } else if (error.message?.includes("لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً")) {
-            toast.error("🛡️ لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً.");
-          } else if (error.message?.includes("Failed to fetch") || error.message?.includes("ERR_CONNECTION_REFUSED")) {
-            toast.error("فشل في الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
-          } else {
-            toast.error(error.message || "فشل في الهجوم");
+          const confinementResult = handleConfinementError(error, toast);
+          if (!confinementResult.isConfinementError) {
+            if (error.message?.includes("لا يمكنك الهجوم وأنت في المستشفى")) {
+              toast.error("لا يمكنك الهجوم وأنت في المستشفى. يجب عليك الانتظار حتى خروجك.");
+            } else if (error.message?.includes("لا يمكنك مهاجمة لاعب في المستشفى")) {
+              toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً.");
+            } else if (error.message?.includes("لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً")) {
+              toast.error("🛡️ لا يمكنك مهاجمة هذا اللاعب لأنه محمي من الهجمات حالياً.");
+            } else if (error.message?.includes("Failed to fetch") || error.message?.includes("ERR_CONNECTION_REFUSED")) {
+              toast.error("فشل في الاتصال بالخادم. يرجى المحاولة مرة أخرى.");
+            } else {
+              toast.error(error.message || "فشل في الهجوم");
+            }
           }
           break;
         }

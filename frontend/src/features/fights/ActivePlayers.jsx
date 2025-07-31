@@ -6,6 +6,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Sword, User, Clock, AlertTriangle } from 'lucide-react';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import VipName from '../profile/VipName.jsx';
+import { handleConfinementError } from '@/utils/errorHandler';
+import { toast } from 'react-toastify';
 
 const API = import.meta.env.VITE_API_URL;
 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
@@ -105,12 +107,20 @@ export default function ActivePlayers() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('فشل في الهجوم');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const error = new Error(errorData.message || 'فشل في الهجوم');
+        error.response = { status: res.status, data: errorData };
+        throw error;
+      }
       const result = await res.json();
       navigate('/dashboard/fight-result', { state: { fightResult: result } });
       refetch();
     } catch (e) {
-      alert(e.message || 'فشل في الهجوم');
+      const confinementResult = handleConfinementError(e, toast);
+      if (!confinementResult.isConfinementError) {
+        toast.error(e.message || 'فشل في الهجوم');
+      }
     } finally {
       setAttacking(null);
     }

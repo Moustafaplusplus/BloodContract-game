@@ -31,7 +31,7 @@ export const FEATURE_UNLOCKS = {
 
   // Advanced Features (Level 21-30)
   dogs: { level: 21, name: "الكلاب" },
-  tasks: { level: 23, name: "المهام" },
+  tasks: { level: 1, name: "المهام" },
   ranking: { level: 30, name: "تصنيف اللاعبين" },
 };
 

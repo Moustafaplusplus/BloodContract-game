@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "react-toastify";
-import { extractErrorMessage } from "@/utils/errorHandler";
+import { extractErrorMessage, handleConfinementError } from "@/utils/errorHandler";
 import { useModalManager } from "@/hooks/useModalManager";
 import { getImageUrl, handleImageError } from "@/utils/imageUtils";
 
@@ -188,9 +188,12 @@ export default function Crimes() {
     },
     onError: (err) => {
       fetchStatuses();
-      const message = extractErrorMessage(err);
-      if (err.response?.cooldownLeft) setCooldownLeft(err.response.cooldownLeft);
-      toast.error(message || "فشل تنفيذ الجريمة");
+      const confinementResult = handleConfinementError(err, toast);
+      if (!confinementResult.isConfinementError) {
+        const message = extractErrorMessage(err);
+        if (err.response?.cooldownLeft) setCooldownLeft(err.response.cooldownLeft);
+        toast.error(message || "فشل تنفيذ الجريمة");
+      }
     },
   });
 
