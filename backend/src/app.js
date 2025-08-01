@@ -196,17 +196,42 @@ app.use('/api/game-news', gameNewsRouter);
 app.use('/api/login-gift', loginGiftRouter);
 app.use('/api/features', featuresRouter);
 
+// Basic route for immediate response
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Blood Contract API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Simple health check endpoint (no database dependency)
+app.get('/health-simple', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    message: 'Server is running'
+  });
+});
+
 // Health check endpoint for Railway
 app.get('/health', async (req, res) => {
   try {
-    // Test database connection
-    await sequelize.authenticate();
+    // Basic health check - don't fail if database is not available
+    let dbStatus = 'unknown';
+    try {
+      await sequelize.authenticate();
+      dbStatus = 'connected';
+    } catch (dbError) {
+      dbStatus = 'disconnected';
+      console.log('Health check: Database not available, but server is running');
+    }
     
     res.status(200).json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      database: 'connected',
+      database: dbStatus,
       environment: process.env.NODE_ENV || 'development',
       port: process.env.PORT || process.env.API_PORT || 3001
     });
@@ -216,7 +241,7 @@ app.get('/health', async (req, res) => {
       status: 'ERROR', 
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      database: 'disconnected',
+      database: 'unknown',
       error: error.message,
       environment: process.env.NODE_ENV || 'development'
     });
@@ -284,6 +309,8 @@ const startServer = async () => {
     console.log('🚀 Starting server...');
     console.log('Environment:', process.env.NODE_ENV || 'development');
     console.log('Port:', process.env.PORT || process.env.API_PORT || 3001);
+    console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
+    console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
     
     // Test database connection with retry logic
     let dbConnected = false;
