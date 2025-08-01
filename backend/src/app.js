@@ -8,8 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
-import passport from 'passport';
-import session from 'express-session';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -87,7 +86,7 @@ import tasksRouter from './routes/tasks.js';
 import authRouter from './routes/auth.js';
 import notificationRouter from './routes/notifications.js';
 
-import { configurePassport } from './config/passport.js';
+
 import gameNewsRouter from './routes/gameNews.js';
 import loginGiftRouter from './routes/loginGift.js';
 import featuresRouter from './routes/features.js';
@@ -138,12 +137,7 @@ app.use(session({
   }
 }));
 
-// Initialize passport
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Configure passport strategies
-configurePassport();
+// Firebase Auth is now handled by the frontend
 
 app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
 

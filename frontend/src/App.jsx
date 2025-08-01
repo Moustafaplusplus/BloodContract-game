@@ -9,7 +9,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { FirebaseAuthProvider, useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -78,8 +78,8 @@ const queryClient = new QueryClient({
 });
 
 function PrivateRoute({ children }) {
-  const { tokenLoaded, isAuthed } = useAuth();
-  if (!tokenLoaded) {
+  const { loading, user } = useFirebaseAuth();
+  if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-black">
         <div className="text-center">
@@ -89,23 +89,23 @@ function PrivateRoute({ children }) {
       </div>
     );
   }
-  return isAuthed ? children : <Navigate to="/" replace />;
+  return user ? children : <Navigate to="/" replace />;
 }
 
 function IntroCheckWrapper({ children }) {
-  const { token, isAuthed } = useAuth();
+  const { user } = useFirebaseAuth();
   const [shouldShowIntro, setShouldShowIntro] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (!isAuthed || !token) {
+    if (!user) {
       setLoading(false);
       return;
     }
 
     // Don't automatically show intro - let user choose
     setLoading(false);
-  }, [token, isAuthed]);
+  }, [user]);
 
   if (loading) {
     return (
@@ -126,57 +126,36 @@ function IntroCheckWrapper({ children }) {
 }
 
 function HUDWrapper() {
-  const { token } = useAuth();
+  const { user } = useFirebaseAuth();
   const queryClient = useQueryClient();
   
-  // Create a key that changes when the user changes (based on token)
-  const hudKey = token ? (() => {
-    try {
-      const { id } = jwtDecode(token);
-      return `hud-${id}`;
-    } catch {
-      return 'hud-no-user';
-    }
-  })() : 'hud-no-user';
+  // Create a key that changes when the user changes (based on user ID)
+  const hudKey = user ? `hud-${user.uid}` : 'hud-no-user';
   
   // Global cache invalidation when user changes
   React.useEffect(() => {
-    if (token) {
-      try {
-        const { id } = jwtDecode(token);
-
-        // Clear all character-related queries to ensure fresh data
-        queryClient.removeQueries(["character"]);
-        queryClient.removeQueries(["hospitalStatus"]);
-        queryClient.removeQueries(["profile"]);
-        // Force refetch of all character data
-        queryClient.invalidateQueries(["character"]);
-        queryClient.invalidateQueries(["hospitalStatus"]);
-        queryClient.invalidateQueries(["profile"]);
-      } catch (error) {
-        console.error('[App] Error decoding token:', error);
-      }
+    if (user) {
+      // Clear all character-related queries to ensure fresh data
+      queryClient.removeQueries(["character"]);
+      queryClient.removeQueries(["hospitalStatus"]);
+      queryClient.removeQueries(["profile"]);
+      // Force refetch of all character data
+      queryClient.invalidateQueries(["character"]);
+      queryClient.invalidateQueries(["hospitalStatus"]);
+      queryClient.invalidateQueries(["profile"]);
     } else {
-      
       queryClient.clear();
     }
-  }, [token, queryClient]);
+  }, [user, queryClient]);
   
   return <HUD key={hudKey} />;
 }
 
 function HomeWrapper() {
-  const { token } = useAuth();
+  const { user } = useFirebaseAuth();
   
-  // Create a key that changes when the user changes (based on token)
-  const homeKey = token ? (() => {
-    try {
-      const { id } = jwtDecode(token);
-      return `home-${id}`;
-    } catch {
-      return 'home-no-user';
-    }
-  })() : 'home-no-user';
+  // Create a key that changes when the user changes (based on user ID)
+  const homeKey = user ? `home-${user.uid}` : 'home-no-user';
   
   return <Home key={homeKey} />;
 }
@@ -185,7 +164,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
+        <FirebaseAuthProvider>
           <ModalProvider>
             <SocketProvider>
               <FamePopupProvider>
@@ -299,7 +278,7 @@ export default function App() {
           </FamePopupProvider>
         </SocketProvider>
       </ModalProvider>
-    </AuthProvider>
+              </FirebaseAuthProvider>
   </ThemeProvider>
 </QueryClientProvider>
 );

@@ -8,6 +8,15 @@ import { getRealIpAddress } from '../utils/ipUtils.js';
 export class UserService {
   static SECRET = process.env.JWT_SECRET;
   
+  // Generate custom token for Firebase users
+  static generateCustomToken(userId, firebaseUid) {
+    return jwt.sign(
+      { id: userId, firebaseUid },
+      this.SECRET,
+      { expiresIn: '7d' }
+    );
+  }
+  
   static makeCharacterDefaults(user) {
     return { userId: user.id, name: user.username };
   }

@@ -86,7 +86,11 @@ export async function auth(req, res, next) {
       console.error('Failed to track IP:', e);
     }
 
-    req.user = { id: decoded.id, characterId: decoded.characterId };
+    req.user = { 
+      id: decoded.id, 
+      characterId: decoded.characterId,
+      firebaseUid: decoded.firebaseUid 
+    };
     
     // Update lastActive for the user's character
     if (decoded.id) {

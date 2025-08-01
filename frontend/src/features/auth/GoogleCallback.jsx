@@ -1,36 +1,25 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useBackgroundMusicContext } from '@/contexts/BackgroundMusicContext';
 import { Target } from 'lucide-react';
 
 export default function GoogleCallback() {
-  const [searchParams] = useSearchParams();
-  const { setToken } = useAuth();
+  const { user, loading } = useFirebaseAuth();
   const { play } = useBackgroundMusicContext();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const isNewUser = searchParams.get('isNewUser') === 'true';
-    
-    if (token) {
-      // Store the token
-      setToken(token);
-      
-      // Background music will start after user interaction
-      
-      // Redirect based on whether user is new or existing
-      if (isNewUser) {
-        navigate('/intro');
-      } else {
+    if (!loading) {
+      if (user) {
+        // User is authenticated, redirect to dashboard
         navigate('/dashboard');
+      } else {
+        // No user, redirect to login
+        navigate('/login');
       }
-    } else {
-      // No token received, redirect to login
-      navigate('/login');
     }
-  }, [searchParams, setToken, navigate]);
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black">

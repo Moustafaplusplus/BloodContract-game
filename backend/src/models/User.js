@@ -61,7 +61,13 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  // Google OAuth fields
+  // Firebase Auth fields
+  firebaseUid: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: true
+  },
+  // Legacy Google OAuth fields (for migration)
   googleId: {
     type: DataTypes.STRING,
     unique: true,
