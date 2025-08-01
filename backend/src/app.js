@@ -197,13 +197,30 @@ app.use('/api/login-gift', loginGiftRouter);
 app.use('/api/features', featuresRouter);
 
 // Health check endpoint for Railway
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: 'connected'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    await sequelize.authenticate();
+    
+    res.status(200).json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected',
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || process.env.API_PORT || 3001
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'ERROR', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'disconnected',
+      error: error.message,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
 });
 
 // Performance monitoring endpoint
@@ -265,39 +282,81 @@ const PORT = process.env.PORT || process.env.API_PORT || 3001;
 const startServer = async () => {
   try {
     console.log('🚀 Starting server...');
+    console.log('Environment:', process.env.NODE_ENV || 'development');
+    console.log('Port:', process.env.PORT || process.env.API_PORT || 3001);
     
-    // Test database connection
-    await sequelize.authenticate();
-    console.log('🗄️  Database connection: OK');
+    // Test database connection with retry logic
+    let dbConnected = false;
+    let retryCount = 0;
+    const maxRetries = 5;
+    
+    while (!dbConnected && retryCount < maxRetries) {
+      try {
+        console.log(`🗄️  Attempting database connection (attempt ${retryCount + 1}/${maxRetries})...`);
+        await sequelize.authenticate();
+        dbConnected = true;
+        console.log('🗄️  Database connection: OK');
+      } catch (dbError) {
+        retryCount++;
+        console.error(`❌ Database connection failed (attempt ${retryCount}/${maxRetries}):`, dbError.message);
+        
+        if (retryCount < maxRetries) {
+          console.log(`⏳ Retrying in 5 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else {
+          console.error('❌ Max database connection retries reached. Starting server anyway...');
+        }
+      }
+    }
 
-    // Sync database with models
-    await sequelize.sync({ alter: true });
-    console.log('📦 Database synced ✅');
+    // Sync database with models (only if connected)
+    if (dbConnected) {
+      try {
+        await sequelize.sync({ alter: true });
+        console.log('📦 Database synced ✅');
+      } catch (syncError) {
+        console.error('❌ Database sync failed:', syncError.message);
+        console.log('⚠️  Continuing without database sync...');
+      }
+    }
 
     // Create HTTP server
     const server = http.createServer(app);
     
     // Initialize Socket.IO
-    const io = initSocket(server);
-    app.set('io', io);
-    console.log('🔌 Socket.IO initialized ✅');
+    try {
+      const io = initSocket(server);
+      app.set('io', io);
+      console.log('🔌 Socket.IO initialized ✅');
+    } catch (socketError) {
+      console.error('❌ Socket.IO initialization failed:', socketError.message);
+      console.log('⚠️  Continuing without Socket.IO...');
+    }
 
-    // Start background jobs
-    startEnergyRegen();
-    startHealthRegen();
-    startBankInterest();
-    startJobPayouts();
-    startJailRelease();
-    startHospitalRelease();
-    startContractExpirationJob();
-    console.log('⚙️  Background jobs started ✅');
-
-    
+    // Start background jobs (only if database is connected)
+    if (dbConnected) {
+      try {
+        startEnergyRegen();
+        startHealthRegen();
+        startBankInterest();
+        startJobPayouts();
+        startJailRelease();
+        startHospitalRelease();
+        startContractExpirationJob();
+        console.log('⚙️  Background jobs started ✅');
+      } catch (jobError) {
+        console.error('❌ Background jobs failed to start:', jobError.message);
+        console.log('⚠️  Continuing without background jobs...');
+      }
+    } else {
+      console.log('⚠️  Skipping background jobs due to database connection issues');
+    }
 
     // Start listening
     server.listen(PORT, () => {
       console.log(`✅ Server listening on http://localhost:${PORT}`);
       console.log('🎮 Blood Contract backend is ready!');
+      console.log(`🔗 Health check available at: http://localhost:${PORT}/health`);
     });
     
     // Graceful shutdown
@@ -311,6 +370,7 @@ const startServer = async () => {
     
   } catch (err) {
     console.error('❌ Server start error:', err);
+    console.error('Stack trace:', err.stack);
     process.exit(1);
   }
 };
