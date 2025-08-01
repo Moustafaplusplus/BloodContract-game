@@ -8,7 +8,8 @@
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
     "verify": "node verify-deployment.js",
-    "reset:db": "node src/resetAndSeed.js"
+    "reset:db": "node src/resetAndSeed.js",
+    "seed": "node seed-all.js"
   },
   "keywords": [],
   "author": "",

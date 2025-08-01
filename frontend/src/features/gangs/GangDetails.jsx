@@ -20,18 +20,18 @@ import {
   UserCheck,
   UserX
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
 import VipName from '../profile/VipName.jsx';
 import '../profile/vipSparkle.css';
 
 export default function GangDetails({ gang, onRefresh }) {
-  const { isAuthed, tokenLoaded } = useAuth();
+  const { user, loading } = useFirebaseAuth();
   const [board, setBoard] = useState(gang.board);
   const [editingBoard, setEditingBoard] = useState(false);
 
   const [vault, setVault] = useState(gang.money);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [donateAmount, setDonateAmount] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [transferTarget, setTransferTarget] = useState('');
@@ -47,7 +47,7 @@ export default function GangDetails({ gang, onRefresh }) {
   // Get current user data and check membership
   useEffect(() => {
     // Wait for auth to be loaded before making any requests
-    if (!tokenLoaded) {
+    if (loading) {
       return;
     }
 
@@ -82,10 +82,10 @@ export default function GangDetails({ gang, onRefresh }) {
       }
     };
 
-    if (isAuthed) {
+    if (user) {
       getCurrentUser();
     }
-  }, [gang.GangMembers, isAuthed, tokenLoaded]);
+  }, [gang.GangMembers, user, loading]);
 
     // Check user's role in the gang
   const isMember = !!userMember;
@@ -118,7 +118,7 @@ export default function GangDetails({ gang, onRefresh }) {
   }, 0) || 0;
 
   const saveBoard = async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('jwt');
@@ -129,13 +129,13 @@ export default function GangDetails({ gang, onRefresh }) {
     } catch (err) {
       setError(err.response?.data?.error || 'فشل حفظ اللوحة');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const leaveGang = async () => {
     if (!window.confirm('هل أنت متأكد من مغادرة العصابة؟')) return;
-    setLoading(true);
+    setIsLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('jwt');
@@ -145,13 +145,13 @@ export default function GangDetails({ gang, onRefresh }) {
     } catch (err) {
       setError(err.response?.data?.error || 'فشل مغادرة العصابة');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const donateToVault = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError('');
     try {
       const amount = parseInt(donateAmount, 10);
@@ -164,13 +164,13 @@ export default function GangDetails({ gang, onRefresh }) {
     } catch (err) {
       setError(err.response?.data?.error || 'فشل التبرع');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const transferFromVault = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError('');
     try {
       const amount = parseInt(transferAmount, 10);
@@ -185,7 +185,7 @@ export default function GangDetails({ gang, onRefresh }) {
     } catch (err) {
       setError(err.response?.data?.error || 'فشل التحويل');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -374,12 +374,12 @@ export default function GangDetails({ gang, onRefresh }) {
                     placeholder="المبلغ"
                     value={donateAmount}
                     onChange={e => setDonateAmount(e.target.value)}
-                    disabled={loading}
+                    disabled={isLoading}
                   />
                   <button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-accent-green to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-bold transition-all duration-300 disabled:opacity-50"
-                    disabled={loading}
+                    disabled={isLoading}
                   >
                     تبرع للخزنة
                   </button>
@@ -395,7 +395,7 @@ export default function GangDetails({ gang, onRefresh }) {
                   <button
                     className="w-full bg-gradient-to-r from-accent-red to-red-600 hover:from-red-600 hover:to-red-700 text-white py-3 px-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center gap-2"
                     onClick={leaveGang}
-                    disabled={loading}
+                    disabled={isLoading}
                   >
                     <LogOut className="w-4 h-4" />
                     مغادرة العصابة
@@ -542,20 +542,20 @@ export default function GangDetails({ gang, onRefresh }) {
                   onChange={e => setBoard(e.target.value)}
                   rows={4}
                   placeholder="اكتب رسالة لأعضاء العصابة..."
-                  disabled={loading}
+                  disabled={isLoading}
                 />
                 <div className="flex gap-3">
                   <button 
                     className="bg-gradient-to-r from-accent-purple to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-bold transition-all duration-300 disabled:opacity-50"
                     onClick={saveBoard}
-                    disabled={loading}
+                    disabled={isLoading}
                   >
-                    {loading ? 'جاري الحفظ...' : 'حفظ'}
+                    {isLoading ? 'جاري الحفظ...' : 'حفظ'}
                   </button>
                   <button 
                     className="bg-hitman-700 hover:bg-hitman-600 text-white px-6 py-2 rounded-lg font-bold transition-all duration-300"
                     onClick={() => setEditingBoard(false)}
-                    disabled={loading}
+                    disabled={isLoading}
                   >
                     إلغاء
                   </button>
@@ -595,7 +595,7 @@ export default function GangDetails({ gang, onRefresh }) {
                       className="w-full p-3 rounded-lg bg-hitman-800 border border-hitman-600 text-white focus:outline-none focus:ring-2 focus:ring-accent-green"
                       value={transferTarget}
                       onChange={e => setTransferTarget(e.target.value)}
-                      disabled={loading || gang.GangMembers?.length === 0}
+                      disabled={isLoading || gang.GangMembers?.length === 0}
                     >
                       <option value="">اختر عضوًا</option>
                       {gang.GangMembers?.map(m => (
@@ -611,13 +611,13 @@ export default function GangDetails({ gang, onRefresh }) {
                       placeholder="المبلغ"
                       value={transferAmount}
                       onChange={e => setTransferAmount(e.target.value)}
-                      disabled={loading}
+                      disabled={isLoading}
                     />
                   </div>
                   <button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-accent-green to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-bold transition-all duration-300 disabled:opacity-50"
-                    disabled={loading || gang.GangMembers?.length === 0}
+                    disabled={isLoading || gang.GangMembers?.length === 0}
                   >
                     تحويل المال
                   </button>

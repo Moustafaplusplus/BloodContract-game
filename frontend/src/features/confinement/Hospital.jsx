@@ -1,10 +1,10 @@
 /* ========================================================================
  *  Hospital.jsx – refactored with modern hitman theme
  * =======================================================================*/
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
 import { Heart, Clock, AlertTriangle, CheckCircle, Activity, RefreshCw, Users } from "lucide-react";
 import MoneyIcon from "@/components/MoneyIcon";
@@ -12,22 +12,22 @@ import axios from "axios";
 import { useSocket } from "@/hooks/useSocket";
 
 export default function Hospital() {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { invalidateHud, loading } = useHud();
   const navigate = useNavigate();
   const { socket } = useSocket();
 
   const [hospitalStatus, setHospitalStatus] = useState(null);
   const [remainingTime, setRemainingTime] = useState(0);
-  const [totalTime, setTotalTime] = useState(null);
+  const [initialTotalTime, setInitialTotalTime] = useState(null);
   const [loadingHeal, setLoadingHeal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hospitalCount, setHospitalCount] = useState(null);
 
   // Fetch hospital status on mount and after actions
-  const fetchHospitalStatus = async () => {
-    if (!token) {
+  const fetchHospitalStatus = useCallback(async () => {
+    if (!customToken) {
       navigate("/login");
       return;
     }
@@ -45,19 +45,33 @@ export default function Hospital() {
         const remaining = data.remainingSeconds;
         
         // Calculate total time from startedAt and releasedAt for progress bar
-        let total = remaining;
+        let total = 600; // Default 10 minutes if no backend data
         if (data.releaseAt && data.startedAt) {
           const releaseAt = new Date(data.releaseAt).getTime();
           const startedAt = new Date(data.startedAt).getTime();
           total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
         }
         
-        setTotalTime(total);
+        // Debug: Let's see what the backend is actually sending
+        console.log('Backend Hospital Data:', {
+          remainingSeconds: data.remainingSeconds,
+          releaseAt: data.releaseAt,
+          startedAt: data.startedAt,
+          calculatedTotal: total,
+          originalDuration: data.originalDuration || 'not provided'
+        });
+        
+
+        
+        // Always update the total time from backend data to ensure accuracy
+        setInitialTotalTime(total);
         setRemainingTime(remaining);
       } else {
-        // Not in hospital, reset everything
-        setTotalTime(null);
-        setRemainingTime(0);
+        // Not in hospital, reset everything only if we were previously in hospital
+        if (hospitalStatus?.inHospital) {
+          setInitialTotalTime(null);
+          setRemainingTime(0);
+        }
       }
     } catch (error) {
       console.error("Hospital fetch error:", error);
@@ -67,11 +81,11 @@ export default function Hospital() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [customToken, navigate, hospitalStatus?.inHospital]);
 
   useEffect(() => {
     fetchHospitalStatus();
-  }, [token, navigate]);
+  }, [fetchHospitalStatus]);
 
   // Fetch hospital count immediately on mount
   useEffect(() => {
@@ -82,13 +96,14 @@ export default function Hospital() {
 
   // Update timer
   useEffect(() => {
-    if (hospitalStatus?.inHospital && totalTime && remainingTime > 0) {
+    if (hospitalStatus?.inHospital && initialTotalTime && remainingTime > 0) {
       const timer = setInterval(() => {
         setRemainingTime(prev => {
           const newRemaining = prev - 1;
           if (newRemaining <= 0) {
             clearInterval(timer);
-            fetchHospitalStatus();
+            // Fetch updated status when timer reaches zero
+            setTimeout(() => fetchHospitalStatus(), 100);
             return 0;
           }
           return newRemaining;
@@ -96,23 +111,30 @@ export default function Hospital() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [hospitalStatus?.inHospital, totalTime, remainingTime]);
+  }, [hospitalStatus?.inHospital, initialTotalTime]);
 
   // Real-time updates for hospital status and count
   useEffect(() => {
     if (!socket) return;
-    const fetchAll = () => {
-      fetchHospitalStatus();
-      // Fetch count
-      axios.get("/api/confinement/hospital/count").then(res => setHospitalCount(res.data.count)).catch(() => setHospitalCount(null));
+    
+    const fetchAll = async () => {
+      try {
+        await fetchHospitalStatus();
+        // Fetch count
+        const countResponse = await axios.get("/api/confinement/hospital/count");
+        setHospitalCount(countResponse.data.count);
+      } catch (error) {
+        console.error("Error in real-time update:", error);
+        // Don't show toast for background updates to avoid spam
+      }
     };
+    
     socket.on('hospital:update', fetchAll);
-    const pollInterval = setInterval(fetchAll, 10000);
+    
     return () => {
       socket.off('hospital:update', fetchAll);
-      clearInterval(pollInterval);
     };
-  }, [socket]);
+  }, [socket, fetchHospitalStatus]);
 
   // Format time display (copied from Profile.jsx)
   function formatTime(seconds) {
@@ -124,8 +146,19 @@ export default function Hospital() {
 
   // Calculate progress percentage
   const getProgressPercentage = () => {
-    if (!hospitalStatus?.inHospital || !totalTime) return 0;
-    return Math.max(0, Math.min(100, ((totalTime - remainingTime) / totalTime) * 100));
+    if (!hospitalStatus?.inHospital || !initialTotalTime) return 0;
+    return Math.max(0, Math.min(100, ((initialTotalTime - remainingTime) / initialTotalTime) * 100));
+  };
+
+  // Calculate dynamic heal cost based on remaining time
+  const getDynamicHealCost = () => {
+    if (!hospitalStatus?.inHospital || !remainingTime) return 0;
+    
+    // Cost is 100 per minute remaining
+    const minutesRemaining = Math.ceil(remainingTime / 60);
+    const costPerMinute = 100;
+    
+    return minutesRemaining * costPerMinute;
   };
 
   // Heal out handler
@@ -141,12 +174,24 @@ export default function Hospital() {
       const result = res.data;
       setHospitalStatus({ inHospital: false });
       setRemainingTime(0);
+      setInitialTotalTime(null);
       invalidateHud?.();
               toast.success(`تم الشفاء بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful healing
       navigate("/dashboard");
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message || "فشل في الشفاء");
+      const errorMessage = err.response?.data?.error || err.message;
+      
+      // Check for specific error types
+      if (errorMessage?.includes('insufficient') || errorMessage?.includes('money') || errorMessage?.includes('funds')) {
+        toast.error("لا تملك مالاً كافياً للشفاء السريع");
+      } else if (errorMessage?.includes('not in hospital')) {
+        toast.error("أنت لست في المستشفى");
+      } else if (errorMessage?.includes('Heal failed') || errorMessage?.includes('failed')) {
+        toast.error("فشل في الشفاء - تحقق من رصيدك");
+      } else {
+        toast.error(errorMessage || "فشل في الشفاء");
+      }
     } finally {
       setLoadingHeal(false);
     }
@@ -260,9 +305,12 @@ export default function Hospital() {
                 <div className="text-center">
                   <div className="text-3xl font-bold text-accent-green mb-2 flex items-center justify-center gap-2">
                     <MoneyIcon className="w-10 h-10" />
-                    {hospitalStatus.cost?.toLocaleString() || 0}
+                    {getDynamicHealCost().toLocaleString()}
                   </div>
-                  <p className="text-hitman-300 text-sm mb-4">تكلفة الشفاء السريع</p>
+                  <p className="text-hitman-300 text-sm mb-4">
+                    تكلفة الشفاء السريع 
+                    <span className="text-accent-yellow text-xs mr-1">(تتغير مع الوقت)</span>
+                  </p>
                   <button
                     onClick={handleHealOut}
                     disabled={loadingHeal || loading}

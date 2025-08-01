@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth.jsx';
+import { useFirebaseAuth } from '../../hooks/useFirebaseAuth.jsx';
 import MoneyIcon from '@/components/MoneyIcon';
 
 const MinistryMission = () => {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const [missions, setMissions] = useState([]);
   const [selectedMission, setSelectedMission] = useState(null);
   const [currentPage, setCurrentPage] = useState("start");
@@ -20,7 +20,7 @@ const MinistryMission = () => {
   }, []);
 
   const fetchMissions = async () => {
-    if (!token) {
+    if (!customToken) {
       setError('يجب تسجيل الدخول أولاً');
       setLoading(false);
       return;
@@ -30,7 +30,7 @@ const MinistryMission = () => {
       setLoading(true);
       const response = await fetch('/api/ministry-missions/list', {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${customToken}`
         }
       });
       
@@ -53,7 +53,7 @@ const MinistryMission = () => {
       // Fetch the full mission data including pages and endings
       const response = await fetch(`/api/ministry-missions/${mission.missionId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${customToken}`
         }
       });
       
@@ -96,7 +96,7 @@ const MinistryMission = () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${customToken}`
             },
             body: JSON.stringify({
               missionId: selectedMission.missionId,

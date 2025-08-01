@@ -129,6 +129,16 @@ export class CharacterService {
   }
 
   static async addStat(userId, field, delta = 1, transaction = null) {
+    // Ensure character exists before creating statistics
+    const character = await Character.findOne({ where: { userId }, transaction });
+    if (!character) {
+      // Create character if it doesn't exist
+      await Character.create({ 
+        userId, 
+        name: `User${userId}` // Default name, can be updated later
+      }, { transaction });
+    }
+    
     let stat = await Statistic.findOne({ where: { userId }, transaction });
     if (!stat) {
       stat = await Statistic.create({ userId }, { transaction });

@@ -1,10 +1,10 @@
 /* ========================================================================
  *  Jail.jsx – refactored with modern hitman theme (restored)
  * =======================================================================*/
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
 import { Lock, Clock, AlertTriangle, CheckCircle, RefreshCw, Users } from "lucide-react";
 import MoneyIcon from "@/components/MoneyIcon";
@@ -12,22 +12,22 @@ import axios from "axios";
 import { useSocket } from "@/hooks/useSocket";
 
 export default function Jail() {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { invalidateHud, loading } = useHud();
   const navigate = useNavigate();
   const { socket } = useSocket();
 
   const [jailStatus, setJailStatus] = useState(null);
   const [remainingTime, setRemainingTime] = useState(0);
-  const [totalTime, setTotalTime] = useState(null);
+  const [initialTotalTime, setInitialTotalTime] = useState(null);
   const [loadingBail, setLoadingBail] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [jailCount, setJailCount] = useState(null);
 
   // Fetch jail status on mount and after actions
-  const fetchJailStatus = async () => {
-    if (!token) {
+  const fetchJailStatus = useCallback(async () => {
+    if (!customToken) {
       navigate("/login");
       return;
     }
@@ -40,16 +40,27 @@ export default function Jail() {
       const data = response.data;
               // Jail status fetched successfully
       setJailStatus(data);
-      if (data.inJail && data.releaseAt && data.startedAt) {
-        const releaseAt = new Date(data.releaseAt).getTime();
-        const startedAt = new Date(data.startedAt).getTime();
-        const now = Date.now();
-        const total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
-        setTotalTime(total);
-        setRemainingTime(Math.max(0, Math.round((releaseAt - now) / 1000)));
-      } else if (data.inJail && data.remainingSeconds) {
-        setTotalTime(data.remainingSeconds);
-        setRemainingTime(data.remainingSeconds);
+      if (data.inJail && data.remainingSeconds) {
+        // Use the remainingSeconds directly from backend (most accurate)
+        const remaining = data.remainingSeconds;
+        
+        // Calculate total time from startedAt and releasedAt for progress bar
+        let total = 600; // Default 10 minutes if no backend data
+        if (data.releaseAt && data.startedAt) {
+          const releaseAt = new Date(data.releaseAt).getTime();
+          const startedAt = new Date(data.startedAt).getTime();
+          total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
+        }
+        
+        // Always update the total time from backend data to ensure accuracy
+        setInitialTotalTime(total);
+        setRemainingTime(remaining);
+      } else {
+        // Not in jail, reset everything only if we were previously in jail
+        if (jailStatus?.inJail) {
+          setInitialTotalTime(null);
+          setRemainingTime(0);
+        }
       }
     } catch (error) {
       console.error("Jail fetch error:", error);
@@ -59,21 +70,37 @@ export default function Jail() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [customToken, navigate, jailStatus?.inJail]);
 
   useEffect(() => {
     fetchJailStatus();
-  }, [token, navigate]);
+  }, [fetchJailStatus]);
+
+  // Fetch jail count immediately on mount
+  useEffect(() => {
+    const fetchJailCount = async () => {
+      try {
+        const response = await axios.get("/api/confinement/jail/count");
+        setJailCount(response.data.count);
+      } catch (error) {
+        console.error("Error fetching jail count:", error);
+        setJailCount(null);
+      }
+    };
+    
+    fetchJailCount();
+  }, []);
 
   // Update timer
   useEffect(() => {
-    if (jailStatus?.inJail && totalTime && remainingTime > 0) {
+    if (jailStatus?.inJail && initialTotalTime && remainingTime > 0) {
       const timer = setInterval(() => {
         setRemainingTime(prev => {
           const newRemaining = prev - 1;
           if (newRemaining <= 0) {
             clearInterval(timer);
-            fetchJailStatus();
+            // Fetch updated status when timer reaches zero
+            setTimeout(() => fetchJailStatus(), 100);
             return 0;
           }
           return newRemaining;
@@ -81,23 +108,30 @@ export default function Jail() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [jailStatus?.inJail, totalTime, remainingTime]);
+  }, [jailStatus?.inJail, initialTotalTime]);
 
   // Real-time updates for jail status and count
   useEffect(() => {
     if (!socket) return;
-    const fetchAll = () => {
-      fetchJailStatus();
-      // Fetch count
-      axios.get("/api/confinement/jail/count").then(res => setJailCount(res.data.count)).catch(() => setJailCount(null));
+    
+    const fetchAll = async () => {
+      try {
+        await fetchJailStatus();
+        // Fetch count
+        const countResponse = await axios.get("/api/confinement/jail/count");
+        setJailCount(countResponse.data.count);
+      } catch (error) {
+        console.error("Error in real-time update:", error);
+        // Don't show toast for background updates to avoid spam
+      }
     };
+    
     socket.on('jail:update', fetchAll);
-    const pollInterval = setInterval(fetchAll, 10000);
+    
     return () => {
       socket.off('jail:update', fetchAll);
-      clearInterval(pollInterval);
     };
-  }, [socket]);
+  }, [socket, fetchJailStatus]);
 
   // Format time display (copied from Profile.jsx)
   function formatTime(seconds) {
@@ -109,8 +143,19 @@ export default function Jail() {
 
   // Calculate progress percentage
   const getProgressPercentage = () => {
-    if (!jailStatus?.inJail || !totalTime) return 0;
-    return Math.max(0, Math.min(100, ((totalTime - remainingTime) / totalTime) * 100));
+    if (!jailStatus?.inJail || !initialTotalTime) return 0;
+    return Math.max(0, Math.min(100, ((initialTotalTime - remainingTime) / initialTotalTime) * 100));
+  };
+
+  // Calculate dynamic bail cost based on remaining time
+  const getDynamicBailCost = () => {
+    if (!jailStatus?.inJail || !remainingTime) return 0;
+    
+    // Cost is 100 per minute remaining
+    const minutesRemaining = Math.ceil(remainingTime / 60);
+    const costPerMinute = 100;
+    
+    return minutesRemaining * costPerMinute;
   };
 
   // Bail out handler
@@ -125,12 +170,24 @@ export default function Jail() {
       const result = res.data;
       setJailStatus({ inJail: false });
       setRemainingTime(0);
+      setInitialTotalTime(null);
       invalidateHud?.();
               toast.success(`تم الإفراج بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful bailing
       navigate("/dashboard");
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message || "فشل في الإفراج");
+      const errorMessage = err.response?.data?.error || err.message;
+      
+      // Check for specific error types
+      if (errorMessage?.includes('insufficient') || errorMessage?.includes('money') || errorMessage?.includes('funds')) {
+        toast.error("لا تملك مالاً كافياً للإفراج بكفالة");
+      } else if (errorMessage?.includes('not in jail')) {
+        toast.error("أنت لست في السجن");
+      } else if (errorMessage?.includes('Bail failed') || errorMessage?.includes('failed')) {
+        toast.error("فشل في الإفراج - تحقق من رصيدك");
+      } else {
+        toast.error(errorMessage || "فشل في الإفراج");
+      }
     } finally {
       setLoadingBail(false);
     }
@@ -240,9 +297,12 @@ export default function Jail() {
                 <div className="text-center">
                   <div className="text-3xl font-bold text-accent-green mb-2 flex items-center justify-center gap-2">
                     <MoneyIcon className="w-10 h-10" />
-                    {jailStatus.cost?.toLocaleString() || 0}
+                    {getDynamicBailCost().toLocaleString()}
                   </div>
-                  <p className="text-hitman-300 text-sm mb-4">تكلفة الإفراج بكفالة</p>
+                  <p className="text-hitman-300 text-sm mb-4">
+                    تكلفة الإفراج بكفالة 
+                    <span className="text-accent-yellow text-xs mr-1">(تتغير مع الوقت)</span>
+                  </p>
                   <button
                     onClick={handleBailOut}
                     disabled={loadingBail || loading}

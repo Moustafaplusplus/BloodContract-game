@@ -1,6 +1,35 @@
 import { sequelize } from './config/db.js';
 import { getDefaultAvatarUrl } from './config/defaultAvatars.js';
 import { Gang } from './models/Gang.js';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Firebase Admin SDK
+const serviceAccount = {
+  type: process.env.FIREBASE_TYPE,
+  project_id: process.env.FIREBASE_PROJECT_ID,
+  private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+  private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/"/g, ''),
+  client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  client_id: process.env.FIREBASE_CLIENT_ID,
+  auth_uri: process.env.FIREBASE_AUTH_URI,
+  token_uri: process.env.FIREBASE_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+  client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
+};
+
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+  });
+  console.log('✅ Firebase Admin SDK initialized');
+} catch (error) {
+  console.log('✅ Firebase Admin SDK already initialized');
+}
 
 // Import all models from the index file to ensure proper registration
 import {
@@ -39,7 +68,10 @@ import {
   Task,
   UserTaskProgress,
   Notification,
-  SpecialItem
+  SpecialItem,
+  LoginGift,
+  LoginGiftItem,
+  UserLoginGift
 } from './models/index.js';
 
 console.log('🚀 Starting complete database reset and seeding process...');
@@ -100,11 +132,42 @@ async function createAllTables() {
   }
 }
 
+async function createFirebaseUser(email, password, displayName) {
+  try {
+    // Create user in Firebase
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName,
+      emailVerified: true
+    });
+    
+    console.log(`✅ Firebase user created: ${email} (UID: ${userRecord.uid})`);
+    return userRecord.uid;
+  } catch (error) {
+    if (error.code === 'auth/email-already-exists') {
+      console.log(`⚠️  Firebase user already exists: ${email}`);
+      // Get the existing user's UID
+      const userRecord = await admin.auth().getUserByEmail(email);
+      return userRecord.uid;
+    }
+    console.error(`❌ Error creating Firebase user ${email}:`, error.message);
+    throw error;
+  }
+}
+
 async function seedTestData() {
   try {
     console.log('🌱 Seeding test data...');
     
-    // Create admin user
+    // Create admin user in Firebase first
+    const adminFirebaseUid = await createFirebaseUser(
+      'admin@hitman.com',
+      'admin123',
+      'Admin User'
+    );
+    
+    // Create admin user in database
     const adminUser = await User.create({
       username: 'admin',
       email: 'admin@hitman.com',
@@ -113,6 +176,7 @@ async function seedTestData() {
       gender: 'male',
       isAdmin: true,
       avatarUrl: getDefaultAvatarUrl('male'),
+      firebaseUid: adminFirebaseUid,
     });
     
     // Create admin character
@@ -141,18 +205,32 @@ async function seedTestData() {
       { username: 'user100', level: 100 }
     ];
     
-    const users = await User.bulkCreate(
-      testUsers.map((user) => ({
-        username: user.username,
-        email: `${user.username}@user.com`,
+    // Create Firebase users and database users
+    const users = [];
+    for (const userData of testUsers) {
+      const email = `${userData.username}@user.com`;
+      
+      // Create Firebase user
+      const firebaseUid = await createFirebaseUser(
+        email,
+        '123456',
+        userData.username
+      );
+      
+      // Create database user
+      const user = await User.create({
+        username: userData.username,
+        email: email,
         password: '123456',
         age: 25,
         gender: 'male',
         isAdmin: false,
         avatarUrl: getDefaultAvatarUrl('male'),
-      })),
-      { individualHooks: true }
-    );
+        firebaseUid: firebaseUid,
+      });
+      
+      users.push(user);
+    }
     
     // Create characters with proper stat calculations
     const characterData = users.map((user, i) => {
@@ -181,6 +259,24 @@ async function seedTestData() {
     console.log('   - user50@user.com / 123456 (Level 50, HP: 5900)');
     console.log('   - user100@user.com / 123456 (Level 100, HP: 10900)');
     
+    // Seed login gifts data
+    console.log('🎁 Seeding login gifts data...');
+    const loginGifts = [];
+    
+    // Create 15 days of login gifts with default values
+    for (let day = 1; day <= 15; day++) {
+      loginGifts.push({
+        dayNumber: day,
+        expReward: 0,
+        moneyReward: 0,
+        blackcoinReward: 0,
+        isActive: true
+      });
+    }
+    
+    await LoginGift.bulkCreate(loginGifts);
+    console.log('✅ Login gifts created: 15 days with default rewards');
+    
     return { users, characters: characterData };
   } catch (error) {
     console.error('❌ Error seeding test data:', error);
@@ -208,6 +304,7 @@ async function main() {
     console.log('   - Users: 5 users (1 admin + 4 test users) with characters');
     console.log('   - Admin user: admin@hitman.com / admin123 (Level 1)');
     console.log('   - Test users: user1@user.com, user10@user.com, user50@user.com, user100@user.com (password: 123456)');
+    console.log('   - All users: Created in both Firebase and database with linked firebaseUid');
     console.log('   - All tables: fresh and clean');
     console.log('\n🚀 Ready to start the application!');
     

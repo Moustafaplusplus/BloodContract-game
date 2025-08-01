@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -71,12 +71,12 @@ const TABS = [
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showCalculator, setShowCalculator] = useState(false);
-  const { isAuthed, isAdmin, token } = useAuth();
+  const { user, isAdmin, customToken } = useFirebaseAuth();
   const navigate = useNavigate();
 
   // Check authentication and admin status
   useEffect(() => {
-    if (!isAuthed) {
+    if (!user) {
       navigate('/login');
       return;
     }
@@ -85,10 +85,10 @@ export default function AdminPanel() {
       navigate('/dashboard');
       return;
     }
-  }, [isAuthed, isAdmin, navigate]);
+  }, [user, isAdmin, navigate]);
 
   // Show loading while checking auth
-  if (!isAuthed || !isAdmin) {
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white flex items-center justify-center">
         <div className="text-center">

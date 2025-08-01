@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useBackgroundMusicContext } from '@/contexts/BackgroundMusicContext';
 import { useNotificationSoundContext } from '@/contexts/NotificationSoundContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { Volume2, VolumeX, Volume1, Volume, Settings as SettingsIcon, Music, User, Shield, Bell, Play, Pause, Mail, Lock, ExternalLink, AlertCircle } from 'lucide-react';
 import { initiateGoogleOAuth } from '@/utils/testGoogleOAuth';
 import axios from 'axios';
@@ -9,7 +9,7 @@ import axios from 'axios';
 export default function Settings() {
   const { isPlaying, volume, toggle, setVolume, userInteracted, isMuted, toggleMute } = useBackgroundMusicContext();
   const { isMuted: notificationMuted, volume: notificationVolume, toggleMute: toggleNotificationMute, setVolume: setNotificationVolume, playNotification } = useNotificationSoundContext();
-  const { token, setToken } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const [activeTab, setActiveTab] = useState('audio');
   const [accountModal, setAccountModal] = useState({ isOpen: false, type: '' });
   const [loading, setLoading] = useState(false);
@@ -23,9 +23,9 @@ export default function Settings() {
 
   // Check if user is guest by decoding JWT token
   const isGuest = () => {
-    if (!token) return false;
+    if (!customToken) return false;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(customToken.split('.')[1]));
       return payload.guest === true;
     } catch {
       return false;

@@ -1,7 +1,7 @@
-import { useQuery, useQueryClient } from "@/hooks/useFirebaseAuth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Star,
   Trophy,
@@ -32,6 +32,7 @@ import VipName from './VipName.jsx';
 import Modal from "@/components/Modal";
 import MoneyIcon from "@/components/MoneyIcon";
 import { useSocket } from "@/hooks/useSocket";
+import { useRealTimeUpdates } from "@/hooks/useRealTimeUpdates";
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import { getImageUrl } from '@/utils/imageUtils.js';
 import { handleConfinementError } from '@/utils/errorHandler';
@@ -117,13 +118,12 @@ export default function Profile() {
   const { stats: hudStats, invalidateHud } = useHud();
   const queryClient = useQueryClient();
   const [attacking, setAttacking] = useState(false);
-  const [remainingTime, setRemainingTime] = useState(0);
-  const [totalTime, setTotalTime] = useState(null);
   const navigate = useNavigate();
   const [isFriend, setIsFriend] = useState(false);
   const [pendingStatus, setPendingStatus] = useState(null); // 'sent', 'received', or null
   const [friendLoading, setFriendLoading] = useState(false);
   const { socket } = useSocket();
+  const { requestProfileUpdate } = useRealTimeUpdates();
   const [profileFriends, setProfileFriends] = useState([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [profileRatings, setProfileRatings] = useState({ likes: 0, dislikes: 0, userRating: null });
@@ -169,9 +169,14 @@ export default function Profile() {
   const isCurrentUser = hudStats?.userId === userId;
 
   const [hospitalStatus, setHospitalStatus] = useState(null);
+  const [jailStatus, setJailStatus] = useState(null);
+  const [remainingTime, setRemainingTime] = useState(0);
+  const [jailRemainingTime, setJailRemainingTime] = useState(0);
+  const [initialTotalTime, setInitialTotalTime] = useState(null);
+  const [jailInitialTotalTime, setJailInitialTotalTime] = useState(null);
 
   // Fetch hospital status function
-  const fetchHospitalStatus = async () => {
+  const fetchHospitalStatus = useCallback(async () => {
     if (!customToken) return;
     
     try {
@@ -191,35 +196,76 @@ export default function Profile() {
         const remaining = data.remainingSeconds;
         
         // Calculate total time from startedAt and releasedAt for progress bar
-        let total = remaining;
+        let total = 1200; // Default 20 minutes if no backend data (matches fight loss time)
         if (data.releaseAt && data.startedAt) {
           const releaseAt = new Date(data.releaseAt).getTime();
           const startedAt = new Date(data.startedAt).getTime();
           total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
         }
         
-        setTotalTime(total);
+        setInitialTotalTime(total);
         setRemainingTime(remaining);
       } else {
         // Not in hospital, reset everything
-        setTotalTime(null);
+        setInitialTotalTime(null);
         setRemainingTime(0);
       }
     } catch (error) {
       // Silently handle hospital fetch errors
     }
-  };
+  }, [customToken, isOwnProfile, userId]);
+
+  // Fetch jail status function
+  const fetchJailStatus = useCallback(async () => {
+    if (!customToken) return;
+    
+    try {
+      let url = '/api/confinement/jail';
+      if (!isOwnProfile && userId) {
+        url = `/api/confinement/jail/${userId}`;
+      }
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${customToken}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setJailStatus(data);
+      
+      if (data.inJail && data.remainingSeconds) {
+        // Use the remainingSeconds directly from backend (most accurate)
+        const remaining = data.remainingSeconds;
+        
+        // Calculate total time from startedAt and releasedAt for progress bar
+        let total = 1200; // Default 20 minutes if no backend data (matches fight loss time)
+        if (data.releaseAt && data.startedAt) {
+          const releaseAt = new Date(data.releaseAt).getTime();
+          const startedAt = new Date(data.startedAt).getTime();
+          total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
+        }
+        
+        setJailInitialTotalTime(total);
+        setJailRemainingTime(remaining);
+      } else {
+        // Not in jail, reset everything
+        setJailInitialTotalTime(null);
+        setJailRemainingTime(0);
+      }
+    } catch (error) {
+      // Silently handle jail fetch errors
+    }
+  }, [customToken, isOwnProfile, userId]);
 
   // Initial fetch on mount
   useEffect(() => {
     if (isOwnProfile || userId) {
       fetchHospitalStatus();
+      fetchJailStatus();
     }
-  }, [isOwnProfile, userId, customToken]);
+  }, [fetchHospitalStatus, fetchJailStatus]);
 
-  // Update timer
+  // Update hospital timer
   useEffect(() => {
-    if (hospitalStatus?.inHospital && totalTime && remainingTime > 0) {
+    if (hospitalStatus?.inHospital && initialTotalTime && remainingTime > 0) {
       const timer = setInterval(() => {
         setRemainingTime(prev => {
           const newRemaining = prev - 1;
@@ -233,17 +279,33 @@ export default function Profile() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [hospitalStatus?.inHospital, totalTime, remainingTime]);
+  }, [hospitalStatus?.inHospital, initialTotalTime, remainingTime, fetchHospitalStatus]);
 
-
-
-  // Real-time updates for friendship and profile
+  // Update jail timer
   useEffect(() => {
-    let pollInterval;
+    if (jailStatus?.inJail && jailInitialTotalTime && jailRemainingTime > 0) {
+      const timer = setInterval(() => {
+        setJailRemainingTime(prev => {
+          const newRemaining = prev - 1;
+          if (newRemaining <= 0) {
+            clearInterval(timer);
+            fetchJailStatus();
+            return 0;
+          }
+          return newRemaining;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [jailStatus?.inJail, jailInitialTotalTime, jailRemainingTime, fetchJailStatus]);
+
+
+
+  // Initial friendship status fetch and real-time updates
+  useEffect(() => {
     if (!isOwnProfile && character?.userId) {
-      // Socket listeners
-      const handleFriendshipUpdate = () => {
-        // Refetch friendship status and pending requests
+      // Initial fetch function
+      const fetchFriendshipStatus = () => {
         const token = localStorage.getItem('jwt');
         axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
           .then(res => setIsFriend(res.data.isFriend))
@@ -260,15 +322,14 @@ export default function Profile() {
           })
           .catch(() => setPendingStatus(null));
       };
-      socket?.on('friendship:update', handleFriendshipUpdate);
-      // Polling fallback
-      pollInterval = setInterval(handleFriendshipUpdate, 10000);
-      return () => {
-        socket?.off('friendship:update', handleFriendshipUpdate);
-        clearInterval(pollInterval);
-      };
+      
+      // Initial fetch
+      fetchFriendshipStatus();
+      
+      // Request profile update via socket
+      requestProfileUpdate(character.userId);
     }
-  }, [character?.userId, isOwnProfile, hudStats?.userId, socket]);
+  }, [character?.userId, isOwnProfile, hudStats?.userId, requestProfileUpdate]);
 
   // Refetch profile data on hud:update (for own profile) or profile:update (for others)
   useEffect(() => {
@@ -290,16 +351,20 @@ export default function Profile() {
     };
   }, [socket, isOwnProfile, username, queryClient]);
 
-  // Real-time updates for hospital status
+  // Real-time updates for hospital and jail status
   useEffect(() => {
     if (!socket) return;
-    socket.on('hospital:update', fetchHospitalStatus);
-    const pollInterval = setInterval(fetchHospitalStatus, 10000);
+    socket.on('hospital:enter', fetchHospitalStatus);
+    socket.on('hospital:leave', fetchHospitalStatus);
+    socket.on('jail:enter', fetchJailStatus);
+    socket.on('jail:leave', fetchJailStatus);
     return () => {
-      socket.off('hospital:update', fetchHospitalStatus);
-      clearInterval(pollInterval);
+      socket.off('hospital:enter', fetchHospitalStatus);
+      socket.off('hospital:leave', fetchHospitalStatus);
+      socket.off('jail:enter', fetchJailStatus);
+      socket.off('jail:leave', fetchJailStatus);
     };
-  }, [socket]);
+  }, [socket, fetchHospitalStatus, fetchJailStatus]);
 
   useEffect(() => {
     if (character?.userId) {
@@ -339,33 +404,55 @@ export default function Profile() {
 
   const handleAddFriend = async () => {
     setFriendLoading(true);
-    await axios.post('/api/friendship/add', { friendId: character.userId });
-    setPendingStatus('sent');
-    setFriendLoading(false);
+    try {
+      await axios.post('/api/friendship/add', { friendId: character.userId });
+      setPendingStatus('sent');
+      setIsFriend(false); // Ensure we're not friends yet
+    } catch (error) {
+      console.error('Add friend error:', error);
+    } finally {
+      setFriendLoading(false);
+    }
   };
 
   const handleUnfriend = async () => {
     setFriendLoading(true);
-    await axios.post('/api/friendship/remove', { friendId: character.userId });
-    setIsFriend(false);
-    setFriendLoading(false);
+    try {
+      await axios.post('/api/friendship/remove', { friendId: character.userId });
+      setIsFriend(false);
+      setPendingStatus(null);
+    } catch (error) {
+      console.error('Unfriend error:', error);
+    } finally {
+      setFriendLoading(false);
+    }
   };
 
   const handleAcceptFriend = async () => {
     setFriendLoading(true);
-    // Find the pending request from this user
-    const res = await axios.get('/api/friendship/pending');
-    const request = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
-    if (request) {
-      await axios.post('/api/friendship/accept', { friendshipId: request.id });
-      setIsFriend(true);
-      setPendingStatus(null);
+    try {
+      // Find the pending request from this user
+      const res = await axios.get('/api/friendship/pending');
+      const request = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+      if (request) {
+        await axios.post('/api/friendship/accept', { friendshipId: request.id });
+        setIsFriend(true);
+        setPendingStatus(null);
+      }
+    } catch (error) {
+      console.error('Accept friend error:', error);
+    } finally {
+      setFriendLoading(false);
     }
-    setFriendLoading(false);
   };
 
-  // Calculate progress
-  const progress = totalTime && totalTime > 0 ? Math.max(0, Math.min(1, (totalTime - remainingTime) / totalTime)) : 0;
+  // Calculate progress for hospital
+  const hospitalProgress = initialTotalTime && initialTotalTime > 0 ? Math.max(0, Math.min(1, (initialTotalTime - remainingTime) / initialTotalTime)) : 0;
+  
+  // Calculate progress for jail
+  const jailProgress = jailInitialTotalTime && jailInitialTotalTime > 0 ? Math.max(0, Math.min(1, (jailInitialTotalTime - jailRemainingTime) / jailInitialTotalTime)) : 0;
+  
+
 
   // Attack immunity countdown timer
   useEffect(() => {
@@ -463,6 +550,30 @@ export default function Profile() {
       toast.error("لا يمكن تحديد هوية اللاعب للهجوم.");
       return;
     }
+
+    // Check if target is in hospital or jail before attempting attack
+    if (hospitalStatus?.inHospital) {
+      toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً.");
+      return;
+    }
+
+    if (jailStatus?.inJail) {
+      toast.error("لا يمكنك مهاجمة هذا اللاعب لأنه في السجن حالياً.");
+      return;
+    }
+
+    // Check if current user is in hospital
+    if (hudStats?.inHospital) {
+      toast.error("لا يمكنك الهجوم وأنت في المستشفى. يجب عليك الانتظار حتى خروجك.");
+      return;
+    }
+
+    // Check if current user is in jail
+    if (hudStats?.inJail) {
+      toast.error("لا يمكنك الهجوم وأنت في السجن. يجب عليك الانتظار حتى خروجك.");
+      return;
+    }
+
     setAttacking(true);
     
     const maxRetries = 3;
@@ -571,7 +682,26 @@ export default function Profile() {
             <span className="mx-2">|</span>
             <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span></span>
             <div className="w-full bg-hitman-700 rounded-full h-3 mt-2">
-              <div className="bg-accent-red h-3 rounded-full transition-all duration-500" style={{ width: `${Math.round(progress * 100)}%` }}></div>
+              <div className="bg-accent-red h-3 rounded-full transition-all duration-500" style={{ width: `${Math.round(hospitalProgress * 100)}%` }}></div>
+            </div>
+          </div>
+        )}
+
+        {/* Jail status message */}
+        {jailStatus?.inJail && (
+          <div className="bg-black border-2 border-orange-600 text-white rounded-lg p-4 mb-4 text-center shadow-md">
+            <span className="font-bold text-orange-400">
+              {isOwnProfile ? "أنت في السجن" : `${displayCharacter?.displayName || displayCharacter?.name || displayCharacter?.username || "هذا اللاعب"} في السجن`}
+            </span>
+            <span className="mx-2">|</span>
+            <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(jailRemainingTime)}</span></span>
+            <div className="w-full bg-hitman-700 rounded-full h-3 mt-2">
+              <div 
+                className="bg-orange-500 h-3 rounded-full transition-all duration-500" 
+                style={{ 
+                  width: `${Math.round(jailProgress * 100)}%` 
+                }}
+              ></div>
             </div>
           </div>
         )}
@@ -673,8 +803,15 @@ export default function Profile() {
                   <button
                     className="min-w-[120px] h-12 bg-accent-red/20 text-accent-red rounded-lg font-bold text-base transition-all duration-200 hover:bg-accent-red/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={attackPlayer}
-                    disabled={attacking || !hudStats || hudStats.energy < 10}
-                    title={!hudStats || hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم" : undefined}
+                    disabled={attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail}
+                    title={
+                      !hudStats || hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم" :
+                      hospitalStatus?.inHospital ? "لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً" :
+                      jailStatus?.inJail ? "لا يمكنك مهاجمة هذا اللاعب لأنه في السجن حالياً" :
+                      hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" :
+                      hudStats?.inJail ? "لا يمكنك الهجوم وأنت في السجن" :
+                      undefined
+                    }
                   >
                     {attacking ? "..." : "هجوم"}
                   </button>

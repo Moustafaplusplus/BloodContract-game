@@ -17,7 +17,7 @@ import { getImageUrl } from '@/utils/imageUtils.js';
 
 export default function Messages() {
   const { socket } = useSocket();
-  const { token } = useFirebaseAuth();
+  const { customToken } = useFirebaseAuth();
   const { refetch: refetchUnreadCount } = useUnreadMessages();
   const location = useLocation();
   const [conversations, setConversations] = useState([]);
@@ -39,9 +39,9 @@ export default function Messages() {
   const audioRef = useRef(null);
   
   // Get userId from JWT token instead of localStorage
-  const userId = token ? (() => {
+  const userId = customToken ? (() => {
     try {
-      const decoded = jwtDecode(token);
+      const decoded = jwtDecode(customToken);
       return decoded.id;
     } catch {
       return null;
@@ -89,7 +89,7 @@ export default function Messages() {
     if (!userId) return;
     
     setLoadingInbox(true);
-    axios.get('/api/messages/inbox', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    axios.get('/api/messages/inbox', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
       .then(res => {
         setConversations(res.data);
         // Update unread state based on new data structure
@@ -113,13 +113,13 @@ export default function Messages() {
       })
       .catch(() => setConversations([]))
       .finally(() => setLoadingInbox(false));
-  }, [userId, token, location.state]);
+  }, [userId, customToken, location.state]);
 
   // Fetch messages for selected user
   useEffect(() => {
     if (selectedUser && userId) {
       setLoadingMessages(true);
-      axios.get(`/api/messages/${selectedUser.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      axios.get(`/api/messages/${selectedUser.userId}`, { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
         .then(res => {
           setMessages(res.data);
           // Mark all unread messages from this user as read
@@ -133,7 +133,7 @@ export default function Messages() {
             // Mark each unread message as read
             Promise.all(unreadMessages.map(msg => 
               axios.patch(`/api/messages/read/${msg.id}`, {}, { 
-                headers: token ? { Authorization: `Bearer ${token}` } : {} 
+                headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} 
               })
             )).then(() => {
               // Update local state to mark messages as read
@@ -153,16 +153,16 @@ export default function Messages() {
       setUnread(prev => ({ ...prev, [selectedUser.userId]: false }));
       setSidebarOpen(false); // auto-close sidebar on mobile
     }
-  }, [selectedUser, userId, token]);
+  }, [selectedUser, userId, customToken]);
 
   // Fetch friends for 'Add Friend' button logic
   useEffect(() => {
     if (!userId) return;
     
-    axios.get('/api/friendship/list', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+          axios.get('/api/friendship/list', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
       .then(res => setFriends(res.data.map(f => f.id)))
       .catch(() => setFriends([]));
-  }, [userId, token]);
+  }, [userId, customToken]);
 
   // Fetch user info for badges
   useEffect(() => {
@@ -178,7 +178,7 @@ export default function Messages() {
       }).catch(() => {
         setUserInfo({ username: '', avatarUrl: '', isAdmin: false, isVip: false });
     });
-  }, [userId, token]);
+  }, [userId, customToken]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -294,8 +294,7 @@ export default function Messages() {
   // Add friend handler
   const handleAddFriend = async (userId) => {
     try {
-      const token = localStorage.getItem('jwt');
-      await axios.post('/api/friendship/add', { friendId: userId }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      await axios.post('/api/friendship/add', { friendId: userId }, { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} });
       setFriends(prev => [...prev, userId]);
     } catch {
       // Optionally show error

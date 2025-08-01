@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'react-hot-toast';
 import VipName from '../profile/VipName.jsx';
 import MoneyIcon from '@/components/MoneyIcon';

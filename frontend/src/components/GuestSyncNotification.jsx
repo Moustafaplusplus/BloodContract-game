@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { UserCheck, X, AlertTriangle } from "lucide-react";
 import GuestSyncModal from "./GuestSyncModal";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 
 export default function GuestSyncNotification() {
   const [showModal, setShowModal] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const { isGuest, setToken } = useAuth();
+  const { isGuest, customToken } = useFirebaseAuth();
 
   // Don't show if user is not a guest or if dismissed
   if (!isGuest || dismissed) {

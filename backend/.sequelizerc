@@ -6,4 +6,5 @@ module.exports = {
   // (optional) keep the default folders for migrations & models
   'migrations-path': path.resolve('migrations'),
   'models-path':     path.resolve('src', 'models'),
+  'seeders-path':    path.resolve('seeders'),
 };

@@ -229,11 +229,10 @@ export default function Character() {
   if (!character) return null
 
   return (
-    <div className="min-h-screen bg-black text-white p-2 sm:p-4 pt-20 overflow-x-hidden" dir="rtl">
-
+    <div className="min-h-screen bg-black text-white p-2 sm:p-4 overflow-x-hidden" dir="rtl">
 
       {hospitalStatus?.inHospital && (
-        <div className="bg-black border-2 border-red-600/50 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
+        <div className="bg-black border border-white/20 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
           <span className="font-bold text-red-400">أنت في المستشفى</span>
           <span className="mx-2">|</span>
           <span>
@@ -245,24 +244,24 @@ export default function Character() {
       <div className="relative z-10 max-w-4xl mx-auto w-full">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-12">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-400 to-red-500">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 text-red-400">
             الملف الشخصي
           </h1>
-          <div className="w-20 sm:w-32 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent mx-auto"></div>
+          <div className="w-20 sm:w-32 h-1 bg-red-500 mx-auto"></div>
         </div>
 
         {/* Main Profile Section */}
         <div className="flex flex-col gap-6 sm:gap-8 mb-8 lg:grid lg:grid-cols-3 lg:gap-8">
           {/* Profile Card */}
           <div className="lg:col-span-1 order-1">
-            <div className="bg-gradient-to-br from-zinc-950 to-black backdrop-blur-sm border border-zinc-800/50 rounded-xl p-4 sm:p-8 text-center">
+            <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-8 text-center">
               {/* Avatar */}
               <div className="relative mb-4 sm:mb-6 flex flex-col items-center">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt="avatar"
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-red-500 bg-zinc-800 mx-auto shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-red-500 bg-black mx-auto shadow-lg"
                     onError={(e) => {
                       e.target.style.display = "none"
                       e.target.nextElementSibling.style.display = "flex"
@@ -270,7 +269,7 @@ export default function Character() {
                   />
                 ) : null}
                 <div
-                  className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-zinc-800 to-black flex items-center justify-center text-4xl sm:text-5xl text-red-400 border-4 border-red-500 mx-auto shadow-lg ${
+                  className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-black flex items-center justify-center text-4xl sm:text-5xl text-red-400 border-4 border-red-500 mx-auto shadow-lg ${
                     avatarUrl ? "hidden" : "flex"
                   }`}
                 >
@@ -293,7 +292,7 @@ export default function Character() {
                     disabled={avatarUploading}
                   />
                   <button
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-lg shadow transition-all duration-200 disabled:opacity-50 text-sm sm:text-base"
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-lg shadow transition-all duration-200 disabled:opacity-50 text-sm sm:text-base border border-white/20"
                     onClick={() => fileInputRef.current.click()}
                     disabled={avatarUploading}
                   >
@@ -316,7 +315,7 @@ export default function Character() {
                 {editingQuote ? (
                   <div className="flex flex-col items-center gap-2">
                     <textarea
-                      className="bg-black border border-red-500/40 text-white rounded-lg px-3 py-2 w-full text-center focus:outline-none focus:ring-2 focus:ring-red-500 transition placeholder:text-zinc-500 text-xs sm:text-sm"
+                      className="bg-black border border-white/20 text-white rounded-lg px-3 py-2 w-full text-center focus:outline-none focus:ring-2 focus:ring-red-500 transition placeholder:text-zinc-500 text-xs sm:text-sm"
                       value={quoteInput}
                       onChange={(e) => setQuoteInput(e.target.value)}
                       maxLength={UI.MAX_QUOTE_LENGTH}
@@ -326,7 +325,7 @@ export default function Character() {
                     />
                     <div className="flex gap-2 justify-center">
                       <button
-                        className="bg-red-600 text-white px-3 py-1 rounded-lg font-bold hover:bg-red-700 transition disabled:opacity-50 text-xs sm:text-sm"
+                        className="bg-red-600 text-white px-3 py-1 rounded-lg font-bold hover:bg-red-700 transition disabled:opacity-50 text-xs sm:text-sm border border-white/20"
                         onClick={async () => {
                           setSavingQuote(true)
                           try {
@@ -346,7 +345,7 @@ export default function Character() {
                         حفظ
                       </button>
                       <button
-                        className="bg-zinc-700 text-white px-3 py-1 rounded-lg font-bold hover:bg-zinc-600 transition text-xs sm:text-sm"
+                        className="bg-black text-white px-3 py-1 rounded-lg font-bold hover:bg-zinc-800 transition text-xs sm:text-sm border border-white/20"
                         onClick={() => {
                           setEditingQuote(false)
                           setQuoteInput(displayCharacter.quote || "")
@@ -358,7 +357,7 @@ export default function Character() {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-black/60 border border-zinc-800/50 rounded-lg p-2 sm:p-4 flex items-center justify-between">
+                  <div className="bg-black border border-white/20 rounded-lg p-2 sm:p-4 flex items-center justify-between">
                     <span className="text-zinc-300 italic text-xs sm:text-sm">
                       {displayCharacter.quote ? `"${displayCharacter.quote}"` : "لا يوجد اقتباس شخصي بعد"}
                     </span>
@@ -378,7 +377,7 @@ export default function Character() {
               {/* Power & Defense */}
               <div className="flex justify-around items-center mt-2 sm:mt-4 mb-2 gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="bg-black/60 border border-zinc-800/50 rounded-lg p-3 mb-2">
+                  <div className="bg-black border border-white/20 rounded-lg p-3 mb-2">
                     <Star className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
                   </div>
                   <span className="font-bold text-base sm:text-lg text-yellow-400">
@@ -387,7 +386,7 @@ export default function Character() {
                   <span className="text-xs text-zinc-400">القوة</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="bg-black/60 border border-zinc-800/50 rounded-lg p-3 mb-2">
+                  <div className="bg-black border border-white/20 rounded-lg p-3 mb-2">
                     <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                   </div>
                   <span className="font-bold text-base sm:text-lg text-blue-400">{displayCharacter.defense ?? 0}</span>
@@ -400,7 +399,7 @@ export default function Character() {
           {/* Stats and Details */}
           <div className="lg:col-span-2 order-2 flex flex-col gap-6 sm:gap-8">
             {/* Stats Grid */}
-            <div className="bg-gradient-to-br from-zinc-950 to-black backdrop-blur-sm border border-zinc-800/50 rounded-xl p-4 sm:p-6">
+            <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-6">
               <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center">
                 <Activity className="w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 text-blue-400" />
                 الإحصائيات
@@ -408,7 +407,7 @@ export default function Character() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
                 {stats.map((stat, index) => (
                   <div key={index} className="text-center">
-                    <div className="bg-black/60 border border-zinc-800/50 rounded-lg p-2 sm:p-4 mb-1 sm:mb-2">
+                    <div className="bg-black border border-white/20 rounded-lg p-2 sm:p-4 mb-1 sm:mb-2">
                       <stat.icon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto ${stat.color}`} />
                     </div>
                     <div className={`text-lg sm:text-2xl font-bold ${stat.color}`}>{stat.value.toLocaleString()}</div>
@@ -420,7 +419,7 @@ export default function Character() {
 
             {/* Additional Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-gradient-to-br from-zinc-950 to-black backdrop-blur-sm border border-zinc-800/50 rounded-xl p-4 sm:p-6">
+              <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-6">
                 <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-4 flex items-center">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2 text-orange-400" />
                   المعلومات الاجتماعية
@@ -435,7 +434,7 @@ export default function Character() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-zinc-950 to-black backdrop-blur-sm border border-zinc-800/50 rounded-xl p-4 sm:p-6">
+              <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-6">
                 <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-4 flex items-center">
                   <HomeIcon className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2 text-yellow-400" />
                   الممتلكات
@@ -455,7 +454,7 @@ export default function Character() {
 
         {/* Active Buffs */}
         {displayCharacter?.buffs && (
-          <div className="mt-4 sm:mt-8 bg-gradient-to-br from-zinc-950 to-black backdrop-blur-sm border border-zinc-800/50 rounded-xl p-4 sm:p-6">
+          <div className="mt-4 sm:mt-8 bg-black border border-white/20 rounded-lg p-4 sm:p-6">
             <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center">
               <Shield className="w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 text-green-400" />
               التأثيرات النشطة

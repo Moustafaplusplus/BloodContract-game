@@ -60,6 +60,15 @@ router.post('/ghost-assassin', auth, async (req, res) => {
       crimeId: null,
     }, { transaction: t });
     // Increment assassinations for the target
+    // Ensure character exists before creating statistics
+    const targetCharacter = await Character.findOne({ where: { userId: targetId }, transaction: t });
+    if (!targetCharacter) {
+      await Character.create({ 
+        userId: targetId, 
+        name: `User${targetId}` // Default name, can be updated later
+      }, { transaction: t });
+    }
+    
     let stat = await Statistic.findOne({ where: { userId: targetId }, transaction: t, lock: t.LOCK.UPDATE });
     if (!stat) {
       stat = await Statistic.create({ userId: targetId }, { transaction: t });
@@ -319,6 +328,15 @@ router.post('/:id/accept', auth, async (req, res) => {
         await assassinCharacter.save({ transaction: t });
       }
       // Increment assassinations for the target
+      // Ensure character exists before creating statistics
+      const targetCharacter2 = await Character.findOne({ where: { userId: contract.targetId }, transaction: t });
+      if (!targetCharacter2) {
+        await Character.create({ 
+          userId: contract.targetId, 
+          name: `User${contract.targetId}` // Default name, can be updated later
+        }, { transaction: t });
+      }
+      
       let stat2 = await Statistic.findOne({ where: { userId: contract.targetId }, transaction: t, lock: t.LOCK.UPDATE });
       if (!stat2) {
         stat2 = await Statistic.create({ userId: contract.targetId }, { transaction: t });

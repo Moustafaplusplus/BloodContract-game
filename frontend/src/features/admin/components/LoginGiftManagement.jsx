@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'react-toastify';
 import { Gift, Calendar, Settings, Save, X, Plus, Trash2, Zap } from 'lucide-react';
 import MoneyIcon from '@/components/MoneyIcon';
 import BlackcoinIcon from '@/components/BlackcoinIcon';
 
 const LoginGiftManagement = () => {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const queryClient = useQueryClient();
   const [selectedDay, setSelectedDay] = useState(null);
   const [editingConfig, setEditingConfig] = useState(null);
@@ -19,14 +19,14 @@ const LoginGiftManagement = () => {
     queryFn: async () => {
       const response = await fetch('/api/login-gift/admin/config', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${customToken}`,
           'Content-Type': 'application/json'
         }
       });
       if (!response.ok) throw new Error('Failed to fetch configuration');
       return response.json();
     },
-    enabled: !!token
+    enabled: !!customToken
   });
 
   // Fetch available items
@@ -35,7 +35,7 @@ const LoginGiftManagement = () => {
     queryFn: async () => {
       const response = await fetch('/api/login-gift/admin/items', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${customToken}`,
           'Content-Type': 'application/json'
         }
       });
@@ -43,7 +43,7 @@ const LoginGiftManagement = () => {
       const data = await response.json();
       return data;
     },
-    enabled: !!token
+    enabled: !!customToken
   });
 
   // Update configuration mutation
@@ -52,7 +52,7 @@ const LoginGiftManagement = () => {
       const response = await fetch(`/api/login-gift/admin/config/${dayNumber}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${customToken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(config)
@@ -155,72 +155,110 @@ const LoginGiftManagement = () => {
             <div className="bg-hitman-800 rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-6 text-center">التقويم</h2>
               <div className="grid grid-cols-5 gap-4">
-                {config?.map((day) => (
-                  <div
-                    key={day.dayNumber}
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                      selectedDay?.dayNumber === day.dayNumber
-                        ? 'bg-accent-red border-accent-red'
-                        : day.isActive
-                        ? 'bg-hitman-700 border-hitman-600 hover:border-accent-red'
-                        : 'bg-hitman-700 border-gray-600 opacity-50'
-                    }`}
-                    onClick={() => handleEditDay(day)}
-                  >
-                    <div className="text-center mb-3">
-                      <div className={`text-lg font-bold ${
-                        selectedDay?.dayNumber === day.dayNumber ? 'text-white' : 'text-gray-300'
-                      }`}>
-                        {day.dayNumber}
+                {config && config.length > 0 ? (
+                  config.map((day) => (
+                    <div
+                      key={day.dayNumber}
+                      className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                        selectedDay?.dayNumber === day.dayNumber
+                          ? 'bg-accent-red border-accent-red'
+                          : day.isActive
+                          ? 'bg-hitman-700 border-hitman-600 hover:border-accent-red'
+                          : 'bg-hitman-700 border-gray-600 opacity-50'
+                      }`}
+                      onClick={() => handleEditDay(day)}
+                    >
+                      <div className="text-center mb-3">
+                        <div className={`text-lg font-bold ${
+                          selectedDay?.dayNumber === day.dayNumber ? 'text-white' : 'text-gray-300'
+                        }`}>
+                          {day.dayNumber}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Rewards Preview */}
-                    <div className="space-y-1 text-xs">
-                      {day.expReward > 0 && (
-                        <div className="flex items-center justify-center">
-                          <Zap className="w-3 h-3 text-yellow-400 mr-1" />
-                          <span className="text-yellow-400">{day.expReward}</span>
-                        </div>
-                      )}
-                      {day.moneyReward > 0 && (
-                        <div className="flex items-center justify-center">
-                          <MoneyIcon className="w-3 h-3" />
-                          <span className="text-green-400 ml-1">{day.moneyReward}</span>
-                        </div>
-                      )}
-                      {day.blackcoinReward > 0 && (
-                        <div className="flex items-center justify-center">
-                          <BlackcoinIcon />
-                          <span className="text-purple-400 ml-1">{day.blackcoinReward}</span>
-                        </div>
-                      )}
-                      {day.items && day.items.length > 0 && (
-                        <div className="flex items-center justify-center">
-                          <Gift className="w-3 h-3 text-blue-400 mr-1" />
-                          <span className="text-blue-400">{day.items.length}</span>
+                      {/* Rewards Preview */}
+                      <div className="space-y-1 text-xs">
+                        {day.expReward > 0 && (
+                          <div className="flex items-center justify-center">
+                            <Zap className="w-3 h-3 text-yellow-400 mr-1" />
+                            <span className="text-yellow-400">{day.expReward}</span>
+                          </div>
+                        )}
+                        {day.moneyReward > 0 && (
+                          <div className="flex items-center justify-center">
+                            <MoneyIcon className="w-3 h-3" />
+                            <span className="text-green-400 ml-1">{day.moneyReward}</span>
+                          </div>
+                        )}
+                        {day.blackcoinReward > 0 && (
+                          <div className="flex items-center justify-center">
+                            <BlackcoinIcon />
+                            <span className="text-purple-400 ml-1">{day.blackcoinReward}</span>
+                          </div>
+                        )}
+                        {day.items && day.items.length > 0 && (
+                          <div className="flex items-center justify-center">
+                            <Gift className="w-3 h-3 text-blue-400 mr-1" />
+                            <span className="text-blue-400">{day.items.length}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Status Indicators */}
+                      <div className="absolute top-2 right-2 flex flex-col space-y-1">
+                        {!day.isActive && (
+                          <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                        )}
+                        {day.isActive && (
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        )}
+                      </div>
+
+                      {/* Total Rewards Count */}
+                      {(day.expReward > 0 || day.moneyReward > 0 || day.blackcoinReward > 0 || (day.items && day.items.length > 0)) && (
+                        <div className="absolute bottom-1 left-1">
+                          <div className="w-2 h-2 bg-accent-red rounded-full"></div>
                         </div>
                       )}
                     </div>
-
-                    {/* Status Indicators */}
-                    <div className="absolute top-2 right-2 flex flex-col space-y-1">
-                      {!day.isActive && (
+                  ))
+                ) : (
+                  // Fallback: Show 15 empty calendar days
+                  Array.from({ length: 15 }, (_, index) => (
+                    <div
+                      key={index + 1}
+                      className="relative p-4 rounded-lg border-2 border-gray-600 bg-hitman-700 opacity-50 cursor-pointer hover:border-accent-red transition-all duration-200"
+                      onClick={() => {
+                        // Create a default day object for editing
+                        const defaultDay = {
+                          dayNumber: index + 1,
+                          expReward: 0,
+                          moneyReward: 0,
+                          blackcoinReward: 0,
+                          isActive: false,
+                          items: []
+                        };
+                        handleEditDay(defaultDay);
+                      }}
+                    >
+                      <div className="text-center mb-3">
+                        <div className="text-lg font-bold text-gray-300">
+                          {index + 1}
+                        </div>
+                      </div>
+                      
+                      {/* Empty state indicator */}
+                      <div className="text-center text-xs text-gray-500">
+                        لا توجد مكافآت
+                      </div>
+                      
+                      {/* Status indicator */}
+                      <div className="absolute top-2 right-2">
                         <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                      )}
-                      {day.isActive && (
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      )}
-                    </div>
-
-                    {/* Total Rewards Count */}
-                    {(day.expReward > 0 || day.moneyReward > 0 || day.blackcoinReward > 0 || (day.items && day.items.length > 0)) && (
-                      <div className="absolute bottom-1 left-1">
-                        <div className="w-2 h-2 bg-accent-red rounded-full"></div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

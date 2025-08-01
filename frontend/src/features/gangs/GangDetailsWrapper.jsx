@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../../hooks/useAuth';
+import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
 import GangDetails from './GangDetails';
 import { toast } from 'react-hot-toast';
 
 export default function GangDetailsWrapper() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthed, tokenLoaded } = useAuth();
+  const { user, loading: authLoading } = useFirebaseAuth();
   const [gang, setGang] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,12 +41,12 @@ export default function GangDetailsWrapper() {
 
   // Load gang data when component mounts or gangId changes
   useEffect(() => {
-    if (!tokenLoaded) {
+    if (authLoading) {
       return; // Wait for auth to be loaded
     }
 
-    if (!isAuthed) {
-      navigate('/auth/login');
+    if (!user) {
+      navigate('/login');
       return;
     }
 
@@ -56,10 +56,10 @@ export default function GangDetailsWrapper() {
     }
 
     refreshGangData();
-  }, [id, isAuthed, tokenLoaded, navigate]);
+  }, [id, user, authLoading, navigate]);
 
   // Show loading state
-  if (!tokenLoaded || loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center">
         <div className="text-center">

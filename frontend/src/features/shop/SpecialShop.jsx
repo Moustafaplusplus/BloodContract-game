@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useHud } from '@/hooks/useHud';
 import { useSocket } from "@/hooks/useSocket";
 import MoneyIcon from '@/components/MoneyIcon';
@@ -455,7 +455,7 @@ const TABS = [
 ];
 
 export default function SpecialShop() {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { stats, invalidateHud } = useHud();
   const { socket } = useSocket();
   const [activeTab, setActiveTab] = useState('vip');
@@ -488,10 +488,10 @@ export default function SpecialShop() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/api/special-items?currency=blackcoin`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${API}/api/special-shop/blackcoin-packages`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${API}/api/special-shop/money-packages`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/api/special-items?currency=blackcoin`, { headers: { Authorization: `Bearer ${customToken}` } }),
+      fetch(`${API}/api/special-shop/blackcoin-packages`, { headers: { Authorization: `Bearer ${customToken}` } }),
+      fetch(`${API}/api/special-shop/vip-packages`, { headers: { Authorization: `Bearer ${customToken}` } }),
+      fetch(`${API}/api/special-shop/money-packages`, { headers: { Authorization: `Bearer ${customToken}` } })
     ]).then(async ([specialRes, packagesRes, vipRes, moneyRes]) => {
       if (specialRes.status === 401 || packagesRes.status === 401 || vipRes.status === 401 || moneyRes.status === 401) {
         toast.error('يجب تسجيل الدخول للوصول إلى سوق العملة السوداء');
@@ -508,12 +508,12 @@ export default function SpecialShop() {
       toast.error('فشل في تحميل عناصر سوق العملة السوداء');
       setSpecialItems([]); setBlackcoinPackages([]); setVipPackages([]); setMoneyPackages([]); setLoading(false);
     });
-  }, [token]);
+  }, [customToken]);
 
   useEffect(() => {
     if (activeTab === 'weapons') {
       setLoadingWeapons(true);
-      fetch(`${API}/api/special-shop/special`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/api/special-shop/special`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => res.json())
         .then(data => {
           setWeapons(data.weapons || []);
@@ -522,37 +522,37 @@ export default function SpecialShop() {
         })
         .catch(() => { setWeapons([]); setArmors([]); setLoadingWeapons(false); });
     }
-  }, [activeTab, token]);
+  }, [activeTab, customToken]);
 
   useEffect(() => {
     if (activeTab === 'cars') {
       setLoadingCars(true);
-      fetch(`${API}/api/special-shop/cars`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/api/special-shop/cars`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => res.json())
         .then(data => { setCars(data); setLoadingCars(false); })
         .catch(() => { setCars([]); setLoadingCars(false); });
     }
-  }, [activeTab, token]);
+  }, [activeTab, customToken]);
 
   useEffect(() => {
     if (activeTab === 'houses') {
       setLoadingHouses(true);
-      fetch(`${API}/api/special-shop/houses`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/api/special-shop/houses`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => res.json())
         .then(data => { setHouses(data); setLoadingHouses(false); })
         .catch(() => { setHouses([]); setLoadingHouses(false); });
     }
-  }, [activeTab, token]);
+  }, [activeTab, customToken]);
 
   useEffect(() => {
     if (activeTab === 'dogs') {
       setLoadingDogs(true);
-      fetch(`${API}/api/special-shop/dogs`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API}/api/special-shop/dogs`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => res.json())
         .then(data => { setDogs(data); setLoadingDogs(false); })
         .catch(() => { setDogs([]); setLoadingDogs(false); });
     }
-  }, [activeTab, token]);
+  }, [activeTab, customToken]);
 
   // Real-time HUD updates
   useEffect(() => {
@@ -571,7 +571,7 @@ export default function SpecialShop() {
     try {
       const res = await fetch(`${API}/api/special-shop/buy/vip`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageId }),
       });
       const data = await res.json();
@@ -584,7 +584,7 @@ export default function SpecialShop() {
     try {
       const res = await fetch(`${API}/api/special-shop/buy/blackcoin`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageId }),
       });
       const data = await res.json();
@@ -598,7 +598,7 @@ export default function SpecialShop() {
     try {
       const res = await fetch(`${API}/api/special-shop/buy/money`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageId }),
       });
       const data = await res.json();
@@ -617,7 +617,7 @@ export default function SpecialShop() {
       }
       const res = await fetch(`${API}/api/special-items/buy/${item.id}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
       });
       const data = await res.json();
@@ -637,7 +637,7 @@ export default function SpecialShop() {
       }
       const res = await fetch(`${API}/api/special-shop/buy/weapon/${weapon.id}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
       });
       const data = await res.json();
@@ -657,7 +657,7 @@ export default function SpecialShop() {
       }
       const res = await fetch(`${API}/api/special-shop/buy/armor/${armor.id}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity }),
       });
       const data = await res.json();
@@ -671,7 +671,7 @@ export default function SpecialShop() {
     try {
       const res = await fetch(`${API}/api/cars/buy`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ carId: car.id }),
       });
       const data = await res.json();
@@ -685,7 +685,7 @@ export default function SpecialShop() {
     try {
       const res = await fetch(`${API}/api/houses/buy`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ houseId: house.id }),
       });
       const data = await res.json();
@@ -699,7 +699,7 @@ export default function SpecialShop() {
     try {
       const res = await fetch(`${API}/api/dogs/buy`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${customToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ dogId: dog.id }),
       });
       const data = await res.json();

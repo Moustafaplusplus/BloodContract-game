@@ -10,7 +10,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 
 import { FirebaseAuthProvider, useFirebaseAuth } from "@/hooks/useFirebaseAuth";
-import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -23,6 +22,7 @@ import PlayerSearch from "./features/profile/PlayerSearch.jsx";
 import FightResults from './features/fights/FightResults';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from 'react-hot-toast';
 import GangDetailsWrapper from './features/gangs/GangDetailsWrapper';
 import AdminPanel from "@/features/admin/AdminPanel";
 import { SocketProvider } from "@/contexts/SocketContext";
@@ -166,13 +166,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <FirebaseAuthProvider>
-          <AuthProvider>
-            <ModalProvider>
-              <SocketProvider>
-                <FamePopupProvider>
-                  <NotificationProvider>
-                    <BackgroundMusicProvider>
-                      <NotificationSoundProvider>
+          <ModalProvider>
+            <SocketProvider>
+              <FamePopupProvider>
+                <NotificationProvider>
+                  <BackgroundMusicProvider>
+                    <NotificationSoundProvider>
                         <Suspense
                         fallback={
                           <div className="h-screen flex items-center justify-center bg-black">
@@ -274,14 +273,24 @@ export default function App() {
                       toastClassName="Toastify__toast"
                       bodyClassName="Toastify__toast-body"
                     />
-                  </NotificationSoundProvider>
+                    <Toaster
+                      position="bottom-center"
+                      toastOptions={{
+                        duration: 4000,
+                        style: {
+                          background: '#1f2937',
+                          color: '#fff',
+                          border: '1px solid #ef4444',
+                        },
+                      }}
+                    />
+                                    </NotificationSoundProvider>
                 </BackgroundMusicProvider>
               </NotificationProvider>
             </FamePopupProvider>
           </SocketProvider>
         </ModalProvider>
-          </AuthProvider>
-        </FirebaseAuthProvider>
+      </FirebaseAuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

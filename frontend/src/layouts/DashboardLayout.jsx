@@ -1,5 +1,5 @@
 /* ============================================================================
- *  src/layouts/DashboardLayout.jsx – added Gym nav link
+ *  src/layouts/DashboardLayout.jsx – Mobile-friendly layout
  * ----------------------------------------------------------------------------*/
 import React, { useState } from "react";
 import Navigation, { MenuButton } from "@/components/Navigation";
@@ -10,16 +10,19 @@ export default function DashboardLayout({ children }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="h-screen bg-black text-white overflow-hidden flex flex-col pt-[60px] lg:pt-[60px]">
-      {/* HUD with menu button inside */}
+    <div className="h-screen bg-black text-white overflow-hidden flex flex-col">
+      {/* Minimal HUD with menu button */}
       <HUD menuButton={<MenuButton isOpen={isOpen} setIsOpen={setIsOpen} />} />
+      
       {/* Navigation sidebar */}
       <Navigation isOpen={isOpen} setIsOpen={setIsOpen} />
+      
       {/* Feature unlock notification */}
       <FeatureUnlockNotification />
-      {/* Main content */}
-      <main className="flex-1 lg:mr-80 p-4 lg:p-6 overflow-auto" >
-        <div className="max-w-7xl mx-auto">{children}</div>
+      
+      {/* Main content - pushed to the right to account for HUD */}
+      <main className="flex-1 overflow-auto ml-16">
+        {children}
       </main>
     </div>
   );

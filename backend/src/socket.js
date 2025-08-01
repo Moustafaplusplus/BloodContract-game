@@ -7,6 +7,14 @@ import { Character } from './models/Character.js';
 import { Message } from './models/Message.js';
 import { GlobalMessage } from './models/GlobalMessage.js';
 import { User } from './models/User.js';
+import { Friendship } from './models/Friendship.js';
+import { Inventory } from './models/Inventory.js';
+import { Bank } from './models/Bank.js';
+import { Task } from './models/Task.js';
+import { Gang } from './models/Gang.js';
+import { Statistic } from './models/Statistic.js';
+import { Op } from 'sequelize';
+import { Item } from './models/Item.js';
 
 let io = null;
 
@@ -76,6 +84,122 @@ export function initSocket(server) {
           }
         } catch (error) {
           console.error(`[Socket] Error pushing HUD for user ${userId}:`, error.message);
+        }
+      };
+
+      /* helper to push profile data updates */
+      const pushProfileUpdate = async (targetUserId = userId) => {
+        try {
+          const char = await Character.findOne({ 
+            where: { userId: targetUserId },
+            include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
+          });
+          if (char) {
+            const profileData = await char.toSafeJSON();
+            io.to(`user:${targetUserId}`).emit('profile:update', profileData);
+          }
+        } catch (error) {
+          console.error(`[Socket] Error pushing profile update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push friendship status updates */
+      const pushFriendshipUpdate = async (targetUserId) => {
+        try {
+          // Check if users are friends
+          const friendship = await Friendship.findOne({
+            where: {
+              [Op.or]: [
+                { requesterId: userId, addresseeId: targetUserId },
+                { requesterId: targetUserId, addresseeId: userId }
+              ],
+              status: 'accepted'
+            }
+          });
+          
+          // Check for pending requests
+          const pendingSent = await Friendship.findOne({
+            where: { requesterId: userId, addresseeId: targetUserId, status: 'pending' }
+          });
+          
+          const pendingReceived = await Friendship.findOne({
+            where: { requesterId: targetUserId, addresseeId: userId, status: 'pending' }
+          });
+          
+          const friendshipStatus = {
+            isFriend: !!friendship,
+            pendingStatus: pendingSent ? 'sent' : pendingReceived ? 'received' : null
+          };
+          
+          // Emit to both users
+          io.to(`user:${userId}`).emit('friendship:update', { targetUserId, ...friendshipStatus });
+          io.to(`user:${targetUserId}`).emit('friendship:update', { targetUserId: userId, ...friendshipStatus });
+        } catch (error) {
+          console.error(`[Socket] Error pushing friendship update:`, error.message);
+        }
+      };
+
+      /* helper to push inventory updates */
+      const pushInventoryUpdate = async (targetUserId = userId) => {
+        try {
+          const inventory = await Inventory.findAll({
+            where: { userId: targetUserId },
+            include: [{ model: Item, as: 'item' }]
+          });
+          
+          io.to(`user:${targetUserId}`).emit('inventory:update', inventory);
+        } catch (error) {
+          console.error(`[Socket] Error pushing inventory update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push bank updates */
+      const pushBankUpdate = async (targetUserId = userId) => {
+        try {
+          const bank = await Bank.findOne({ where: { userId: targetUserId } });
+          if (bank) {
+            io.to(`user:${targetUserId}`).emit('bank:update', bank);
+          }
+        } catch (error) {
+          console.error(`[Socket] Error pushing bank update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push task updates */
+      const pushTaskUpdate = async (targetUserId = userId) => {
+        try {
+          const tasks = await Task.findAll({ where: { userId: targetUserId } });
+          io.to(`user:${targetUserId}`).emit('tasks:update', tasks);
+        } catch (error) {
+          console.error(`[Socket] Error pushing task update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push gang updates */
+      const pushGangUpdate = async (gangId) => {
+        try {
+          const gang = await Gang.findByPk(gangId, {
+            include: [{ model: Character, as: 'members' }]
+          });
+          if (gang) {
+            // Emit to all gang members
+            gang.members.forEach(member => {
+              io.to(`user:${member.userId}`).emit('gang:update', gang);
+            });
+          }
+        } catch (error) {
+          console.error(`[Socket] Error pushing gang update for gang ${gangId}:`, error.message);
+        }
+      };
+
+      /* helper to push rankings update */
+      const pushRankingsUpdate = async () => {
+        try {
+          const { RankingService } = await import('./services/RankingService.js');
+          const rankings = await RankingService.getTopPlayers();
+          io.emit('rankings:update', rankings);
+        } catch (error) {
+          console.error(`[Socket] Error pushing rankings update:`, error.message);
         }
       };
 
@@ -198,108 +322,144 @@ export function initSocket(server) {
       socket.on('join_global_chat', async () => {
         socket.join('global_chat');
         onlineGlobalChatUsers.add(userId);
-        // Emit updated online count to all in global chat
-        io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
-        // Send a test message to confirm connection
-        socket.emit('global_message', {
-          id: 'test',
-          userId: 'system',
-          username: 'System',
-          avatarUrl: '/avatars/default.png',
-          isAdmin: true,
-          isVip: false,
-          content: 'تم الاتصال بالدردشة العامة بنجاح!',
-          messageType: 'SYSTEM',
-          createdAt: new Date()
-        });
+        io.to('global_chat').emit('global_chat_users_count', onlineGlobalChatUsers.size);
       });
 
-      socket.on('leave_global_chat', async () => {
+      socket.on('leave_global_chat', () => {
         socket.leave('global_chat');
         onlineGlobalChatUsers.delete(userId);
-        io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
-        console.log(`[Global Chat] User ${userId} left global chat (socket ${socket.id})`);
-      });
-
-      // Respond to get_online_count event
-      socket.on('get_online_count', () => {
-        socket.emit('online_count', { count: onlineGlobalChatUsers.size });
+        io.to('global_chat').emit('global_chat_users_count', onlineGlobalChatUsers.size);
       });
 
       socket.on('send_global_message', async (data) => {
         try {
-          console.log('[Global Chat] Received message:', data);
           const { content } = data;
+          const char = await Character.findOne({ where: { userId } });
+          if (!char) return socket.emit('global_message_error', { error: 'Character not found' });
           
-          // Get user info
-          const user = await User.findByPk(userId);
-          if (!user) {
-            console.log('[Global Chat] User not found:', userId);
-            socket.emit('global_message_error', { error: 'User not found' });
-            return;
-          }
-
-          // Check chat ban
-          if (user.chatBannedUntil && new Date(user.chatBannedUntil) > new Date()) {
-            socket.emit('global_message_error', { error: 'تم حظرك من الدردشة العامة.' });
-            return;
-          }
-          // Check chat mute
-          if (user.chatMutedUntil && new Date(user.chatMutedUntil) > new Date()) {
-            socket.emit('global_message_error', { error: 'تم كتمك في الدردشة العامة.' });
-            return;
-          }
-
-          // Validate message
-          if (!content || content.trim().length === 0) {
-            socket.emit('global_message_error', { error: 'Message cannot be empty' });
-            return;
-          }
-
-          if (content.length > 500) {
-            socket.emit('global_message_error', { error: 'Message too long (max 500 characters)' });
-            return;
-          }
-
-          console.log('[Global Chat] Creating message for user:', user.username);
-          
-          // Get character name for display
-          const character = await Character.findOne({ where: { userId: user.id } });
-          const displayName = character?.name || user.username;
-          
-          // Save to database
           const message = await GlobalMessage.create({
-            userId: userId,
-            username: user.username,
-            content: content.trim(),
-            messageType: 'GLOBAL'
+            userId,
+            content,
+            characterName: char.name
           });
-
-          console.log('[Global Chat] Message saved:', message.id);
-
-          // Broadcast to all users in global chat
-          const messageData = {
-            id: message.id,
-            userId: userId,
-            username: user.username,
-            displayName: displayName,
-            avatarUrl: user.avatarUrl,
-            isAdmin: user.isAdmin,
-            isVip: user.isVip,
-            vipExpiresAt: character?.vipExpiresAt,
-            content: message.content,
-            messageType: message.messageType,
-            createdAt: message.createdAt
+          
+          const fullMessage = {
+            ...message.toJSON(),
+            username: char.User?.username || 'Unknown'
           };
-
-          console.log('[Global Chat] Broadcasting message:', messageData);
-          io.to('global_chat').emit('global_message', messageData);
-          console.log(`[Global Chat] Emitted global_message to global_chat room`);
-
-          console.log(`[Global Chat] ${user.username}: ${content}`);
+          
+          io.to('global_chat').emit('global_message', fullMessage);
         } catch (error) {
-          console.error(`[Socket] Error sending global message:`, error);
-          socket.emit('global_message_error', { error: 'Failed to send message: ' + error.message });
+          console.error(`[Socket] Error sending global message:`, error.message);
+          socket.emit('global_message_error', { error: 'Failed to send message' });
+        }
+      });
+
+      // --- Friendship System ---
+      socket.on('friendship:add', async (data) => {
+        try {
+          const { friendId } = data;
+          const friendship = await Friendship.create({
+            requesterId: userId,
+            addresseeId: friendId,
+            status: 'pending'
+          });
+          
+          // Push updates to both users
+          await pushFriendshipUpdate(friendId);
+        } catch (error) {
+          console.error(`[Socket] Error adding friendship:`, error.message);
+        }
+      });
+
+      socket.on('friendship:accept', async (data) => {
+        try {
+          const { friendshipId } = data;
+          const friendship = await Friendship.findByPk(friendshipId);
+          if (friendship && friendship.addresseeId === userId) {
+            friendship.status = 'accepted';
+            await friendship.save();
+            
+            // Push updates to both users
+            await pushFriendshipUpdate(friendship.requesterId);
+          }
+        } catch (error) {
+          console.error(`[Socket] Error accepting friendship:`, error.message);
+        }
+      });
+
+      socket.on('friendship:remove', async (data) => {
+        try {
+          const { friendId } = data;
+          await Friendship.destroy({
+            where: {
+              [Op.or]: [
+                { requesterId: userId, addresseeId: friendId },
+                { requesterId: friendId, addresseeId: userId }
+              ]
+            }
+          });
+          
+          // Push updates to both users
+          await pushFriendshipUpdate(friendId);
+        } catch (error) {
+          console.error(`[Socket] Error removing friendship:`, error.message);
+        }
+      });
+
+      // --- Profile Updates ---
+      socket.on('profile:request', async (data) => {
+        try {
+          const { targetUserId } = data;
+          await pushProfileUpdate(targetUserId || userId);
+        } catch (error) {
+          console.error(`[Socket] Error handling profile request:`, error.message);
+        }
+      });
+
+      // --- Inventory Updates ---
+      socket.on('inventory:request', async () => {
+        try {
+          await pushInventoryUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling inventory request:`, error.message);
+        }
+      });
+
+      // --- Bank Updates ---
+      socket.on('bank:request', async () => {
+        try {
+          await pushBankUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling bank request:`, error.message);
+        }
+      });
+
+      // --- Task Updates ---
+      socket.on('tasks:request', async () => {
+        try {
+          await pushTaskUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling tasks request:`, error.message);
+        }
+      });
+
+      // --- Gang Updates ---
+      socket.on('gang:request', async (data) => {
+        try {
+          const { gangId } = data;
+          await pushGangUpdate(gangId);
+        } catch (error) {
+          console.error(`[Socket] Error handling gang request:`, error.message);
+        }
+      });
+
+      // --- Rankings Updates ---
+      socket.on('rankings:request', async () => {
+        try {
+          await pushRankingsUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling rankings request:`, error.message);
         }
       });
 
@@ -496,21 +656,19 @@ export function initSocket(server) {
         }
       });
 
-      socket.on('disconnect', async (reason) => {
+      // --- Disconnect handling ---
+      socket.on('disconnect', () => {
+        onlineGlobalChatUsers.delete(userId);
+        io.to('global_chat').emit('global_chat_users_count', onlineGlobalChatUsers.size);
         clearInterval(tick);
-        // Remove from online global chat users if present
-        if (onlineGlobalChatUsers.has(userId)) {
-          onlineGlobalChatUsers.delete(userId);
-          io.to('global_chat').emit('online_count', { count: onlineGlobalChatUsers.size });
-        }
       });
       
       socket.on('error', (error) => {
         console.error(`[Socket] Error for user ${userId}:`, error);
       });
       
-    } catch (err) {
-      console.error('[Socket] Authentication error:', err.message);
+    } catch (error) {
+      console.error(`[Socket] Authentication error:`, error.message);
       socket.disconnect();
     }
   });
@@ -523,27 +681,42 @@ export function initSocket(server) {
   return io;
 }
 
-// Function to emit notification to a specific user
-export const emitNotification = (userId, notification) => {
-  console.log(`[Socket] Emitting notification to user ${userId}:`, notification);
+// Export helper functions for other services to use
+export const emitToUser = (userId, event, data) => {
   if (io) {
-    io.to(String(userId)).emit('notification', notification);
-    console.log(`[Socket] Notification emitted successfully to user ${userId}`);
-  } else {
-    console.error('[Socket] IO instance not available for notification emission');
+    io.to(`user:${userId}`).emit(event, data);
   }
 };
 
-// Function to create and emit notification
+export const emitToAll = (event, data) => {
+  if (io) {
+    io.emit(event, data);
+  }
+};
+
+export const emitToRoom = (room, event, data) => {
+  if (io) {
+    io.to(room).emit(event, data);
+  }
+};
+
+// Enhanced notification system
+export const emitNotification = (userId, notification) => {
+  if (io) {
+    io.to(`user:${userId}`).emit('notification', notification);
+  }
+};
+
 export const createAndEmitNotification = async (userId, type, title, content, data = {}) => {
   try {
-    // This function is deprecated - use NotificationService.createNotification() and emitNotification() separately
-    console.warn('createAndEmitNotification is deprecated. Use NotificationService.createNotification() and emitNotification() separately.');
-    return null;
+    const { NotificationService } = await import('./services/NotificationService.js');
+    const notification = await NotificationService.createNotification(userId, type, title, content, data);
+    emitNotification(userId, notification);
+    return notification;
   } catch (error) {
-    console.error('Error creating and emitting notification:', error);
-    throw error;
+    console.error('[Socket] Error creating and emitting notification:', error);
   }
 };
 
+// Export io instance for other services
 export { io };

@@ -45,8 +45,8 @@ User.hasOne(Character, { foreignKey: 'userId' });
 Character.belongsTo(User, { foreignKey: 'userId' });
 Character.belongsTo(House, { foreignKey: 'equippedHouseId', as: 'equippedHouse' });
 Character.belongsTo(Gang, { foreignKey: 'gangId', as: 'gang' });
-Character.hasOne(Statistic, { foreignKey: 'userId' });
-Statistic.belongsTo(Character, { foreignKey: 'userId' });
+User.hasOne(Statistic, { foreignKey: 'userId' });
+Statistic.belongsTo(User, { foreignKey: 'userId' });
 
 // Suggestion associations
 User.hasMany(Suggestion, { foreignKey: 'userId' });
