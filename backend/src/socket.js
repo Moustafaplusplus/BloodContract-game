@@ -8,24 +8,24 @@ import { Message } from './models/Message.js';
 import { GlobalMessage } from './models/GlobalMessage.js';
 import { User } from './models/User.js';
 import { Friendship } from './models/Friendship.js';
-import { Inventory } from './models/Inventory.js';
-import { Bank } from './models/Bank.js';
+import { InventoryItem } from './models/Inventory.js';
+import { BankAccount } from './models/Bank.js';
 import { Task } from './models/Task.js';
 import { Gang } from './models/Gang.js';
 import { Statistic } from './models/Statistic.js';
 import { Op } from 'sequelize';
-import { Item } from './models/Item.js';
+// Item import removed - using InventoryItem instead
 import { Crime } from './models/Crime.js';
 import { Fight } from './models/Fight.js';
-import { BloodContract } from './models/BloodContract.js';
+import BloodContract from './models/BloodContract.js';
 import { Job } from './models/Job.js';
 import { MinistryMission } from './models/MinistryMission.js';
 import { Car } from './models/Car.js';
 import { Dog } from './models/Dog.js';
 import { House } from './models/House.js';
-import { BlackMarket } from './models/BlackMarket.js';
-import { Shop } from './models/Shop.js';
-import { SpecialShop } from './models/SpecialShop.js';
+import { BlackMarketItem } from './models/BlackMarket.js';
+import { Weapon, Armor } from './models/Shop.js';
+import { SpecialItem } from './models/SpecialItem.js';
 import { LoginGift } from './models/LoginGift.js';
 
 let io = null;
@@ -154,9 +154,8 @@ export function initSocket(server) {
       /* helper to push inventory updates */
       const pushInventoryUpdate = async (targetUserId = userId) => {
         try {
-          const inventory = await Inventory.findAll({
-            where: { userId: targetUserId },
-            include: [{ model: Item, as: 'item' }]
+          const inventory = await InventoryItem.findAll({
+            where: { userId: targetUserId }
           });
           
           io.to(`user:${targetUserId}`).emit('inventory:update', inventory);
@@ -168,7 +167,7 @@ export function initSocket(server) {
       /* helper to push bank updates */
       const pushBankUpdate = async (targetUserId = userId) => {
         try {
-          const bank = await Bank.findOne({ where: { userId: targetUserId } });
+          const bank = await BankAccount.findOne({ where: { userId: targetUserId } });
           if (bank) {
             io.to(`user:${targetUserId}`).emit('bank:update', bank);
           }
@@ -324,11 +323,8 @@ export function initSocket(server) {
       /* helper to push black market updates */
       const pushBlackMarketUpdate = async () => {
         try {
-          const listings = await BlackMarket.findAll({
-            where: { status: 'active' },
-            include: [{ model: User, attributes: ['username'] }]
-          });
-          io.emit('blackMarket:update', listings);
+          const items = await BlackMarketItem.findAll({ where: { isAvailable: true } });
+          io.emit('blackMarket:update', items);
         } catch (error) {
           console.error(`[Socket] Error pushing black market update:`, error.message);
         }
@@ -337,7 +333,9 @@ export function initSocket(server) {
       /* helper to push shop updates */
       const pushShopUpdate = async () => {
         try {
-          const items = await Shop.findAll({ where: { isEnabled: true } });
+          const weapons = await Weapon.findAll();
+          const armors = await Armor.findAll();
+          const items = [...weapons, ...armors];
           io.emit('shop:update', items);
         } catch (error) {
           console.error(`[Socket] Error pushing shop update:`, error.message);
@@ -347,7 +345,7 @@ export function initSocket(server) {
       /* helper to push special shop updates */
       const pushSpecialShopUpdate = async () => {
         try {
-          const items = await SpecialShop.findAll({ where: { isEnabled: true } });
+          const items = await SpecialItem.findAll({ where: { isAvailable: true } });
           io.emit('specialShop:update', items);
         } catch (error) {
           console.error(`[Socket] Error pushing special shop update:`, error.message);

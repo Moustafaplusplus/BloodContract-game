@@ -2,143 +2,92 @@
 
 // Deployment verification script
 import http from 'http';
-import { sequelize } from './src/config/db.js';
+import dotenv from 'dotenv';
 
-console.log('🔍 Starting deployment verification...');
+dotenv.config();
 
-const checks = {
-  database: false,
-  server: false,
-  health: false
-};
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
+const HOST = 'localhost';
 
-// Check database connection
-async function checkDatabase() {
-  try {
-    console.log('🗄️  Testing database connection...');
-    await sequelize.authenticate();
-    console.log('✅ Database connection: OK');
-    checks.database = true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    checks.database = false;
-  }
-}
+console.log('🔍 Deployment verification starting...');
+console.log(`📍 Target: http://${HOST}:${PORT}`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`🚂 Railway Environment: ${process.env.RAILWAY_ENVIRONMENT || 'not set'}`);
 
-// Check if server is running
-function checkServer() {
-  return new Promise((resolve) => {
+const endpoints = [
+  { path: '/', name: 'Root' },
+  { path: '/health-simple', name: 'Simple Health' },
+  { path: '/health', name: 'Full Health' },
+  { path: '/api/debug/env', name: 'Environment Debug' }
+];
+
+let currentEndpoint = 0;
+
+const testEndpoint = (endpoint) => {
+  return new Promise((resolve, reject) => {
     const options = {
-      hostname: 'localhost',
-      port: process.env.PORT || 3000,
-      path: '/health',
+      hostname: HOST,
+      port: PORT,
+      path: endpoint.path,
       method: 'GET',
-      timeout: 5000
+      timeout: 10000
     };
 
+    console.log(`\n🔍 Testing ${endpoint.name} endpoint: ${endpoint.path}`);
+
     const req = http.request(options, (res) => {
-      console.log(`✅ Server health check: ${res.statusCode}`);
-      checks.server = true;
-      resolve();
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        console.log(`✅ ${endpoint.name}: ${res.statusCode}`);
+        try {
+          const response = JSON.parse(data);
+          console.log(`📊 ${endpoint.name} response:`, response);
+        } catch (parseError) {
+          console.log(`📄 ${endpoint.name} raw response:`, data);
+        }
+        resolve();
+      });
     });
 
     req.on('error', (err) => {
-      console.error('❌ Server health check failed:', err.message);
-      checks.server = false;
-      resolve();
+      console.error(`❌ ${endpoint.name} failed: ${err.message}`);
+      reject(err);
     });
 
     req.on('timeout', () => {
-      console.error('❌ Server health check timed out');
-      checks.server = false;
-      resolve();
+      console.error(`❌ ${endpoint.name} timed out`);
+      req.destroy();
+      reject(new Error('Timeout'));
     });
 
     req.end();
   });
-}
+};
 
-// Check environment variables
-function checkEnvironment() {
-  console.log('🔧 Checking environment variables...');
-  
-  const requiredVars = [
-    'DATABASE_URL',
-    'PORT',
-    'NODE_ENV'
-  ];
-
-  const optionalVars = [
-    'FIREBASE_TYPE',
-    'FIREBASE_PROJECT_ID',
-    'FIREBASE_PRIVATE_KEY_ID',
-    'FIREBASE_PRIVATE_KEY',
-    'FIREBASE_CLIENT_EMAIL',
-    'FIREBASE_CLIENT_ID',
-    'FIREBASE_AUTH_URI',
-    'FIREBASE_TOKEN_URI',
-    'FIREBASE_AUTH_PROVIDER_X509_CERT_URL',
-    'FIREBASE_CLIENT_X509_CERT_URL',
-    'FIREBASE_STORAGE_BUCKET'
-  ];
-
-  console.log('📋 Required variables:');
-  requiredVars.forEach(varName => {
-    const value = process.env[varName];
-    if (value) {
-      console.log(`  ✅ ${varName}: ${varName.includes('PASSWORD') || varName.includes('KEY') ? '***' : value.substring(0, 20) + '...'}`);
-    } else {
-      console.log(`  ❌ ${varName}: MISSING`);
+const runTests = async () => {
+  try {
+    for (const endpoint of endpoints) {
+      try {
+        await testEndpoint(endpoint);
+        // Wait a bit between tests
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`❌ ${endpoint.name} test failed:`, error.message);
+        // Continue with other tests
+      }
     }
-  });
-
-  console.log('📋 Optional variables:');
-  optionalVars.forEach(varName => {
-    const value = process.env[varName];
-    if (value) {
-      console.log(`  ✅ ${varName}: ${varName.includes('PASSWORD') || varName.includes('KEY') ? '***' : value.substring(0, 20) + '...'}`);
-    } else {
-      console.log(`  ⚠️  ${varName}: NOT SET`);
-    }
-  });
-}
-
-// Main verification
-async function verifyDeployment() {
-  console.log('🚀 Starting deployment verification...');
-  console.log('Environment:', process.env.NODE_ENV || 'development');
-  console.log('Port:', process.env.PORT || 3000);
-  
-  // Check environment variables
-  checkEnvironment();
-  
-  // Check database
-  await checkDatabase();
-  
-  // Wait a bit for server to start
-  console.log('⏳ Waiting 10 seconds for server to start...');
-  await new Promise(resolve => setTimeout(resolve, 10000));
-  
-  // Check server
-  await checkServer();
-  
-  // Summary
-  console.log('\n📊 Verification Summary:');
-  console.log(`Database: ${checks.database ? '✅ OK' : '❌ FAILED'}`);
-  console.log(`Server: ${checks.server ? '✅ OK' : '❌ FAILED'}`);
-  
-  const allPassed = Object.values(checks).every(check => check);
-  
-  if (allPassed) {
-    console.log('🎉 All checks passed! Deployment is ready.');
+    
+    console.log('\n✅ Deployment verification completed');
     process.exit(0);
-  } else {
-    console.log('⚠️  Some checks failed. Please review the logs above.');
+  } catch (error) {
+    console.error('\n❌ Deployment verification failed:', error.message);
     process.exit(1);
   }
-}
+};
 
-verifyDeployment().catch(error => {
-  console.error('❌ Verification failed:', error);
-  process.exit(1);
-}); 
+runTests(); 

@@ -10,13 +10,14 @@ import { dirname } from 'path';
 import fs from 'fs';
 import session from 'express-session';
 
+// Load environment variables first
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import { DataTypes } from 'sequelize';
 import { sequelize } from './config/db.js';
-dotenv.config();
 
 /* ─────────── Export for tests ─────────── */
 export { sequelize };
@@ -92,24 +93,6 @@ import gameNewsRouter from './routes/gameNews.js';
 import loginGiftRouter from './routes/loginGift.js';
 import featuresRouter from './routes/features.js';
 
-/* ─────────── Sequelize model auto-init (skip if already inited) ─────────── */
-[
-  User, CharacterModel,
-  JailModel, HospitalModel, Crime, CrimeLog,
-  Weapon, Armor, InventoryItem, SpecialItem,
-  HouseModel, UserHouseModel,
-  FightModel, BankAccount,
-  CarModel,
-  Friendship, Message,
-  JobModel, JobHistoryModel,
-  Gang, GangMember, GangJoinRequest,
-  IpTracking, MinistryMission, UserMinistryMission, Suggestion, GlobalMessage, ProfileRating,
-  Task, UserTaskProgress,
-].forEach((M) => {
-  if (M.sequelize || typeof M.init !== 'function') return; // already initialised
-  M.init.length === 1 ? M.init(sequelize) : M.init(sequelize, DataTypes);
-});
-
 /* ─────────── Express bootstrapping ─────────── */
 const app = express();
 
@@ -140,8 +123,142 @@ app.use(session({
 
 // Firebase Auth is now handled by the frontend
 
-app.get('/', (_req, res) => res.send('🎉 Backend is working!'));
+// Basic route for immediate response
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Blood Contract API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    port: process.env.PORT || process.env.API_PORT || 3001
+  });
+});
 
+// Simple health check endpoint (no database dependency)
+app.get('/health-simple', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    message: 'Server is running',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Health check endpoint for Railway
+app.get('/health', async (req, res) => {
+  try {
+    // Basic health check - don't fail if database is not available
+    let dbStatus = 'unknown';
+    try {
+      await sequelize.authenticate();
+      dbStatus = 'connected';
+    } catch (dbError) {
+      dbStatus = 'disconnected';
+      console.log('Health check: Database not available, but server is running');
+    }
+    
+    res.status(200).json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: dbStatus,
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || process.env.API_PORT || 3001
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'ERROR', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'unknown',
+      error: error.message,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
+});
+
+// Performance monitoring endpoint
+app.get('/api/performance', (req, res) => {
+  const memUsage = process.memoryUsage();
+  res.json({
+    memory: {
+      rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB'
+    },
+    uptime: process.uptime(),
+    database: 'connected'
+  });
+});
+
+// Debug endpoint to check environment variables
+app.get('/api/debug/env', (req, res) => {
+  const envVars = {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    API_PORT: process.env.API_PORT,
+    DATABASE_URL: process.env.DATABASE_URL ? 'present' : 'missing',
+    RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
+    SESSION_SECRET: process.env.SESSION_SECRET ? 'present' : 'missing'
+  };
+  
+  res.json({
+    environment: envVars,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Debug endpoint to check Firebase environment variables
+app.get('/api/debug/firebase', (req, res) => {
+  const requiredEnvVars = [
+    'FIREBASE_TYPE',
+    'FIREBASE_PROJECT_ID', 
+    'FIREBASE_PRIVATE_KEY_ID',
+    'FIREBASE_PRIVATE_KEY',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_CLIENT_ID',
+    'FIREBASE_AUTH_URI',
+    'FIREBASE_TOKEN_URI',
+    'FIREBASE_AUTH_PROVIDER_X509_CERT_URL',
+    'FIREBASE_CLIENT_X509_CERT_URL',
+    'FIREBASE_STORAGE_BUCKET'
+  ];
+
+  const envStatus = {};
+  requiredEnvVars.forEach(varName => {
+    const value = process.env[varName];
+    envStatus[varName] = {
+      present: !!value,
+      length: value ? value.length : 0,
+      preview: value ? (varName.includes('PRIVATE_KEY') ? `${value.substring(0, 20)}...` : value.substring(0, 50)) : null
+    };
+  });
+
+  res.json({
+    environment: process.env.NODE_ENV,
+    firebase: envStatus,
+    missing: requiredEnvVars.filter(varName => !process.env[varName])
+  });
+});
+
+/* ─────────── Sequelize model auto-init (skip if already inited) ─────────── */
+[
+  User, CharacterModel,
+  JailModel, HospitalModel, Crime, CrimeLog,
+  Weapon, Armor, InventoryItem, SpecialItem,
+  HouseModel, UserHouseModel,
+  FightModel, BankAccount,
+  CarModel,
+  Friendship, Message,
+  JobModel, JobHistoryModel,
+  Gang, GangMember, GangJoinRequest,
+  IpTracking, MinistryMission, UserMinistryMission, Suggestion, GlobalMessage, ProfileRating,
+  Task, UserTaskProgress,
+].forEach((M) => {
+  if (M.sequelize || typeof M.init !== 'function') return; // already initialised
+  M.init.length === 1 ? M.init(sequelize) : M.init(sequelize, DataTypes);
+});
 
 /* ─────────── Feature-barrel routers ─────────── */
 app.use('/api/v1/search',        searchRouter);
@@ -196,105 +313,6 @@ app.use('/api/game-news', gameNewsRouter);
 app.use('/api/login-gift', loginGiftRouter);
 app.use('/api/features', featuresRouter);
 
-// Basic route for immediate response
-app.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Blood Contract API is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Simple health check endpoint (no database dependency)
-app.get('/health-simple', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    message: 'Server is running'
-  });
-});
-
-// Health check endpoint for Railway
-app.get('/health', async (req, res) => {
-  try {
-    // Basic health check - don't fail if database is not available
-    let dbStatus = 'unknown';
-    try {
-      await sequelize.authenticate();
-      dbStatus = 'connected';
-    } catch (dbError) {
-      dbStatus = 'disconnected';
-      console.log('Health check: Database not available, but server is running');
-    }
-    
-    res.status(200).json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: dbStatus,
-      environment: process.env.NODE_ENV || 'development',
-      port: process.env.PORT || process.env.API_PORT || 3001
-    });
-  } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(503).json({ 
-      status: 'ERROR', 
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: 'unknown',
-      error: error.message,
-      environment: process.env.NODE_ENV || 'development'
-    });
-  }
-});
-
-// Performance monitoring endpoint
-app.get('/api/performance', (req, res) => {
-  const memUsage = process.memoryUsage();
-  res.json({
-    memory: {
-      rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
-      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
-      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB'
-    },
-    uptime: process.uptime(),
-    database: 'connected'
-  });
-});
-
-// Debug endpoint to check Firebase environment variables
-app.get('/api/debug/firebase', (req, res) => {
-  const requiredEnvVars = [
-    'FIREBASE_TYPE',
-    'FIREBASE_PROJECT_ID', 
-    'FIREBASE_PRIVATE_KEY_ID',
-    'FIREBASE_PRIVATE_KEY',
-    'FIREBASE_CLIENT_EMAIL',
-    'FIREBASE_CLIENT_ID',
-    'FIREBASE_AUTH_URI',
-    'FIREBASE_TOKEN_URI',
-    'FIREBASE_AUTH_PROVIDER_X509_CERT_URL',
-    'FIREBASE_CLIENT_X509_CERT_URL',
-    'FIREBASE_STORAGE_BUCKET'
-  ];
-
-  const envStatus = {};
-  requiredEnvVars.forEach(varName => {
-    const value = process.env[varName];
-    envStatus[varName] = {
-      present: !!value,
-      length: value ? value.length : 0,
-      preview: value ? (varName.includes('PRIVATE_KEY') ? `${value.substring(0, 20)}...` : value.substring(0, 50)) : null
-    };
-  });
-
-  res.json({
-    environment: process.env.NODE_ENV,
-    firebase: envStatus,
-    missing: requiredEnvVars.filter(varName => !process.env[varName])
-  });
-});
-
 /* ─────────── Global error handler ─────────── */
 app.use(errorHandler);
 
@@ -308,7 +326,7 @@ const startServer = async () => {
   try {
     console.log('🚀 Starting server...');
     console.log('Environment:', process.env.NODE_ENV || 'development');
-    console.log('Port:', process.env.PORT || process.env.API_PORT || 3001);
+    console.log('Port:', PORT);
     console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
     console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
     

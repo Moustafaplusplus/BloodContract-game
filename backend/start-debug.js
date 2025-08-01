@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 // Debug startup script for Railway deployment
+import dotenv from 'dotenv';
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,48 +9,48 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log('🔍 Starting debug mode...');
-console.log('Environment:', process.env.NODE_ENV || 'development');
-console.log('Port:', process.env.PORT || 3000);
-console.log('Working directory:', process.cwd());
+// Load environment variables
+dotenv.config();
 
-// Check if we're in the right directory
-const packageJsonPath = path.join(__dirname, 'package.json');
-try {
-  const packageJson = JSON.parse(await import('fs').then(fs => fs.readFileSync(packageJsonPath, 'utf8')));
-  console.log('📦 Package.json found:', packageJson.name);
-} catch (error) {
-  console.error('❌ Package.json not found or invalid');
-  process.exit(1);
+console.log('🔍 Debug startup script starting...');
+console.log('Environment variables:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- PORT:', process.env.PORT);
+console.log('- API_PORT:', process.env.API_PORT);
+console.log('- DATABASE_URL:', process.env.DATABASE_URL ? 'present' : 'missing');
+console.log('- RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
+
+// Check if we're in Railway
+if (process.env.RAILWAY_ENVIRONMENT) {
+  console.log('🚂 Running in Railway environment');
+} else {
+  console.log('💻 Running in local environment');
 }
 
-// Start the server with detailed logging
-const serverProcess = spawn('node', ['src/app.js'], {
+// Start the main application
+console.log('\n🚀 Starting main application...');
+const appProcess = spawn('node', ['src/app.js'], {
   stdio: 'inherit',
-  env: {
-    ...process.env,
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    DEBUG: '*'
-  }
+  env: process.env
 });
 
-serverProcess.on('error', (error) => {
-  console.error('❌ Failed to start server:', error);
+appProcess.on('error', (error) => {
+  console.error('❌ Failed to start application:', error);
   process.exit(1);
 });
 
-serverProcess.on('exit', (code) => {
-  console.log(`Server process exited with code ${code}`);
+appProcess.on('exit', (code) => {
+  console.log(`📤 Application exited with code ${code}`);
   process.exit(code);
 });
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down...');
-  serverProcess.kill('SIGTERM');
+  appProcess.kill('SIGTERM');
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down...');
-  serverProcess.kill('SIGINT');
+  appProcess.kill('SIGINT');
 }); 
