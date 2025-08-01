@@ -119,9 +119,10 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [attacking, setAttacking] = useState(false);
   const navigate = useNavigate();
-  const [isFriend, setIsFriend] = useState(false);
+  const [isFriend, setIsFriend] = useState(null); // null = loading, true/false = loaded
   const [pendingStatus, setPendingStatus] = useState(null); // 'sent', 'received', or null
   const [friendLoading, setFriendLoading] = useState(false);
+  const [friendshipStatusLoading, setFriendshipStatusLoading] = useState(true);
   const { socket } = useSocket();
   const { requestProfileUpdate } = useRealTimeUpdates();
   const [profileFriends, setProfileFriends] = useState([]);
@@ -303,24 +304,51 @@ export default function Profile() {
 
   // Initial friendship status fetch and real-time updates
   useEffect(() => {
-    if (!isOwnProfile && character?.userId) {
+    if (!isOwnProfile && character?.userId && hudStats?.userId) {
+      setFriendshipStatusLoading(true);
+      
       // Initial fetch function
-      const fetchFriendshipStatus = () => {
+      const fetchFriendshipStatus = async () => {
         const token = localStorage.getItem('jwt');
-        axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-          .then(res => setIsFriend(res.data.isFriend))
-          .catch(() => setIsFriend(false));
-        axios.get('/api/friendship/pending', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-          .then(res => {
-            const pending = res.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
-            if (pending) setPendingStatus('sent');
-            else {
-              const received = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
-              if (received) setPendingStatus('received');
-              else setPendingStatus(null);
+        try {
+          console.log('Fetching friendship status for:', character.userId, 'from user:', hudStats.userId);
+          
+          // Check if they are friends
+          const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
+            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+          });
+          console.log('Friend response:', friendRes.data);
+          setIsFriend(friendRes.data.isFriend);
+          
+          // Check pending requests
+          const pendingRes = await axios.get('/api/friendship/pending', { 
+            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+          });
+          console.log('Pending requests:', pendingRes.data);
+          
+          // Check if current user sent a request to this character
+          const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+          if (sentRequest) {
+            console.log('Found pending request sent by current user');
+            setPendingStatus('sent');
+          } else {
+            // Check if current user received a request from this character
+            const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+            if (receivedRequest) {
+              console.log('Found pending request received from target user');
+              setPendingStatus('received');
+            } else {
+              console.log('No pending requests found');
+              setPendingStatus(null);
             }
-          })
-          .catch(() => setPendingStatus(null));
+          }
+        } catch (error) {
+          console.error('Error fetching friendship status:', error);
+          setIsFriend(false);
+          setPendingStatus(null);
+        } finally {
+          setFriendshipStatusLoading(false);
+        }
       };
       
       // Initial fetch
@@ -328,8 +356,78 @@ export default function Profile() {
       
       // Request profile update via socket
       requestProfileUpdate(character.userId);
+    } else if (isOwnProfile) {
+      // Reset friendship status for own profile
+      setIsFriend(null);
+      setPendingStatus(null);
+      setFriendshipStatusLoading(false);
     }
   }, [character?.userId, isOwnProfile, hudStats?.userId, requestProfileUpdate]);
+
+  // Debug: Log when dependencies change
+  useEffect(() => {
+    console.log('Profile component dependencies changed:', {
+      isOwnProfile,
+      characterUserId: character?.userId,
+      hudStatsUserId: hudStats?.userId,
+      isFriend,
+      pendingStatus,
+      friendshipStatusLoading
+    });
+  }, [isOwnProfile, character?.userId, hudStats?.userId, isFriend, pendingStatus, friendshipStatusLoading]);
+
+  // Refetch friendship status when component mounts or when data changes
+  useEffect(() => {
+    if (!isOwnProfile && character?.userId && hudStats?.userId) {
+      console.log('Triggering friendship status refetch');
+      // Add a small delay to ensure all data is loaded
+      const timer = setTimeout(() => {
+        const fetchFriendshipStatus = async () => {
+          const token = localStorage.getItem('jwt');
+          try {
+            console.log('Refetching friendship status...');
+            // Check if they are friends
+            const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
+              headers: token ? { Authorization: `Bearer ${token}` } : {} 
+            });
+            console.log('Refetch friend response:', friendRes.data);
+            setIsFriend(friendRes.data.isFriend);
+            
+            // Check pending requests
+            const pendingRes = await axios.get('/api/friendship/pending', { 
+              headers: token ? { Authorization: `Bearer ${token}` } : {} 
+            });
+            console.log('Refetch pending requests:', pendingRes.data);
+            
+            // Check if current user sent a request to this character
+            const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+            if (sentRequest) {
+              console.log('Refetch: Found pending request sent by current user');
+              setPendingStatus('sent');
+            } else {
+              // Check if current user received a request from this character
+              const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+              if (receivedRequest) {
+                console.log('Refetch: Found pending request received from target user');
+                setPendingStatus('received');
+              } else {
+                console.log('Refetch: No pending requests found');
+                setPendingStatus(null);
+              }
+            }
+          } catch (error) {
+            console.error('Error refetching friendship status:', error);
+            setIsFriend(false);
+            setPendingStatus(null);
+          }
+        };
+        
+        fetchFriendshipStatus();
+      }, 100); // Small delay to ensure data is loaded
+      
+      return () => clearTimeout(timer);
+    }
+  }, [character?.userId, isOwnProfile, hudStats?.userId]);
 
   // Refetch profile data on hud:update (for own profile) or profile:update (for others)
   useEffect(() => {
@@ -358,13 +456,62 @@ export default function Profile() {
     socket.on('hospital:leave', fetchHospitalStatus);
     socket.on('jail:enter', fetchJailStatus);
     socket.on('jail:leave', fetchJailStatus);
-    return () => {
-      socket.off('hospital:enter', fetchHospitalStatus);
-      socket.off('hospital:leave', fetchHospitalStatus);
-      socket.off('jail:enter', fetchJailStatus);
-      socket.off('jail:leave', fetchJailStatus);
+    
+    // Real-time friendship status updates
+    const handleFriendshipUpdate = async () => {
+      if (!isOwnProfile && character?.userId) {
+        console.log('Socket: Refetching friendship status due to update');
+        const token = localStorage.getItem('jwt');
+        try {
+          const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
+            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+          });
+          setIsFriend(friendRes.data.isFriend);
+          
+          const pendingRes = await axios.get('/api/friendship/pending', { 
+            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+          });
+          
+          // Check if current user sent a request to this character
+          const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+          if (sentRequest) {
+            setPendingStatus('sent');
+          } else {
+            // Check if current user received a request from this character
+            const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+            if (receivedRequest) {
+              setPendingStatus('received');
+            } else {
+              setPendingStatus(null);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching friendship status:', error);
+        }
+      }
     };
-  }, [socket, fetchHospitalStatus, fetchJailStatus]);
+
+    // Listen for all friendship-related socket events
+    socket.on('friendship:updated', handleFriendshipUpdate);
+    socket.on('friendship:request-sent', handleFriendshipUpdate);
+    socket.on('friendship:request-received', handleFriendshipUpdate);
+    socket.on('friendship:request-accepted', handleFriendshipUpdate);
+    socket.on('friendship:request-rejected', handleFriendshipUpdate);
+    socket.on('friendship:removed', handleFriendshipUpdate);
+    
+          return () => {
+        socket.off('hospital:enter', fetchHospitalStatus);
+        socket.off('hospital:leave', fetchHospitalStatus);
+        socket.off('jail:enter', fetchJailStatus);
+        socket.off('jail:leave', fetchJailStatus);
+        socket.off('friendship:updated', handleFriendshipUpdate);
+        socket.off('friendship:request-sent', handleFriendshipUpdate);
+        socket.off('friendship:request-received', handleFriendshipUpdate);
+        socket.off('friendship:request-accepted', handleFriendshipUpdate);
+        socket.off('friendship:request-rejected', handleFriendshipUpdate);
+        socket.off('friendship:removed', handleFriendshipUpdate);
+      };
+  }, [socket, fetchHospitalStatus, fetchJailStatus, character?.userId, isOwnProfile, hudStats?.userId]);
 
   useEffect(() => {
     if (character?.userId) {
@@ -408,8 +555,10 @@ export default function Profile() {
       await axios.post('/api/friendship/add', { friendId: character.userId });
       setPendingStatus('sent');
       setIsFriend(false); // Ensure we're not friends yet
+      toast.success('تم إرسال طلب الصداقة بنجاح');
     } catch (error) {
       console.error('Add friend error:', error);
+      toast.error('فشل في إرسال طلب الصداقة');
     } finally {
       setFriendLoading(false);
     }
@@ -421,8 +570,10 @@ export default function Profile() {
       await axios.post('/api/friendship/remove', { friendId: character.userId });
       setIsFriend(false);
       setPendingStatus(null);
+      toast.success('تم إزالة الصديق بنجاح');
     } catch (error) {
       console.error('Unfriend error:', error);
+      toast.error('فشل في إزالة الصديق');
     } finally {
       setFriendLoading(false);
     }
@@ -438,9 +589,13 @@ export default function Profile() {
         await axios.post('/api/friendship/accept', { friendshipId: request.id });
         setIsFriend(true);
         setPendingStatus(null);
+        toast.success('تم قبول طلب الصداقة بنجاح');
+      } else {
+        toast.error('لم يتم العثور على طلب الصداقة');
       }
     } catch (error) {
       console.error('Accept friend error:', error);
+      toast.error('فشل في قبول طلب الصداقة');
     } finally {
       setFriendLoading(false);
     }
@@ -590,27 +745,33 @@ export default function Profile() {
         
         if (!res.ok) {
           let errorMsg = "فشل في الهجوم";
+          let responseData = null;
+          
           try {
-            const data = await res.json();
-            errorMsg = data.error || errorMsg;
-            // Create error object with response data for confinement handling
-            const error = new Error(errorMsg);
-            error.response = { status: res.status, data: data };
-            throw error;
+            // Clone the response to avoid "body stream already read" error
+            const responseClone = res.clone();
+            responseData = await responseClone.json();
+            errorMsg = responseData.error || errorMsg;
           } catch (parseError) {
-            let text = await res.text();
             try {
-              const data = JSON.parse(text);
-              errorMsg = data.error || errorMsg;
-              const error = new Error(errorMsg);
-              error.response = { status: res.status, data: data };
-              throw error;
-            } catch {
-              const error = new Error(errorMsg);
-              error.response = { status: res.status, data: { message: text } };
-              throw error;
+              // If JSON parsing fails, try to get text
+              const responseClone = res.clone();
+              const text = await responseClone.text();
+              try {
+                responseData = JSON.parse(text);
+                errorMsg = responseData.error || errorMsg;
+              } catch {
+                errorMsg = text || errorMsg;
+              }
+            } catch (textError) {
+              console.error('Error parsing response:', textError);
             }
           }
+          
+          // Create error object with response data for confinement handling
+          const error = new Error(errorMsg);
+          error.response = { status: res.status, data: responseData };
+          throw error;
         }
         
         const result = await res.json();
@@ -796,34 +957,71 @@ export default function Profile() {
               </div>
               {/* Action Buttons (hide if viewing own profile) */}
               {!isCurrentUser && (
-                <div className="flex flex-row justify-center gap-3">
+                <div className="flex flex-col gap-3">
+                  {/* Warning message when user is in hospital/jail */}
+                  {(hudStats?.inHospital || hudStats?.inJail) && (
+                    <div className="w-full p-3 bg-red-950/50 border border-red-500/50 rounded-lg text-center">
+                      <span className="text-red-400 font-bold">
+                        {hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" : "لا يمكنك الهجوم وأنت في السجن"}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-row justify-center gap-3">
                   <button onClick={handleSendMessage} className="min-w-[120px] h-12 bg-accent-blue/20 text-accent-blue rounded-lg font-bold text-base" disabled={!character?.userId}>
                     إرسال رسالة
                   </button>
                   <button
-                    className="min-w-[120px] h-12 bg-accent-red/20 text-accent-red rounded-lg font-bold text-base transition-all duration-200 hover:bg-accent-red/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`min-w-[120px] h-12 rounded-lg font-bold text-base transition-all duration-200 ${
+                      attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail
+                        ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed'
+                        : 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30 hover:text-white'
+                    }`}
                     onClick={attackPlayer}
                     disabled={attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail}
                     title={
-                      !hudStats || hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم" :
+                      attacking ? "جاري الهجوم..." :
+                      !hudStats ? "جاري تحميل البيانات..." :
+                      hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم (مطلوب 10 طاقة)" :
                       hospitalStatus?.inHospital ? "لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً" :
                       jailStatus?.inJail ? "لا يمكنك مهاجمة هذا اللاعب لأنه في السجن حالياً" :
                       hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" :
                       hudStats?.inJail ? "لا يمكنك الهجوم وأنت في السجن" :
-                      undefined
+                      "هجوم"
                     }
                   >
-                    {attacking ? "..." : "هجوم"}
+                    {attacking ? "جاري الهجوم..." : "هجوم"}
                   </button>
                   {/* Friendship Button Logic */}
-                  {isFriend ? (
+                  {friendshipStatusLoading ? (
                     <button
-                      className="min-w-[120px] h-12 bg-accent-green/20 text-accent-green rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-green hover:bg-accent-green/30 hover:text-white transition-all duration-200"
+                      className="min-w-[120px] h-12 bg-hitman-700/50 text-hitman-400 rounded-lg font-bold text-base flex items-center justify-center gap-2 cursor-not-allowed"
+                      disabled
+                    >
+                      <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
+                      جاري التحميل...
+                    </button>
+                  ) : isFriend ? (
+                    <button
+                      className={`min-w-[120px] h-12 rounded-lg font-bold text-base flex items-center justify-center gap-2 border transition-all duration-200 ${
+                        friendLoading 
+                          ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed' 
+                          : 'bg-accent-green/20 text-accent-green border-accent-green hover:bg-accent-green/30 hover:text-white'
+                      }`}
                       onClick={handleUnfriend}
                       disabled={friendLoading}
                     >
-                      <UserCheck className="w-5 h-5" /> صديقك
-                      <X className="w-4 h-4 ml-2 text-accent-red" />
+                      {friendLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
+                          جاري...
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-5 h-5" /> صديقك
+                          <X className="w-4 h-4 ml-2 text-accent-red" />
+                        </>
+                      )}
                     </button>
                   ) : pendingStatus === 'sent' ? (
                     <button
@@ -834,21 +1032,48 @@ export default function Profile() {
                     </button>
                   ) : pendingStatus === 'received' ? (
                     <button
-                      className="min-w-[120px] h-12 bg-accent-blue/20 text-accent-blue rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-blue hover:bg-accent-blue/30 hover:text-white transition-all duration-200"
+                      className={`min-w-[120px] h-12 rounded-lg font-bold text-base flex items-center justify-center gap-2 border transition-all duration-200 ${
+                        friendLoading 
+                          ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed' 
+                          : 'bg-accent-blue/20 text-accent-blue border-accent-blue hover:bg-accent-blue/30 hover:text-white'
+                      }`}
                       onClick={handleAcceptFriend}
                       disabled={friendLoading}
                     >
-                      <UserPlus className="w-5 h-5" /> قبول الطلب
+                      {friendLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
+                          جاري...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5" /> قبول الطلب
+                        </>
+                      )}
                     </button>
                   ) : (
                     <button
-                      className="min-w-[120px] h-12 bg-accent-yellow/20 text-accent-yellow rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-yellow hover:bg-accent-yellow/30 hover:text-white transition-all duration-200"
+                      className={`min-w-[120px] h-12 rounded-lg font-bold text-base flex items-center justify-center gap-2 border transition-all duration-200 ${
+                        friendLoading 
+                          ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed' 
+                          : 'bg-accent-yellow/20 text-accent-yellow border-accent-yellow hover:bg-accent-yellow/30 hover:text-white'
+                      }`}
                       onClick={handleAddFriend}
                       disabled={friendLoading}
                     >
-                      <UserPlus className="w-5 h-5" /> إضافة صديق
+                      {friendLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
+                          جاري...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5" /> إضافة صديق
+                        </>
+                      )}
                     </button>
                   )}
+                  </div>
                 </div>
               )}
               {/* Last Active Card */}

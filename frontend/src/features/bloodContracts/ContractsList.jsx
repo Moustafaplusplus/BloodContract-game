@@ -15,37 +15,8 @@ function getRemainingTime(expiry) {
     .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-const ContractsList = ({ onAttack }) => {
-  const [contracts, setContracts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const ContractsList = ({ onAttack, contracts = [] }) => {
   const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const fetchContracts = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const token = localStorage.getItem('jwt');
-        const res = await fetch('/api/bloodcontracts/available', {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : '',
-          },
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.message || 'فشل جلب العقود.');
-        } else {
-          setContracts(data.contracts || []);
-        }
-      } catch {
-        setError('حدث خطأ أثناء الاتصال بالخادم.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchContracts();
-  }, []);
 
   // Timer to update countdown every second
   useEffect(() => {
@@ -53,12 +24,6 @@ const ContractsList = ({ onAttack }) => {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
-    return <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل العقود..." />;
-  }
-  if (error) {
-    return <LoadingOrErrorPlaceholder error errorText={error} />;
-  }
   if (contracts.length === 0) {
     return <div style={{ color: '#fff', textAlign: 'center', margin: '2rem' }}>لا توجد عقود متاحة حالياً.</div>;
   }

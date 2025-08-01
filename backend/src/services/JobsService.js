@@ -289,6 +289,23 @@ export class JobsService {
       }, { transaction: t });
 
       await t.commit();
+      
+      // Emit real-time updates
+      const { io } = await import('../socket.js');
+      if (io) {
+        // Update HUD
+        const hudData = await character.toSafeJSON();
+        io.to(String(userId)).emit('hud:update', hudData);
+        
+        // Update jobs
+        const jobs = await Job.findAll({ where: { userId } });
+        io.to(String(userId)).emit('jobs:update', jobs);
+        
+        // Update tasks
+        const tasks = await TaskService.getUserTasks(userId);
+        io.to(String(userId)).emit('tasks:update', tasks);
+      }
+      
       return newJob;
     } catch (err) {
       await t.rollback();
@@ -356,6 +373,25 @@ export class JobsService {
       }
 
       await t.commit();
+      
+      // Emit real-time updates
+      const { io } = await import('../socket.js');
+      if (io) {
+        // Update HUD
+        const character = await Character.findOne({ where: { userId } });
+        if (character) {
+          const hudData = await character.toSafeJSON();
+          io.to(String(userId)).emit('hud:update', hudData);
+        }
+        
+        // Update jobs
+        const jobs = await Job.findAll({ where: { userId } });
+        io.to(String(userId)).emit('jobs:update', jobs);
+        
+        // Update tasks
+        const tasks = await TaskService.getUserTasks(userId);
+        io.to(String(userId)).emit('tasks:update', tasks);
+      }
       
       return {
         jobType: currentJob.jobType,
@@ -443,6 +479,35 @@ export class JobsService {
       }
 
       await t.commit();
+      
+      // Emit real-time updates for all users who received payouts
+      const { io } = await import('../socket.js');
+      if (io) {
+        for (const jobRecord of activeJobs) {
+          const jobDefinition = await JobDefinition.findByPk(jobRecord.jobType);
+          if (!jobDefinition || !jobDefinition.isEnabled) continue;
+
+          const lastPaid = new Date(jobRecord.lastPaidAt);
+          const daysSinceLastPaid = Math.floor((now - lastPaid) / (1000 * 60 * 60 * 24));
+
+          if (daysSinceLastPaid >= 1) {
+            // Update HUD
+            const character = await Character.findOne({ where: { userId: jobRecord.userId } });
+            if (character) {
+              const hudData = await character.toSafeJSON();
+              io.to(String(jobRecord.userId)).emit('hud:update', hudData);
+            }
+            
+            // Update jobs
+            const jobs = await Job.findAll({ where: { userId: jobRecord.userId } });
+            io.to(String(jobRecord.userId)).emit('jobs:update', jobs);
+            
+            // Update tasks
+            const tasks = await TaskService.getUserTasks(jobRecord.userId);
+            io.to(String(jobRecord.userId)).emit('tasks:update', tasks);
+          }
+        }
+      }
       
       // Create notifications for job payouts
       try {

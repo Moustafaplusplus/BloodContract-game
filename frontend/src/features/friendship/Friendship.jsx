@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useFriendRequests } from '@/hooks/useFriendRequests';
+import { useSocket } from '@/hooks/useSocket';
 import { Link } from 'react-router-dom';
 import { User } from 'lucide-react';
 import VipName from '../profile/VipName.jsx';
@@ -19,6 +20,7 @@ export default function Friendship() {
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const { refetch: refetchPendingCount } = useFriendRequests();
+  const { socket } = useSocket();
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,34 @@ export default function Friendship() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Real-time socket updates for friendship changes
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleFriendshipUpdate = () => {
+      console.log('Friendship: Refetching data due to socket update');
+      fetchData();
+      refetchPendingCount();
+    };
+
+    // Listen for all friendship-related socket events
+    socket.on('friendship:updated', handleFriendshipUpdate);
+    socket.on('friendship:request-sent', handleFriendshipUpdate);
+    socket.on('friendship:request-received', handleFriendshipUpdate);
+    socket.on('friendship:request-accepted', handleFriendshipUpdate);
+    socket.on('friendship:request-rejected', handleFriendshipUpdate);
+    socket.on('friendship:removed', handleFriendshipUpdate);
+
+    return () => {
+      socket.off('friendship:updated', handleFriendshipUpdate);
+      socket.off('friendship:request-sent', handleFriendshipUpdate);
+      socket.off('friendship:request-received', handleFriendshipUpdate);
+      socket.off('friendship:request-accepted', handleFriendshipUpdate);
+      socket.off('friendship:request-rejected', handleFriendshipUpdate);
+      socket.off('friendship:removed', handleFriendshipUpdate);
+    };
+  }, [socket, refetchPendingCount]);
 
   // Search users
   const handleSearch = async (e) => {

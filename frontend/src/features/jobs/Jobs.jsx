@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { useHud } from '@/hooks/useHud';
+import { useSocket } from '@/hooks/useSocket';
 import { 
   Briefcase, 
   DollarSign, 
@@ -24,10 +24,22 @@ import {
 } from 'lucide-react';
 
 export default function Jobs() {
-  const { stats, invalidateHud } = useHud();
+  const { 
+    socket, 
+    jobs, 
+    hudData,
+    requestJobsUpdate 
+  } = useSocket();
   const [hiringJobId, setHiringJobId] = useState(null);
   const [quittingJob, setQuittingJob] = useState(false);
   const queryClient = useQueryClient();
+
+  // Request initial jobs data when component mounts
+  useEffect(() => {
+    if (socket && socket.connected) {
+      requestJobsUpdate();
+    }
+  }, [socket, requestJobsUpdate]);
 
   // Fetch available jobs
   const {
@@ -48,25 +60,10 @@ export default function Jobs() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch current job
-  const {
-    data: currentJobData,
-    isLoading: currentJobLoading,
-    error: currentJobError
-  } = useQuery({
-    queryKey: ['currentJob'],
-    queryFn: async () => {
-      const response = await fetch('/api/jobs/current', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch current job');
-      return response.json();
-    },
-    staleTime: 1 * 60 * 1000,
-  });
-
+  // Use real-time jobs data if available, otherwise fall back to query
+  const currentJobData = jobs?.length > 0 ? jobs[0] : null;
+  const currentJobLoading = false;
+  const currentJobError = null;
 
 
   // Hire mutation
@@ -88,7 +85,10 @@ export default function Jobs() {
     },
     onSuccess: (data) => {
       setHiringJobId(null);
-      invalidateHud?.();
+      // Request fresh jobs data
+      if (socket && socket.connected) {
+        requestJobsUpdate();
+      }
       queryClient.invalidateQueries(['currentJob']);
       toast.success(data.message || 'تم التوظيف بنجاح!');
     },
@@ -116,7 +116,10 @@ export default function Jobs() {
     },
     onSuccess: (data) => {
       setQuittingJob(false);
-      invalidateHud?.();
+      // Request fresh jobs data
+      if (socket && socket.connected) {
+        requestJobsUpdate();
+      }
       queryClient.invalidateQueries(['currentJob']);
       queryClient.invalidateQueries(['jobHistory']);
       
@@ -254,7 +257,7 @@ export default function Jobs() {
       )}
 
       {/* Job Statistics */}
-      {stats && (
+      {hudData && (
         <div className="max-w-4xl mx-auto mb-8 animate-slide-up">
           <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-2xl p-6">
             <h3 className="text-xl font-bold text-accent-red mb-4 flex items-center">
@@ -263,19 +266,19 @@ export default function Jobs() {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-accent-green">{stats.totalJobs}</div>
+                <div className="text-2xl font-bold text-accent-green">{hudData.totalJobs}</div>
                 <div className="text-sm text-hitman-400">الوظائف السابقة</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-accent-green">{stats.totalEarned}$</div>
+                <div className="text-2xl font-bold text-accent-green">{hudData.totalEarned}$</div>
                 <div className="text-sm text-hitman-400">إجمالي الأرباح</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-accent-blue">{stats.totalExpEarned}</div>
+                <div className="text-2xl font-bold text-accent-blue">{hudData.totalExpEarned}</div>
                 <div className="text-sm text-hitman-400">إجمالي الخبرة</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-accent-yellow">{stats.totalDaysWorked}</div>
+                <div className="text-2xl font-bold text-accent-yellow">{hudData.totalDaysWorked}</div>
                 <div className="text-sm text-hitman-400">أيام العمل</div>
               </div>
             </div>
@@ -290,7 +293,7 @@ export default function Jobs() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {availableJobs.map((job) => {
               const isHiring = hiringJobId === job.id;
-              const canHire = stats && stats.level >= job.minLevel;
+              const canHire = hudData && hudData.level >= job.minLevel;
               
               return (
                 <div 

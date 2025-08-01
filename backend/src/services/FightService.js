@@ -616,8 +616,67 @@ export class FightService {
 
           // Live update via Socket.IO
           if (io) {
+            // Emit fight result
             io.to(`user:${attackerId}`).emit("fightResult", result);
             io.to(`user:${defenderId}`).emit("fightResult", result);
+            
+            // Update HUD for both players
+            const [attackerHud, defenderHud] = await Promise.all([
+              atkChar.toSafeJSON(),
+              defChar.toSafeJSON()
+            ]);
+            
+            io.to(`user:${attackerId}`).emit('hud:update', attackerHud);
+            io.to(`user:${defenderId}`).emit('hud:update', defenderHud);
+            
+            // Update fight-specific data
+            io.to(`user:${attackerId}`).emit('fight:update', {
+              hp: atkChar.hp,
+              maxHp: atkChar.maxHp,
+              fame: atkChar.fame
+            });
+            
+            io.to(`user:${defenderId}`).emit('fight:update', {
+              hp: defChar.hp,
+              maxHp: defChar.maxHp,
+              fame: defChar.fame
+            });
+            
+            // Update inventory if items were stolen
+            if (result.amountStolen > 0) {
+              const { InventoryService } = await import('./InventoryService.js');
+              const [attackerInventory, defenderInventory] = await Promise.all([
+                InventoryService.getUserInventory(attackerId),
+                InventoryService.getUserInventory(defenderId)
+              ]);
+              
+              io.to(`user:${attackerId}`).emit('inventory:update', attackerInventory);
+              io.to(`user:${defenderId}`).emit('inventory:update', defenderInventory);
+            }
+            
+            // Update bank if money was stolen
+            if (result.amountStolen > 0) {
+              const [attackerBank, defenderBank] = await Promise.all([
+                Bank.findOne({ where: { userId: attackerId } }),
+                Bank.findOne({ where: { userId: defenderId } })
+              ]);
+              
+              if (attackerBank) {
+                io.to(`user:${attackerId}`).emit('bank:update', attackerBank);
+              }
+              if (defenderBank) {
+                io.to(`user:${defenderId}`).emit('bank:update', defenderBank);
+              }
+            }
+            
+            // Update tasks for both players
+            const [attackerTasks, defenderTasks] = await Promise.all([
+              Task.findAll({ where: { userId: attackerId } }),
+              Task.findAll({ where: { userId: defenderId } })
+            ]);
+            
+            io.to(`user:${attackerId}`).emit('tasks:update', attackerTasks);
+            io.to(`user:${defenderId}`).emit('tasks:update', defenderTasks);
           }
 
           // Create notification only for the person who was attacked (loser)

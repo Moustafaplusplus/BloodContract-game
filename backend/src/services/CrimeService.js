@@ -233,9 +233,44 @@ export class CrimeService {
       
       const narrative = this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect);
       
-      if (levelUpRewards.length > 0 && io) {
+      // Emit real-time updates
+      if (io) {
+        // Update HUD
         const hudData = await character.toSafeJSON();
         io.to(String(userId)).emit('hud:update', hudData);
+        
+        // Update crime-specific data
+        const now = Date.now();
+        const crimeCooldown = character.crimeCooldown && character.crimeCooldown > now 
+          ? Math.floor((character.crimeCooldown - now) / 1000) 
+          : 0;
+        
+        io.to(String(userId)).emit('crime:update', {
+          crimeCooldown,
+          energy: character.energy,
+          maxEnergy: character.maxEnergy
+        });
+        
+        // Update inventory if items were gained
+        if (success && payout > 0) {
+          const { InventoryService } = await import('./InventoryService.js');
+          const inventory = await InventoryService.getUserInventory(userId);
+          io.to(String(userId)).emit('inventory:update', inventory);
+        }
+        
+        // Update bank if money was gained
+        if (success && payout > 0) {
+          const bank = await Bank.findOne({ where: { userId } });
+          if (bank) {
+            io.to(String(userId)).emit('bank:update', bank);
+          }
+        }
+        
+        // Update tasks
+        if (success) {
+          const tasks = await Task.findAll({ where: { userId } });
+          io.to(String(userId)).emit('tasks:update', tasks);
+        }
       }
       
       if (success) {

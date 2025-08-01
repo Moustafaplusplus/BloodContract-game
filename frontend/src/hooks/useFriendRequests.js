@@ -42,13 +42,25 @@ export const useFriendRequests = () => {
     if (!socket || !socket.connected) return;
 
     const handleFriendshipUpdate = () => {
+      console.log('useFriendRequests: Refetching due to socket update');
       fetchPendingCount();
     };
 
-    socket.on('friendship:update', handleFriendshipUpdate);
+    // Listen for all friendship-related socket events
+    socket.on('friendship:updated', handleFriendshipUpdate);
+    socket.on('friendship:request-sent', handleFriendshipUpdate);
+    socket.on('friendship:request-received', handleFriendshipUpdate);
+    socket.on('friendship:request-accepted', handleFriendshipUpdate);
+    socket.on('friendship:request-rejected', handleFriendshipUpdate);
+    socket.on('friendship:removed', handleFriendshipUpdate);
 
     return () => {
-      socket.off('friendship:update', handleFriendshipUpdate);
+      socket.off('friendship:updated', handleFriendshipUpdate);
+      socket.off('friendship:request-sent', handleFriendshipUpdate);
+      socket.off('friendship:request-received', handleFriendshipUpdate);
+      socket.off('friendship:request-accepted', handleFriendshipUpdate);
+      socket.off('friendship:request-rejected', handleFriendshipUpdate);
+      socket.off('friendship:removed', handleFriendshipUpdate);
     };
   }, [socket, fetchPendingCount]);
 

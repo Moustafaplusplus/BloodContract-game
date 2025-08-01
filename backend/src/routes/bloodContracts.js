@@ -77,6 +77,55 @@ router.post('/ghost-assassin', auth, async (req, res) => {
     await stat.save({ transaction: t });
     await t.commit();
     
+    // Emit real-time updates
+    const { io } = await import('../socket.js');
+    if (io) {
+      // Update HUD for both users
+      const [userHud, targetHud] = await Promise.all([
+        character.toSafeJSON(),
+        Character.findOne({ where: { userId: targetId } }).then(c => c?.toSafeJSON())
+      ]);
+      
+      io.to(String(userId)).emit('hud:update', userHud);
+      if (targetHud) {
+        io.to(String(targetId)).emit('hud:update', targetHud);
+      }
+      
+      // Update blood contracts for both users
+      const [userContracts, targetContracts] = await Promise.all([
+        BloodContract.findAll({
+          where: {
+            [Op.or]: [
+              { attackerId: userId },
+              { defenderId: userId }
+            ],
+            status: 'active'
+          }
+        }),
+        BloodContract.findAll({
+          where: {
+            [Op.or]: [
+              { attackerId: targetId },
+              { defenderId: targetId }
+            ],
+            status: 'active'
+          }
+        })
+      ]);
+      
+      io.to(String(userId)).emit('bloodContract:update', userContracts);
+      io.to(String(targetId)).emit('bloodContract:update', targetContracts);
+      
+      // Update hospital status for target
+      const hospitalStatus = {
+        isHospitalized: true,
+        releaseAt: releasedAt,
+        minutes: minutes,
+        hpLoss: 100
+      };
+      io.to(String(targetId)).emit('hospital:enter', hospitalStatus);
+    }
+    
     // Send notification to target about Ghost Assassin
     try {
       const ghostNotification = await NotificationService.createGhostAssassinatedNotification(targetId);

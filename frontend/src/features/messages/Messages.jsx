@@ -115,6 +115,53 @@ export default function Messages() {
       .finally(() => setLoadingInbox(false));
   }, [userId, customToken, location.state]);
 
+  // Real-time socket updates for friendship changes
+  useEffect(() => {
+    if (!socket || !userId) return;
+
+    const handleFriendshipUpdate = () => {
+      console.log('Messages: Refetching data due to friendship update');
+      // Refetch inbox to update friend status
+      axios.get('/api/messages/inbox', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
+        .then(res => {
+          setConversations(res.data);
+          // Update unread state based on new data structure
+          const unreadState = {};
+          res.data.forEach(conversation => {
+            if (conversation.hasUnreadMessages) {
+              unreadState[conversation.userId] = true;
+            }
+          });
+          setUnread(unreadState);
+        })
+        .catch(err => {
+          console.error('Error refetching inbox:', err);
+        });
+      
+      // Refetch friends list
+      axios.get('/api/friendship/list', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
+        .then(res => setFriends(res.data.map(f => f.id)))
+        .catch(() => setFriends([]));
+    };
+
+    // Listen for all friendship-related socket events
+    socket.on('friendship:updated', handleFriendshipUpdate);
+    socket.on('friendship:request-sent', handleFriendshipUpdate);
+    socket.on('friendship:request-received', handleFriendshipUpdate);
+    socket.on('friendship:request-accepted', handleFriendshipUpdate);
+    socket.on('friendship:request-rejected', handleFriendshipUpdate);
+    socket.on('friendship:removed', handleFriendshipUpdate);
+
+    return () => {
+      socket.off('friendship:updated', handleFriendshipUpdate);
+      socket.off('friendship:request-sent', handleFriendshipUpdate);
+      socket.off('friendship:request-received', handleFriendshipUpdate);
+      socket.off('friendship:request-accepted', handleFriendshipUpdate);
+      socket.off('friendship:request-rejected', handleFriendshipUpdate);
+      socket.off('friendship:removed', handleFriendshipUpdate);
+    };
+  }, [socket, userId, customToken]);
+
   // Fetch messages for selected user
   useEffect(() => {
     if (selectedUser && userId) {

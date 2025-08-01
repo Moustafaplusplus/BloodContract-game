@@ -15,6 +15,18 @@ import { Gang } from './models/Gang.js';
 import { Statistic } from './models/Statistic.js';
 import { Op } from 'sequelize';
 import { Item } from './models/Item.js';
+import { Crime } from './models/Crime.js';
+import { Fight } from './models/Fight.js';
+import { BloodContract } from './models/BloodContract.js';
+import { Job } from './models/Job.js';
+import { MinistryMission } from './models/MinistryMission.js';
+import { Car } from './models/Car.js';
+import { Dog } from './models/Dog.js';
+import { House } from './models/House.js';
+import { BlackMarket } from './models/BlackMarket.js';
+import { Shop } from './models/Shop.js';
+import { SpecialShop } from './models/SpecialShop.js';
+import { LoginGift } from './models/LoginGift.js';
 
 let io = null;
 
@@ -200,6 +212,155 @@ export function initSocket(server) {
           io.emit('rankings:update', rankings);
         } catch (error) {
           console.error(`[Socket] Error pushing rankings update:`, error.message);
+        }
+      };
+
+      /* helper to push crime updates */
+      const pushCrimeUpdate = async (targetUserId = userId) => {
+        try {
+          const char = await Character.findOne({ where: { userId: targetUserId } });
+          if (char) {
+            const now = Date.now();
+            const crimeCooldown = char.crimeCooldown && char.crimeCooldown > now 
+              ? Math.floor((char.crimeCooldown - now) / 1000) 
+              : 0;
+            
+            io.to(`user:${targetUserId}`).emit('crime:update', {
+              crimeCooldown,
+              energy: char.energy,
+              maxEnergy: char.maxEnergy
+            });
+          }
+        } catch (error) {
+          console.error(`[Socket] Error pushing crime update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push fight updates */
+      const pushFightUpdate = async (targetUserId = userId) => {
+        try {
+          const char = await Character.findOne({ where: { userId: targetUserId } });
+          if (char) {
+            io.to(`user:${targetUserId}`).emit('fight:update', {
+              hp: char.hp,
+              maxHp: char.maxHp,
+              fame: char.fame
+            });
+          }
+        } catch (error) {
+          console.error(`[Socket] Error pushing fight update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push blood contract updates */
+      const pushBloodContractUpdate = async (targetUserId = userId) => {
+        try {
+          const contracts = await BloodContract.findAll({
+            where: {
+              [Op.or]: [
+                { attackerId: targetUserId },
+                { defenderId: targetUserId }
+              ],
+              status: 'active'
+            }
+          });
+          
+          io.to(`user:${targetUserId}`).emit('bloodContract:update', contracts);
+        } catch (error) {
+          console.error(`[Socket] Error pushing blood contract update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push job updates */
+      const pushJobUpdate = async (targetUserId = userId) => {
+        try {
+          const jobs = await Job.findAll({ where: { userId: targetUserId } });
+          io.to(`user:${targetUserId}`).emit('jobs:update', jobs);
+        } catch (error) {
+          console.error(`[Socket] Error pushing job update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push ministry mission updates */
+      const pushMinistryMissionUpdate = async (targetUserId = userId) => {
+        try {
+          const missions = await MinistryMission.findAll({ where: { userId: targetUserId } });
+          io.to(`user:${targetUserId}`).emit('ministryMission:update', missions);
+        } catch (error) {
+          console.error(`[Socket] Error pushing ministry mission update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push car updates */
+      const pushCarUpdate = async (targetUserId = userId) => {
+        try {
+          const cars = await Car.findAll({ where: { userId: targetUserId } });
+          io.to(`user:${targetUserId}`).emit('cars:update', cars);
+        } catch (error) {
+          console.error(`[Socket] Error pushing car update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push dog updates */
+      const pushDogUpdate = async (targetUserId = userId) => {
+        try {
+          const dogs = await Dog.findAll({ where: { userId: targetUserId } });
+          io.to(`user:${targetUserId}`).emit('dogs:update', dogs);
+        } catch (error) {
+          console.error(`[Socket] Error pushing dog update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push house updates */
+      const pushHouseUpdate = async (targetUserId = userId) => {
+        try {
+          const houses = await House.findAll({ where: { userId: targetUserId } });
+          io.to(`user:${targetUserId}`).emit('houses:update', houses);
+        } catch (error) {
+          console.error(`[Socket] Error pushing house update for user ${targetUserId}:`, error.message);
+        }
+      };
+
+      /* helper to push black market updates */
+      const pushBlackMarketUpdate = async () => {
+        try {
+          const listings = await BlackMarket.findAll({
+            where: { status: 'active' },
+            include: [{ model: User, attributes: ['username'] }]
+          });
+          io.emit('blackMarket:update', listings);
+        } catch (error) {
+          console.error(`[Socket] Error pushing black market update:`, error.message);
+        }
+      };
+
+      /* helper to push shop updates */
+      const pushShopUpdate = async () => {
+        try {
+          const items = await Shop.findAll({ where: { isEnabled: true } });
+          io.emit('shop:update', items);
+        } catch (error) {
+          console.error(`[Socket] Error pushing shop update:`, error.message);
+        }
+      };
+
+      /* helper to push special shop updates */
+      const pushSpecialShopUpdate = async () => {
+        try {
+          const items = await SpecialShop.findAll({ where: { isEnabled: true } });
+          io.emit('specialShop:update', items);
+        } catch (error) {
+          console.error(`[Socket] Error pushing special shop update:`, error.message);
+        }
+      };
+
+      /* helper to push login gift updates */
+      const pushLoginGiftUpdate = async (targetUserId = userId) => {
+        try {
+          const gifts = await LoginGift.findAll({ where: { isEnabled: true } });
+          io.to(`user:${targetUserId}`).emit('loginGift:update', gifts);
+        } catch (error) {
+          console.error(`[Socket] Error pushing login gift update for user ${targetUserId}:`, error.message);
         }
       };
 
@@ -460,6 +621,114 @@ export function initSocket(server) {
           await pushRankingsUpdate();
         } catch (error) {
           console.error(`[Socket] Error handling rankings request:`, error.message);
+        }
+      });
+
+      // --- Crime Updates ---
+      socket.on('crime:request', async () => {
+        try {
+          await pushCrimeUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling crime request:`, error.message);
+        }
+      });
+
+      // --- Fight Updates ---
+      socket.on('fight:request', async () => {
+        try {
+          await pushFightUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling fight request:`, error.message);
+        }
+      });
+
+      // --- Blood Contract Updates ---
+      socket.on('bloodContract:request', async () => {
+        try {
+          await pushBloodContractUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling blood contract request:`, error.message);
+        }
+      });
+
+      // --- Job Updates ---
+      socket.on('jobs:request', async () => {
+        try {
+          await pushJobUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling jobs request:`, error.message);
+        }
+      });
+
+      // --- Ministry Mission Updates ---
+      socket.on('ministryMission:request', async () => {
+        try {
+          await pushMinistryMissionUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling ministry mission request:`, error.message);
+        }
+      });
+
+      // --- Car Updates ---
+      socket.on('cars:request', async () => {
+        try {
+          await pushCarUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling cars request:`, error.message);
+        }
+      });
+
+      // --- Dog Updates ---
+      socket.on('dogs:request', async () => {
+        try {
+          await pushDogUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling dogs request:`, error.message);
+        }
+      });
+
+      // --- House Updates ---
+      socket.on('houses:request', async () => {
+        try {
+          await pushHouseUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling houses request:`, error.message);
+        }
+      });
+
+      // --- Black Market Updates ---
+      socket.on('blackMarket:request', async () => {
+        try {
+          await pushBlackMarketUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling black market request:`, error.message);
+        }
+      });
+
+      // --- Shop Updates ---
+      socket.on('shop:request', async () => {
+        try {
+          await pushShopUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling shop request:`, error.message);
+        }
+      });
+
+      // --- Special Shop Updates ---
+      socket.on('specialShop:request', async () => {
+        try {
+          await pushSpecialShopUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling special shop request:`, error.message);
+        }
+      });
+
+      // --- Login Gift Updates ---
+      socket.on('loginGift:request', async () => {
+        try {
+          await pushLoginGiftUpdate();
+        } catch (error) {
+          console.error(`[Socket] Error handling login gift request:`, error.message);
         }
       });
 

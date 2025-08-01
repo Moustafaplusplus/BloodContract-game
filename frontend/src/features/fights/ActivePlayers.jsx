@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-import { useHud } from '@/hooks/useHud';
+import { useSocket } from '@/hooks/useSocket';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sword, User, Clock, AlertTriangle } from 'lucide-react';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
@@ -90,9 +90,21 @@ function getXPWarning(attackerLevel, defenderLevel) {
 
 export default function ActivePlayers() {
   const { customToken } = useFirebaseAuth();
-  const { stats } = useHud();
+  const { 
+    socket, 
+    fightData, 
+    hudData,
+    requestFightUpdate 
+  } = useSocket();
   const navigate = useNavigate();
   const [attacking, setAttacking] = useState(null);
+
+  // Request initial fight data when component mounts
+  useEffect(() => {
+    if (socket && socket.connected) {
+      requestFightUpdate();
+    }
+  }, [socket, requestFightUpdate]);
 
   const { data: users = [], isLoading, error, refetch } = useQuery({
     queryKey: ['active-users'],
@@ -108,9 +120,32 @@ export default function ActivePlayers() {
         headers: { Authorization: `Bearer ${customToken}` },
       });
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const error = new Error(errorData.message || 'فشل في الهجوم');
-        error.response = { status: res.status, data: errorData };
+        let errorMsg = "فشل في الهجوم";
+        let responseData = null;
+        
+        try {
+          // Clone the response to avoid "body stream already read" error
+          const responseClone = res.clone();
+          responseData = await responseClone.json();
+          errorMsg = responseData.message || responseData.error || errorMsg;
+        } catch (parseError) {
+          try {
+            // If JSON parsing fails, try to get text
+            const responseClone = res.clone();
+            const text = await responseClone.text();
+            try {
+              responseData = JSON.parse(text);
+              errorMsg = responseData.message || responseData.error || errorMsg;
+            } catch {
+              errorMsg = text || errorMsg;
+            }
+          } catch (textError) {
+            console.error('Error parsing response:', textError);
+          }
+        }
+        
+        const error = new Error(errorMsg);
+        error.response = { status: res.status, data: responseData };
         throw error;
       }
       const result = await res.json();
@@ -147,7 +182,7 @@ export default function ActivePlayers() {
       ) : (
         <div className="max-w-2xl mx-auto space-y-4">
           {users.map((user) => {
-            const xpWarning = getXPWarning(stats?.level || 1, user.level);
+            const xpWarning = getXPWarning(hudData?.level || 1, user.level);
             
             return (
               <div key={user.userId} className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg">
@@ -193,8 +228,8 @@ export default function ActivePlayers() {
                       xpWarning?.type === 'bonus' ? 'border-2 border-green-500' : ''
                     }`}
                     onClick={() => attackPlayer(user.userId)}
-                    disabled={attacking === user.userId || stats?.userId === user.userId}
-                    title={stats?.userId === user.userId ? 'لا يمكنك مهاجمة نفسك' : xpWarning?.message}
+                    disabled={attacking === user.userId || hudData?.userId === user.userId}
+                    title={hudData?.userId === user.userId ? 'لا يمكنك مهاجمة نفسك' : xpWarning?.message}
                   >
                     <Sword className="w-4 h-4" />
                     {attacking === user.userId ? '...' : 'هجوم'}

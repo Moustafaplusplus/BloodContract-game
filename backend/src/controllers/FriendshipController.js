@@ -2,6 +2,7 @@ import { Friendship } from '../models/Friendship.js';
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
+import { io } from '../socket.js';
 
 const FriendshipController = {
   async addFriend(req, res) {
@@ -9,7 +10,31 @@ const FriendshipController = {
       const userId = req.user.id;
       const { friendId } = req.body;
       if (userId === friendId) return res.status(400).json({ error: 'Cannot friend yourself' });
-      await Friendship.findOrCreate({ where: { requesterId: userId, addresseeId: friendId }, defaults: { status: 'PENDING' } });
+      
+      const friendship = await Friendship.findOrCreate({ 
+        where: { requesterId: userId, addresseeId: friendId }, 
+        defaults: { status: 'PENDING' } 
+      });
+      
+      // Emit socket events for real-time updates
+      if (io) {
+        // Notify the requester (sender)
+        io.to(String(userId)).emit('friendship:request-sent', {
+          friendId,
+          status: 'PENDING'
+        });
+        
+        // Notify the addressee (receiver)
+        io.to(String(friendId)).emit('friendship:request-received', {
+          requesterId: userId,
+          status: 'PENDING'
+        });
+        
+        // Emit general friendship update
+        io.to(String(userId)).emit('friendship:updated');
+        io.to(String(friendId)).emit('friendship:updated');
+      }
+      
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -19,8 +44,32 @@ const FriendshipController = {
     try {
       const userId = req.user.id;
       const { friendId } = req.body;
+      
+      // Check if friendship exists before destroying
+      const friendship1 = await Friendship.findOne({ where: { requesterId: userId, addresseeId: friendId } });
+      const friendship2 = await Friendship.findOne({ where: { requesterId: friendId, addresseeId: userId } });
+      
       await Friendship.destroy({ where: { requesterId: userId, addresseeId: friendId } });
       await Friendship.destroy({ where: { requesterId: friendId, addresseeId: userId } });
+      
+      // Emit socket events for real-time updates
+      if (io) {
+        // Notify both users about the friendship removal
+        io.to(String(userId)).emit('friendship:removed', {
+          friendId,
+          status: 'REMOVED'
+        });
+        
+        io.to(String(friendId)).emit('friendship:removed', {
+          friendId: userId,
+          status: 'REMOVED'
+        });
+        
+        // Emit general friendship update
+        io.to(String(userId)).emit('friendship:updated');
+        io.to(String(friendId)).emit('friendship:updated');
+      }
+      
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -77,15 +126,26 @@ const FriendshipController = {
       res.status(500).json({ error: err.message });
     }
   },
-  // New: Get pending friend requests for the current user
+  // New: Get pending friend requests for the current user (both sent and received)
   async pending(req, res) {
     try {
       const userId = req.user.id;
       const requests = await Friendship.findAll({
-        where: { status: 'PENDING', addresseeId: userId },
+        where: { 
+          status: 'PENDING', 
+          [Op.or]: [
+            { requesterId: userId },
+            { addresseeId: userId }
+          ]
+        },
         include: [
           { 
             association: 'Requester', 
+            attributes: ['id', 'username'],
+            include: [{ model: Character, attributes: ['name'] }]
+          },
+          { 
+            association: 'Addressee', 
             attributes: ['id', 'username'],
             include: [{ model: Character, attributes: ['name'] }]
           }
@@ -105,7 +165,31 @@ const FriendshipController = {
       if (!friendship) return res.status(404).json({ error: 'Request not found' });
       if (friendship.addresseeId !== userId) return res.status(403).json({ error: 'Not authorized' });
       if (friendship.status !== 'PENDING') return res.status(400).json({ error: 'Not pending' });
+      
       await friendship.update({ status: 'ACCEPTED' });
+      
+      // Emit socket events for real-time updates
+      if (io) {
+        const requesterId = friendship.requesterId;
+        const addresseeId = friendship.addresseeId;
+        
+        // Notify the requester (sender) that their request was accepted
+        io.to(String(requesterId)).emit('friendship:request-accepted', {
+          friendId: addresseeId,
+          status: 'ACCEPTED'
+        });
+        
+        // Notify the addressee (receiver) that they accepted the request
+        io.to(String(addresseeId)).emit('friendship:request-accepted', {
+          friendId: requesterId,
+          status: 'ACCEPTED'
+        });
+        
+        // Emit general friendship update
+        io.to(String(requesterId)).emit('friendship:updated');
+        io.to(String(addresseeId)).emit('friendship:updated');
+      }
+      
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -120,7 +204,31 @@ const FriendshipController = {
       if (!friendship) return res.status(404).json({ error: 'Request not found' });
       if (friendship.addresseeId !== userId) return res.status(403).json({ error: 'Not authorized' });
       if (friendship.status !== 'PENDING') return res.status(400).json({ error: 'Not pending' });
+      
       await friendship.update({ status: 'REJECTED' });
+      
+      // Emit socket events for real-time updates
+      if (io) {
+        const requesterId = friendship.requesterId;
+        const addresseeId = friendship.addresseeId;
+        
+        // Notify the requester (sender) that their request was rejected
+        io.to(String(requesterId)).emit('friendship:request-rejected', {
+          friendId: addresseeId,
+          status: 'REJECTED'
+        });
+        
+        // Notify the addressee (receiver) that they rejected the request
+        io.to(String(addresseeId)).emit('friendship:request-rejected', {
+          friendId: requesterId,
+          status: 'REJECTED'
+        });
+        
+        // Emit general friendship update
+        io.to(String(requesterId)).emit('friendship:updated');
+        io.to(String(addresseeId)).emit('friendship:updated');
+      }
+      
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });

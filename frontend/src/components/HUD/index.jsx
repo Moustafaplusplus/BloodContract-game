@@ -1,7 +1,6 @@
 // src/components/HUD/index.jsx
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { useHud } from "@/hooks/useHud"
 import { useSocket } from "@/hooks/useSocket"
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { useNotificationContext } from "@/contexts/NotificationContext"
@@ -59,20 +58,31 @@ const NotificationIndicator = ({ count }) => {
 }
 
 export default function HUD({ menuButton }) {
-  const { stats, invalidateHud } = useHud()
-  const { socket } = useSocket()
+  const { 
+    socket, 
+    hudData, 
+    crimeData,
+    requestHudUpdate 
+  } = useSocket()
   const { customToken } = useFirebaseAuth()
   const navigate = useNavigate()
   const { unreadCount: notificationCount } = useNotificationContext()
   const { unreadCount: messageCount } = useUnreadMessages()
   const { pendingCount: friendRequestCount } = useFriendRequests()
 
-  if (!customToken || !stats) return null
+  // Request initial data when component mounts
+  useEffect(() => {
+    if (socket && socket.connected) {
+      requestHudUpdate()
+    }
+  }, [socket, requestHudUpdate])
+
+  if (!customToken || !hudData) return null
 
   // Calculate percentages
-  const healthPercent = stats.maxHp > 0 ? (stats.hp / stats.maxHp) * 100 : 0
-  const energyPercent = stats.maxEnergy > 0 ? (stats.energy / stats.maxEnergy) * 100 : 0
-  const expPercent = stats.nextLevelExp > 0 ? (stats.exp / stats.nextLevelExp) * 100 : 0
+  const healthPercent = hudData.maxHp > 0 ? (hudData.hp / hudData.maxHp) * 100 : 0
+  const energyPercent = hudData.maxEnergy > 0 ? (hudData.energy / hudData.maxEnergy) * 100 : 0
+  const expPercent = hudData.nextLevelExp > 0 ? (hudData.exp / hudData.nextLevelExp) * 100 : 0
 
   // Calculate total notifications
   const totalNotifications = notificationCount + messageCount + friendRequestCount
@@ -95,7 +105,7 @@ export default function HUD({ menuButton }) {
       <div className="p-2 border-b border-white/20">
         <IconStat 
           icon="❤️"
-          value={`${stats.hp}/${stats.maxHp}`}
+          value={`${hudData.hp}/${hudData.maxHp}`}
           percent={healthPercent}
           color="text-red-400"
           label="الصحة"
@@ -106,7 +116,7 @@ export default function HUD({ menuButton }) {
       <div className="p-2 border-b border-white/20">
         <IconStat 
           icon="⚡"
-          value={`${stats.energy}/${stats.maxEnergy}`}
+          value={`${hudData.energy}/${hudData.maxEnergy}`}
           percent={energyPercent}
           color="text-blue-400"
           label="الطاقة"
@@ -117,7 +127,7 @@ export default function HUD({ menuButton }) {
       <div className="p-2 border-b border-white/20">
         <IconStat 
           icon="⭐"
-          value={`${stats.exp}/${stats.nextLevelExp}`}
+          value={`${hudData.exp}/${hudData.nextLevelExp}`}
           percent={expPercent}
           color="text-yellow-400"
           label="الخبرة"
@@ -128,7 +138,7 @@ export default function HUD({ menuButton }) {
       <div className="p-2 border-b border-white/20">
         <IconStat 
           IconComponent={BlackcoinIcon}
-          value={stats.blackcoins?.toLocaleString() ?? 0}
+          value={hudData.blackcoins?.toLocaleString() ?? 0}
           percent={100}
           color="text-red-400"
           label="البلاك كوين"
@@ -139,7 +149,7 @@ export default function HUD({ menuButton }) {
       <div className="p-2 border-b border-white/20">
         <IconStat 
           IconComponent={MoneyIcon}
-          value={stats.money?.toLocaleString()}
+          value={hudData.money?.toLocaleString()}
           percent={100}
           color="text-white"
           label="المال"

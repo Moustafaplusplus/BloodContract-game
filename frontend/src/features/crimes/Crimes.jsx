@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
-import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "react-toastify";
 import { extractErrorMessage, handleConfinementError } from "@/utils/errorHandler";
@@ -39,8 +38,12 @@ export default function Crimes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { customToken } = useFirebaseAuth();
-  const { stats } = useHud();
-  const { socket } = useSocket();
+  const { 
+    socket, 
+    crimeData, 
+    hudData,
+    requestCrimeUpdate 
+  } = useSocket();
   const { showModal } = useModalManager();
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [totalCooldown, setTotalCooldown] = useState(0);
@@ -48,16 +51,22 @@ export default function Crimes() {
   const [hospitalStatus, setHospitalStatus] = useState({ inHospital: false });
   const justAttemptedCrime = useRef(false);
 
-  // Initialize cooldown from HUD data
+  // Initialize cooldown from real-time crime data
   useEffect(() => {
-    if (stats?.crimeCooldown && stats.crimeCooldown > 0) {
-      setCooldownLeft(stats.crimeCooldown);
+    if (crimeData?.crimeCooldown !== undefined) {
+      setCooldownLeft(crimeData.crimeCooldown);
       // Estimate total cooldown based on typical crime cooldowns (60-300 seconds)
-      // This is a fallback since we don't have the exact crime that was executed
-      const estimatedTotal = Math.max(stats.crimeCooldown, 60);
+      const estimatedTotal = Math.max(crimeData.crimeCooldown, 60);
       setTotalCooldown(estimatedTotal);
     }
-  }, [stats?.crimeCooldown]);
+  }, [crimeData?.crimeCooldown]);
+
+  // Request initial crime data when component mounts
+  useEffect(() => {
+    if (socket && socket.connected) {
+      requestCrimeUpdate();
+    }
+  }, [socket, requestCrimeUpdate]);
 
   // Fetch jail/hospital status
   const fetchStatuses = useCallback(() => {
@@ -98,7 +107,31 @@ export default function Crimes() {
     ? `أنت في السجن. الوقت المتبقي: ${formatCooldown(Math.max(0, Math.floor((jailStatus.remainingSeconds || 0))))}`
     : hospitalStatus.inHospital
       ? `أنت في المستشفى. الوقت المتبقي: ${formatCooldown(Math.max(0, Math.floor((hospitalStatus.remainingSeconds || 0))))}`
-      : null;
+      : "";
+
+  // Use real-time energy data
+  const currentEnergy = crimeData?.energy ?? hudData?.energy ?? 0;
+  const maxEnergy = crimeData?.maxEnergy ?? hudData?.maxEnergy ?? 100;
+
+  // Update cooldown timer in real-time
+  useEffect(() => {
+    if (cooldownLeft <= 0) return;
+    
+    const timer = setInterval(() => {
+      setCooldownLeft(prev => {
+        if (prev <= 1) {
+          // Request fresh data when cooldown expires
+          if (socket && socket.connected) {
+            requestCrimeUpdate();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [cooldownLeft, socket, requestCrimeUpdate]);
 
   /* ───────────────────────── عدّاد التبريد ──────────��──────────── */
   useEffect(() => {
@@ -124,8 +157,8 @@ export default function Crimes() {
     const handleHudUpdate = () => {
       // The HUD data will be updated via the useHud hook
       // We just need to re-initialize the cooldown when stats change
-      if (stats?.crimeCooldown && stats.crimeCooldown > 0) {
-        setCooldownLeft(stats.crimeCooldown);
+      if (crimeData?.crimeCooldown !== undefined) {
+        setCooldownLeft(crimeData.crimeCooldown);
       }
     };
     
@@ -133,8 +166,8 @@ export default function Crimes() {
     
     // Also poll for updates every 10 seconds as a fallback
     const pollInterval = setInterval(() => {
-      if (stats?.crimeCooldown && stats.crimeCooldown > 0) {
-        setCooldownLeft(stats.crimeCooldown);
+      if (crimeData?.crimeCooldown !== undefined) {
+        setCooldownLeft(crimeData.crimeCooldown);
       }
     }, 10000);
     
@@ -142,7 +175,7 @@ export default function Crimes() {
       socket.off('hud:update', handleHudUpdate);
       clearInterval(pollInterval);
     };
-  }, [socket, stats?.crimeCooldown]);
+  }, [socket, crimeData?.crimeCooldown]);
 
   /* ───────────── جلب قائمة الجرائم ───────────── */
   const {
@@ -325,7 +358,7 @@ export default function Crimes() {
         )}
 
         {/* Statistics Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
             <Target className="w-8 h-8 text-accent-red mx-auto mb-2" />
             <div className="text-2xl font-bold text-accent-red">
@@ -366,6 +399,21 @@ export default function Crimes() {
               {cooldownLeft > 0 ? formatCooldown(cooldownLeft) : "جاهز"}
             </div>
             <div className="text-sm text-hitman-300">حالة العميل</div>
+          </div>
+          
+          {/* Energy Display */}
+          <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+            <Zap className="w-8 h-8 text-accent-yellow mx-auto mb-2" />
+            <div className="text-2xl font-bold text-accent-yellow">
+              {currentEnergy}/{maxEnergy}
+            </div>
+            <div className="text-sm text-hitman-300">الطاقة</div>
+            <div className="w-full bg-hitman-700 rounded-full h-2 mt-2">
+              <div 
+                className="bg-gradient-to-r from-accent-yellow to-yellow-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentEnergy / maxEnergy) * 100}%` }}
+              ></div>
+            </div>
           </div>
         </div>
 
