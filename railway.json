@@ -8,12 +8,19 @@
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
-    "startCommand": "cd backend && npm start"
+    "startCommand": "cd backend && npm start",
+    "numReplicas": 1,
+    "cpu": "0.5",
+    "memory": "512MB"
   },
   "environments": {
     "production": {
       "variables": {
-        "NODE_VERSION": "20"
+        "NODE_VERSION": "20",
+        "NODE_ENV": "production",
+        "SOCKET_IO_PING_TIMEOUT": "60000",
+        "SOCKET_IO_PING_INTERVAL": "25000",
+        "SOCKET_IO_MAX_HTTP_BUFFER_SIZE": "1048576"
       }
     }
   }

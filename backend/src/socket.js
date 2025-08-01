@@ -730,6 +730,237 @@ export function initSocket(server) {
         }
       });
 
+      // --- Game News Updates (HTTP replacement) ---
+      socket.on('gameNews:request', async () => {
+        try {
+          const { GameNewsService } = await import('./services/GameNewsService.js');
+          const news = await GameNewsService.getRecentNews();
+          io.to(`user:${userId}`).emit('gameNews:update', news);
+        } catch (error) {
+          console.error(`[Socket] Error handling game news request:`, error.message);
+        }
+      });
+
+      // --- Confinement Status Updates (HTTP replacement) ---
+      socket.on('confinement:request', async () => {
+        try {
+          const { ConfinementService } = await import('./services/ConfinementService.js');
+          const hospitalStatus = await ConfinementService.getHospitalStatus(userId);
+          const jailStatus = await ConfinementService.getJailStatus(userId);
+          
+          io.to(`user:${userId}`).emit('confinement:update', {
+            hospital: hospitalStatus,
+            jail: jailStatus
+          });
+        } catch (error) {
+          console.error(`[Socket] Error handling confinement request:`, error.message);
+        }
+      });
+
+      // --- Crimes List Updates (HTTP replacement) ---
+      socket.on('crimes:request', async () => {
+        try {
+          const { CrimeService } = await import('./services/CrimeService.js');
+          const crimes = await CrimeService.getAllCrimes();
+          io.to(`user:${userId}`).emit('crimes:update', crimes);
+        } catch (error) {
+          console.error(`[Socket] Error handling crimes request:`, error.message);
+        }
+      });
+
+      // --- Friendship List Updates (HTTP replacement) ---
+      socket.on('friendshipList:request', async () => {
+        try {
+          const friendships = await Friendship.findAll({
+            where: {
+              [Op.or]: [
+                { requesterId: userId },
+                { addresseeId: userId }
+              ],
+              status: 'accepted'
+            },
+            include: [
+              { model: User, as: 'requester', attributes: ['id', 'username', 'avatarUrl'] },
+              { model: User, as: 'addressee', attributes: ['id', 'username', 'avatarUrl'] }
+            ]
+          });
+          
+          io.to(`user:${userId}`).emit('friendshipList:update', friendships);
+        } catch (error) {
+          console.error(`[Socket] Error handling friendship list request:`, error.message);
+        }
+      });
+
+      // --- Pending Friendships Updates (HTTP replacement) ---
+      socket.on('pendingFriendships:request', async () => {
+        try {
+          const pendingFriendships = await Friendship.findAll({
+            where: {
+              addresseeId: userId,
+              status: 'pending'
+            },
+            include: [
+              { model: User, as: 'requester', attributes: ['id', 'username', 'avatarUrl'] }
+            ]
+          });
+          
+          io.to(`user:${userId}`).emit('pendingFriendships:update', pendingFriendships);
+        } catch (error) {
+          console.error(`[Socket] Error handling pending friendships request:`, error.message);
+        }
+      });
+
+      // --- Messages Updates (HTTP replacement) ---
+      socket.on('messages:request', async (data) => {
+        try {
+          const { targetUserId } = data;
+          const messages = await Message.findAll({
+            where: {
+              [Op.or]: [
+                { senderId: userId, receiverId: targetUserId },
+                { senderId: targetUserId, receiverId: userId }
+              ]
+            },
+            order: [['createdAt', 'ASC']]
+          });
+          
+          io.to(`user:${userId}`).emit('messages:update', messages);
+        } catch (error) {
+          console.error(`[Socket] Error handling messages request:`, error.message);
+        }
+      });
+
+      // --- Global Chat Messages Updates (HTTP replacement) ---
+      socket.on('globalChatMessages:request', async () => {
+        try {
+          const messages = await GlobalMessage.findAll({
+            order: [['createdAt', 'DESC']],
+            limit: 50,
+            include: [
+              { model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }
+            ]
+          });
+          
+          io.to(`user:${userId}`).emit('globalChatMessages:update', messages);
+        } catch (error) {
+          console.error(`[Socket] Error handling global chat messages request:`, error.message);
+        }
+      });
+
+      // --- Unread Messages Count Updates (HTTP replacement) ---
+      socket.on('unreadMessagesCount:request', async () => {
+        try {
+          const count = await Message.count({
+            where: {
+              receiverId: userId,
+              isRead: false
+            }
+          });
+          
+          io.to(`user:${userId}`).emit('unreadMessagesCount:update', count);
+        } catch (error) {
+          console.error(`[Socket] Error handling unread messages count request:`, error.message);
+        }
+      });
+
+      // --- Unclaimed Tasks Count Updates (HTTP replacement) ---
+      socket.on('unclaimedTasksCount:request', async () => {
+        try {
+          const { TaskService } = await import('./services/TaskService.js');
+          const count = await TaskService.getUnclaimedTasksCount(userId);
+          io.to(`user:${userId}`).emit('unclaimedTasksCount:update', count);
+        } catch (error) {
+          console.error(`[Socket] Error handling unclaimed tasks count request:`, error.message);
+        }
+      });
+
+      // --- Friend Requests Count Updates (HTTP replacement) ---
+      socket.on('friendRequestsCount:request', async () => {
+        try {
+          const count = await Friendship.count({
+            where: {
+              addresseeId: userId,
+              status: 'pending'
+            }
+          });
+          
+          io.to(`user:${userId}`).emit('friendRequestsCount:update', count);
+        } catch (error) {
+          console.error(`[Socket] Error handling friend requests count request:`, error.message);
+        }
+      });
+
+      // --- Notifications Count Updates (HTTP replacement) ---
+      socket.on('notificationsCount:request', async () => {
+        try {
+          const { NotificationService } = await import('./services/NotificationService.js');
+          const count = await NotificationService.getUnreadCount(userId);
+          io.to(`user:${userId}`).emit('notificationsCount:update', count);
+        } catch (error) {
+          console.error(`[Socket] Error handling notifications count request:`, error.message);
+        }
+      });
+
+      // --- Intro Status Updates (HTTP replacement) ---
+      socket.on('introStatus:request', async () => {
+        try {
+          const user = await User.findByPk(userId);
+          const introStatus = {
+            hasCompletedIntro: user?.hasCompletedIntro || false,
+            introStep: user?.introStep || 0
+          };
+          
+          io.to(`user:${userId}`).emit('introStatus:update', introStatus);
+        } catch (error) {
+          console.error(`[Socket] Error handling intro status request:`, error.message);
+        }
+      });
+
+      // --- Profile Updates (HTTP replacement) ---
+      socket.on('profile:request', async (data) => {
+        try {
+          const { targetUserId } = data;
+          const char = await Character.findOne({ 
+            where: { userId: targetUserId || userId },
+            include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
+          });
+          
+          if (char) {
+            const profileData = await char.toSafeJSON();
+            io.to(`user:${userId}`).emit('profile:update', profileData);
+          }
+        } catch (error) {
+          console.error(`[Socket] Error handling profile request:`, error.message);
+        }
+      });
+
+      // --- Gang Updates (HTTP replacement) ---
+      socket.on('gang:request', async (data) => {
+        try {
+          const { gangId } = data;
+          if (gangId) {
+            await pushGangUpdate(gangId);
+          } else {
+            // Get user's gang
+            const userGang = await Gang.findOne({
+              include: [
+                {
+                  model: Character,
+                  where: { userId },
+                  required: false
+                }
+              ]
+            });
+            
+            if (userGang) {
+              io.to(`user:${userId}`).emit('gang:update', userGang);
+            }
+          }
+        } catch (error) {
+          console.error(`[Socket] Error handling gang request:`, error.message);
+        }
+      });
+
       // --- Moderation: Mute User ---
       socket.on('mute_user', async ({ targetUserId, durationMinutes }, callback) => {
         try {

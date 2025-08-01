@@ -1,18 +1,62 @@
 // src/features/dashboard/Home.jsx
-import React from "react"
-import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
-import { useSocket } from "@/hooks/useSocket"
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
-import { jwtDecode } from "jwt-decode"
-import { useQueryClient } from "@tanstack/react-query"
-import { useIntroStatus } from "@/hooks/useIntroStatus"
-import {
-  Target, Zap, DollarSign, Shield, Activity, Star, Award, Calendar,
-  MapPin, HomeIcon, Car, Briefcase, Building2, Lock, Dumbbell,
-  TrendingUp, Users, X, Play, Heart, Battery, Crown, Sword,
-  MessageSquare, UserPlus, Gift, Trophy, Settings, LogOut
-} from "lucide-react"
+import React, { useState, useEffect } from 'react';
+import { useSocket } from '@/contexts/SocketContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useFeatureUnlock } from '@/hooks/useFeatureUnlock';
+import { useConfinement } from '@/hooks/useConfinement';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
+import { useUnclaimedTasks } from '@/hooks/useUnclaimedTasks';
+import { useFriendRequests } from '@/hooks/useFriendRequests';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useIntroStatus } from '@/hooks/useIntroStatus';
+import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
+import { useModal } from '@/contexts/ModalContext';
+import { useFamePopup } from '@/contexts/FamePopupContext';
+import { toast } from 'react-hot-toast';
+import { 
+  FaUser, 
+  FaHeart, 
+  FaBolt, 
+  FaStar, 
+  FaSearch, 
+  FaBell, 
+  FaCog,
+  FaGift,
+  FaTrophy,
+  FaUsers,
+  FaHome,
+  FaCar,
+  FaDog,
+  FaShieldAlt,
+  FaDumbbell,
+  FaBriefcase,
+  FaGraduationCap,
+  FaStore,
+  FaGem,
+  FaComments,
+  FaEnvelope,
+  FaUserFriends,
+  FaTasks,
+  FaNewspaper,
+  FaHandshake,
+  FaSkull,
+  FaHospital,
+  FaJail,
+  FaMoneyBillWave,
+  FaCoins
+} from 'react-icons/fa';
+import { GiSwordman, GiCrossedSwords, GiPistolGun } from 'react-icons/gi';
+import { MdLocalHospital, MdLocalPolice } from 'react-icons/md';
+import { IoMdNotifications } from 'react-icons/io';
+import { BsFillGearFill } from 'react-icons/bs';
+import { RiVipCrownFill } from 'react-icons/ri';
+import { TbReportMoney } from 'react-icons/tb';
+import { BiSolidGift } from 'react-icons/bi';
+import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
+import { VscDebugConsole } from 'react-icons/vsc';
+import { SiFirebase } from 'react-icons/si';
+import { CgProfile } from 'react-icons/cg';
+import { FiUsers, FiHome, FiCar, FiDog, FiShield, FiDumbbell, FiBriefcase, FiGraduationCap, FiShoppingBag, FiGift, FiMessageSquare, FiMail, FiUserPlus, FiCheckSquare, FiFileText, FiHandshake, FiZap, FiUser, FiHeart, FiStar, FiSearch, FiBell, FiSettings, FiTrophy, FiUsers as FiUsersIcon, FiHome as FiHomeIcon, FiCar as FiCarIcon, FiDog as FiDogIcon, FiShield as FiShieldIcon, FiDumbbell as FiDumbbellIcon, FiBriefcase as FiBriefcaseIcon, FiGraduationCap as FiGraduationCapIcon, FiShoppingBag as FiShoppingBagIcon, FiGift as FiGiftIcon, FiMessageSquare as FiMessageSquareIcon, FiMail as FiMailIcon, FiUserPlus as FiUserPlusIcon, FiCheckSquare as FiCheckSquareIcon, FiFileText as FiFileTextIcon, FiHandshake as FiHandshakeIcon, FiZap as FiZapIcon, FiUser as FiUserIcon, FiHeart as FiHeartIcon, FiStar as FiStarIcon, FiSearch as FiSearchIcon, FiBell as FiBellIcon, FiSettings as FiSettingsIcon, FiTrophy as FiTrophyIcon } from 'react-icons/fi';
 import { Link } from "react-router-dom"
 import { FeatureProgressCard } from "@/components/FeatureUnlockNotification"
 import GuestSyncNotification from "@/components/GuestSyncNotification"
@@ -189,69 +233,65 @@ const CharacterStats = ({ character }) => {
 }
 
 export default function Home() {
-  const { customToken } = useFirebaseAuth()
-  const { socket } = useSocket()
-  const queryClient = useQueryClient()
-  const { hasSeenIntro, loading: introLoading } = useIntroStatus()
-  const [showIntroNotification, setShowIntroNotification] = React.useState(false)
+  const { user, logout } = useAuth();
+  const { 
+    hudData, 
+    gameNews, 
+    confinementStatus,
+    isConnected,
+    requestHud,
+    requestGameNews,
+    requestConfinement
+  } = useSocket();
+  const { isFeatureUnlocked } = useFeatureUnlock();
+  const { isInHospital, isInJail } = useConfinement();
+  const { unreadCount: unreadMessagesCount } = useUnreadMessages();
+  const { unclaimedCount: unclaimedTasksCount } = useUnclaimedTasks();
+  const { pendingCount: friendRequestsCount } = useFriendRequests();
+  const { unreadCount: notificationsCount } = useNotifications();
+  const { hasCompletedIntro } = useIntroStatus();
+  const { isPlaying, toggleMusic } = useBackgroundMusic();
+  const { openModal } = useModal();
+  const { showFamePopup } = useFamePopup();
 
-  // Get userId from token for cache invalidation
-  const userId = customToken
-    ? (() => {
-        try {
-          const { id } = jwtDecode(customToken)
-          return id
-        } catch {
-          return null
-        }
-      })()
-    : null
+  // Request initial data via Socket.IO
+  useEffect(() => {
+    if (isConnected) {
+      requestHud();
+      requestGameNews();
+      requestConfinement();
+    }
+  }, [isConnected, requestHud, requestGameNews, requestConfinement]);
 
   // Show intro notification if user hasn't seen intro and not loading
-  React.useEffect(() => {
-    if (!introLoading && !hasSeenIntro) {
+  const [showIntroNotification, setShowIntroNotification] = useState(false)
+  useEffect(() => {
+    if (!hudData?.loadingIntro && !hasCompletedIntro) {
       setShowIntroNotification(true)
     }
-  }, [hasSeenIntro, introLoading])
+  }, [hudData?.loadingIntro, hasCompletedIntro])
 
   // Reset all state when user changes
-  const [key, setKey] = React.useState(0)
-  React.useEffect(() => {
-    if (userId) {
+  const [key, setKey] = useState(0)
+  useEffect(() => {
+    if (user?.id) {
       setKey((prev) => prev + 1)
-      queryClient.removeQueries(["character"])
-      queryClient.removeQueries(["hospitalStatus"])
-      queryClient.removeQueries(["profile"])
+      // queryClient.removeQueries(["character"]) // Removed as per new_code
+      // queryClient.removeQueries(["hospitalStatus"]) // Removed as per new_code
+      // queryClient.removeQueries(["profile"]) // Removed as per new_code
     }
-  }, [userId, queryClient])
+  }, [user?.id])
 
-  const {
-    data: character,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["character", userId, key],
-    queryFn: () => axios.get("/api/character").then((res) => res.data),
-    staleTime: 0,
-    retry: false,
-    enabled: !!userId,
-  })
-
-  // Fetch game news
-  const { data: gameNews } = useQuery({
-    queryKey: ["game-news"],
-    queryFn: () => axios.get("/api/game-news/news").then((res) => res.data),
-    staleTime: 60000,
-  })
+  const character = hudData
 
   // Real-time countdown states
-  const [hospitalRemaining, setHospitalRemaining] = React.useState(0)
-  const [jailRemaining, setJailRemaining] = React.useState(0)
-  const [crimeCooldownRemaining, setCrimeCooldownRemaining] = React.useState(0)
-  const [gymCooldownRemaining, setGymCooldownRemaining] = React.useState(0)
+  const [hospitalRemaining, setHospitalRemaining] = useState(0)
+  const [jailRemaining, setJailRemaining] = useState(0)
+  const [crimeCooldownRemaining, setCrimeCooldownRemaining] = useState(0)
+  const [gymCooldownRemaining, setGymCooldownRemaining] = useState(0)
 
   // Hospital countdown timer
-  React.useEffect(() => {
+  useEffect(() => {
     if (character?.hospitalStatus?.inHospital && character?.hospitalStatus?.remainingSeconds > 0) {
       const updateTimer = () => {
         setHospitalRemaining((prev) => {
@@ -268,7 +308,7 @@ export default function Home() {
   }, [character?.hospitalStatus?.inHospital, character?.hospitalStatus?.remainingSeconds])
 
   // Jail countdown timer
-  React.useEffect(() => {
+  useEffect(() => {
     if (character?.jailStatus?.inJail && character?.jailStatus?.remainingSeconds > 0) {
       const updateTimer = () => {
         setJailRemaining((prev) => {
@@ -285,7 +325,7 @@ export default function Home() {
   }, [character?.jailStatus?.inJail, character?.jailStatus?.remainingSeconds])
 
   // Crime cooldown timer
-  React.useEffect(() => {
+  useEffect(() => {
     if (character?.crimeCooldown > 0) {
       const updateTimer = () => {
         setCrimeCooldownRemaining((prev) => {
@@ -302,7 +342,7 @@ export default function Home() {
   }, [character?.crimeCooldown])
 
   // Gym cooldown timer
-  React.useEffect(() => {
+  useEffect(() => {
     if (character?.gymCooldown > 0) {
       const updateTimer = () => {
         setGymCooldownRemaining((prev) => {
@@ -319,44 +359,25 @@ export default function Home() {
   }, [character?.gymCooldown])
 
   // Real-time updates for dashboard stats
-  React.useEffect(() => {
-    if (!socket) return
+  useEffect(() => {
+    if (!isConnected) return
     const refetchCharacter = () => {
-      queryClient.invalidateQueries(["character", userId])
+      // queryClient.invalidateQueries(["character", userId]) // Removed as per new_code
     }
-    socket.on("hud:update", refetchCharacter)
-    const pollInterval = setInterval(refetchCharacter, 10000)
-    return () => {
-      socket.off("hud:update", refetchCharacter)
-      clearInterval(pollInterval)
-    }
-  }, [socket, queryClient, userId])
+    // socket.on("hud:update", refetchCharacter) // Removed as per new_code
+    // const pollInterval = setInterval(refetchCharacter, 10000) // Removed as per new_code
+    // return () => { // Removed as per new_code
+    //   socket.off("hud:update", refetchCharacter) // Removed as per new_code
+    //   clearInterval(pollInterval) // Removed as per new_code
+    // } // Removed as per new_code
+  }, [isConnected]) // Removed queryClient, userId from dependencies as per new_code
 
-  if (isLoading) {
+  if (!isConnected) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-white text-sm">جاري التحميل...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="text-center">
-          <div className="bg-red-950/50 border border-red-700/50 rounded-lg p-4 mb-4">
-            <p className="text-red-400 text-sm mb-2">⚠️ تعذر الاتصال بالخادم</p>
-            <p className="text-zinc-400 text-xs">يرجى التحقق من اتصال الإنترنت</p>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors text-sm"
-          >
-            إعادة المحاولة
-          </button>
+          <p className="text-white text-sm">جاري الاتصال بالخادم...</p>
         </div>
       </div>
     )
@@ -374,31 +395,31 @@ export default function Home() {
   }
 
   // Extract status data with real-time values
-  const hospitalStatus = {
+  const currentHospitalStatus = {
     inHospital: displayCharacter.hospitalStatus?.inHospital || false,
     remainingSeconds: hospitalRemaining
   }
-  const jailStatus = {
+  const currentJailStatus = {
     inJail: displayCharacter.jailStatus?.inJail || false,
     remainingSeconds: jailRemaining
   }
-  const crimeCooldown = crimeCooldownRemaining
-  const gymCooldown = gymCooldownRemaining
+  const currentCrimeCooldown = crimeCooldownRemaining
+  const currentGymCooldown = gymCooldownRemaining
 
   const quickActions = [
     {
       icon: Target,
       label: "الجرائم",
       href: "/crimes",
-      disabled: crimeCooldown > 0,
-      cooldown: crimeCooldown,
+      disabled: currentCrimeCooldown > 0,
+      cooldown: currentCrimeCooldown,
     },
     {
       icon: Dumbbell,
       label: "النادي",
       href: "/gym",
-      disabled: gymCooldown > 0,
-      cooldown: gymCooldown,
+      disabled: currentGymCooldown > 0,
+      cooldown: currentGymCooldown,
     },
     {
       icon: DollarSign,
@@ -492,11 +513,11 @@ export default function Home() {
         )}
 
         {/* Smart Cooldown Group */}
-        <CooldownGroup 
-          hospitalStatus={hospitalStatus}
-          jailStatus={jailStatus}
-          crimeCooldown={crimeCooldown}
-          gymCooldown={gymCooldown}
+                <CooldownGroup
+          hospitalStatus={currentHospitalStatus}
+          jailStatus={currentJailStatus}
+          crimeCooldown={currentCrimeCooldown}
+          gymCooldown={currentGymCooldown}
         />
 
         {/* Quick Actions */}

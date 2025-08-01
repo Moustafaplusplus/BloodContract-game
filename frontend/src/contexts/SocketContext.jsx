@@ -52,6 +52,20 @@ export function SocketProvider({ children }) {
   const [loginGifts, setLoginGifts] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [friendshipData, setFriendshipData] = useState({});
+  
+  // Additional state for HTTP-replacement data
+  const [gameNews, setGameNews] = useState([]);
+  const [confinementStatus, setConfinementStatus] = useState({ hospital: { inHospital: false }, jail: { inJail: false } });
+  const [crimesList, setCrimesList] = useState([]);
+  const [friendshipList, setFriendshipList] = useState([]);
+  const [pendingFriendships, setPendingFriendships] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [globalChatMessages, setGlobalChatMessages] = useState([]);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [unclaimedTasksCount, setUnclaimedTasksCount] = useState(0);
+  const [friendRequestsCount, setFriendRequestsCount] = useState(0);
+  const [notificationsCount, setNotificationsCount] = useState(0);
+  const [introStatus, setIntroStatus] = useState(null);
 
   // Get token from localStorage and track changes
   useEffect(() => {
@@ -102,305 +116,311 @@ export function SocketProvider({ children }) {
       }
       setUserId(id);
     } catch (error) {
+      console.error('Error decoding token:', error);
       setUserId(null);
     }
   }, [token]);
 
+  // Socket connection management
   useEffect(() => {
-    // Clean up existing socket if no auth or user changed
-    if (socket) {
-      socket.disconnect();
-      setSocket(null);
-      setConnectionAttempts(0);
-    }
-
-    if (!userId || !token) {
+    if (!token || !userId) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
       return;
     }
+
+    const newSocket = createSocket({ token });
     
-    const s = createSocket({ token });
-    
-    s.on('connect', () => {
+    newSocket.on('connect', () => {
       console.log('[Socket] Connected successfully');
-      setConnectionAttempts(0); // Reset connection attempts on successful connection
+      setConnectionAttempts(0);
+      
+      // Request initial data via Socket.IO instead of HTTP
+      newSocket.emit('hud:request');
+      newSocket.emit('inventory:request');
+      newSocket.emit('bank:request');
+      newSocket.emit('tasks:request');
+      newSocket.emit('jobs:request');
+      newSocket.emit('ministryMission:request');
+      newSocket.emit('cars:request');
+      newSocket.emit('dogs:request');
+      newSocket.emit('houses:request');
+      newSocket.emit('bloodContract:request');
+      newSocket.emit('crime:request');
+      newSocket.emit('fight:request');
+      newSocket.emit('rankings:request');
+      newSocket.emit('blackMarket:request');
+      newSocket.emit('shop:request');
+      newSocket.emit('specialShop:request');
+      newSocket.emit('loginGift:request');
     });
-    
-    s.on('disconnect', (reason) => {
+
+    newSocket.on('disconnect', (reason) => {
       console.log('[Socket] Disconnected:', reason);
       if (reason === 'io server disconnect') {
-        // Server disconnected us, try to reconnect
-        setTimeout(() => {
-          if (s && !s.connected) {
-            s.connect();
-          }
-        }, 1000);
+        // Server disconnected, try to reconnect
+        newSocket.connect();
       }
     });
-    
-    s.on('connect_error', (error) => {
+
+    newSocket.on('connect_error', (error) => {
       console.error('[Socket] Connection error:', error);
       setConnectionAttempts(prev => prev + 1);
-      
-      // If we've tried too many times, stop trying
-      if (connectionAttempts >= 5) {
-        return;
-      }
-      
-      // Retry connection after a delay
-      setTimeout(() => {
-        if (s && !s.connected) {
-          s.connect();
-        }
-      }, 2000);
     });
-    
-    s.on('error', (error) => {
-      console.error('[Socket] Socket error:', error);
-    });
-    
-    s.on('reconnect', () => {
-      console.log('[Socket] Reconnected');
-      setConnectionAttempts(0);
-    });
-    
-    s.on('reconnect_error', (error) => {
-      console.error('[Socket] Reconnection error:', error);
-    });
-    
-    s.on('reconnect_attempt', (attemptNumber) => {
-      console.log('[Socket] Reconnection attempt:', attemptNumber);
-    });
-    
-    s.on('reconnect_failed', () => {
-      console.error('[Socket] Reconnection failed');
-    });
-    
-    // HUD Updates
-    s.on('hud:update', (data) => {
+
+    // Socket event listeners for real-time updates
+    newSocket.on('hud:update', (data) => {
       setHudData(data);
     });
-    
-    // Crime Updates
-    s.on('crime:update', (data) => {
-      setCrimeData(data);
-    });
-    
-    // Fight Updates
-    s.on('fight:update', (data) => {
-      setFightData(data);
-    });
-    
-    // Blood Contract Updates
-    s.on('bloodContract:update', (data) => {
-      setBloodContracts(data);
-    });
-    
-    // Job Updates
-    s.on('jobs:update', (data) => {
-      setJobs(data);
-    });
-    
-    // Ministry Mission Updates
-    s.on('ministryMission:update', (data) => {
-      setMinistryMissions(data);
-    });
-    
-    // Car Updates
-    s.on('cars:update', (data) => {
-      setCars(data);
-    });
-    
-    // Dog Updates
-    s.on('dogs:update', (data) => {
-      setDogs(data);
-    });
-    
-    // House Updates
-    s.on('houses:update', (data) => {
-      setHouses(data);
-    });
-    
-    // Inventory Updates
-    s.on('inventory:update', (data) => {
+
+    newSocket.on('inventory:update', (data) => {
       setInventory(data);
     });
-    
-    // Bank Updates
-    s.on('bank:update', (data) => {
+
+    newSocket.on('bank:update', (data) => {
       setBank(data);
     });
-    
-    // Task Updates
-    s.on('tasks:update', (data) => {
+
+    newSocket.on('tasks:update', (data) => {
       setTasks(data);
     });
-    
-    // Gang Updates
-    s.on('gang:update', (data) => {
-      setGang(data);
+
+    newSocket.on('jobs:update', (data) => {
+      setJobs(data);
     });
-    
-    // Rankings Updates
-    s.on('rankings:update', (data) => {
+
+    newSocket.on('ministryMission:update', (data) => {
+      setMinistryMissions(data);
+    });
+
+    newSocket.on('cars:update', (data) => {
+      setCars(data);
+    });
+
+    newSocket.on('dogs:update', (data) => {
+      setDogs(data);
+    });
+
+    newSocket.on('houses:update', (data) => {
+      setHouses(data);
+    });
+
+    newSocket.on('bloodContract:update', (data) => {
+      setBloodContracts(data);
+    });
+
+    newSocket.on('crime:update', (data) => {
+      setCrimeData(data);
+    });
+
+    newSocket.on('fight:update', (data) => {
+      setFightData(data);
+    });
+
+    newSocket.on('rankings:update', (data) => {
       setRankings(data);
     });
-    
-    // Black Market Updates
-    s.on('blackMarket:update', (data) => {
+
+    newSocket.on('blackMarket:update', (data) => {
       setBlackMarket(data);
     });
-    
-    // Shop Updates
-    s.on('shop:update', (data) => {
+
+    newSocket.on('shop:update', (data) => {
       setShop(data);
     });
-    
-    // Special Shop Updates
-    s.on('specialShop:update', (data) => {
+
+    newSocket.on('specialShop:update', (data) => {
       setSpecialShop(data);
     });
-    
-    // Login Gift Updates
-    s.on('loginGift:update', (data) => {
+
+    newSocket.on('loginGift:update', (data) => {
       setLoginGifts(data);
     });
-    
-    // Profile Updates
-    s.on('profile:update', (data) => {
+
+    newSocket.on('profile:update', (data) => {
       setProfileData(data);
     });
-    
-    // Friendship Updates
-    s.on('friendship:update', (data) => {
+
+    newSocket.on('friendship:update', (data) => {
       setFriendshipData(prev => ({
         ...prev,
         [data.targetUserId]: data
       }));
     });
-    
-    // Cooldown Updates
-    s.on('cooldown:update', (data) => {
-      setCooldowns(data);
+
+    // Additional event listeners for HTTP-replacement data
+    newSocket.on('gameNews:update', (data) => {
+      setGameNews(data);
     });
-    
-    // Confinement Events
-    s.on('jail:enter', (data) => {
-      console.log('[Socket] Entered jail:', data);
+
+    newSocket.on('confinement:update', (data) => {
+      setConfinementStatus(data);
     });
-    
-    s.on('jail:leave', (data) => {
-      console.log('[Socket] Left jail:', data);
+
+    newSocket.on('crimes:update', (data) => {
+      setCrimesList(data);
     });
-    
-    s.on('hospital:enter', (data) => {
-      console.log('[Socket] Entered hospital:', data);
+
+    newSocket.on('friendshipList:update', (data) => {
+      setFriendshipList(data);
     });
-    
-    s.on('hospital:leave', (data) => {
-      console.log('[Socket] Left hospital:', data);
+
+    newSocket.on('pendingFriendships:update', (data) => {
+      setPendingFriendships(data);
     });
-    
-    // Fight Results
-    s.on('fightResult', (data) => {
-      console.log('[Socket] Fight result received:', data);
+
+    newSocket.on('messages:update', (data) => {
+      setMessages(data);
     });
-    
-    // Notifications
-    s.on('notification', (data) => {
-      console.log('[Socket] Notification received:', data);
+
+    newSocket.on('globalChatMessages:update', (data) => {
+      setGlobalChatMessages(data);
     });
-    
-    // Global Chat Events
-    s.on('global_message', (data) => {
-      console.log('[Socket] Global message received:', data);
+
+    newSocket.on('unreadMessagesCount:update', (data) => {
+      setUnreadMessagesCount(data);
     });
-    
-    s.on('global_chat_users_count', (count) => {
-      console.log('[Socket] Global chat users count:', count);
+
+    newSocket.on('unclaimedTasksCount:update', (data) => {
+      setUnclaimedTasksCount(data);
     });
-    
-    // Moderation Events
-    s.on('muted', (data) => {
-      console.log('[Socket] User muted:', data);
+
+    newSocket.on('friendRequestsCount:update', (data) => {
+      setFriendRequestsCount(data);
     });
-    
-    s.on('banned', (data) => {
-      console.log('[Socket] User banned:', data);
+
+    newSocket.on('notificationsCount:update', (data) => {
+      setNotificationsCount(data);
     });
-    
-    s.on('kicked', () => {
-      console.log('[Socket] User kicked');
+
+    newSocket.on('introStatus:update', (data) => {
+      setIntroStatus(data);
     });
-    
-    setSocket(s);
-    
-    // Connect manually after setting up event handlers
-    setTimeout(() => {
-      if (s && !s.connected) {
-        s.connect();
-      }
-    }, 100);
-    
+
+    setSocket(newSocket);
+
     return () => {
-      if (s) {
-        s.disconnect();
-      }
+      newSocket.disconnect();
     };
-  }, [userId, token, connectionAttempts]);
+  }, [token, userId]);
+
+  // Socket methods for making requests (replacing HTTP calls)
+  const socketRequest = (event, data = {}) => {
+    return new Promise((resolve, reject) => {
+      if (!socket || !socket.connected) {
+        reject(new Error('Socket not connected'));
+        return;
+      }
+
+      const timeout = setTimeout(() => {
+        reject(new Error('Socket request timeout'));
+      }, 10000);
+
+      socket.emit(event, data, (response) => {
+        clearTimeout(timeout);
+        if (response && response.error) {
+          reject(new Error(response.error));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  };
+
+  const contextValue = {
+    socket,
+    userId,
+    connectionAttempts,
+    isConnected: socket?.connected || false,
+    
+    // Real-time data
+    hudData,
+    crimeData,
+    fightData,
+    bloodContracts,
+    jobs,
+    ministryMissions,
+    cars,
+    dogs,
+    houses,
+    inventory,
+    bank,
+    tasks,
+    gang,
+    rankings,
+    blackMarket,
+    shop,
+    specialShop,
+    loginGifts,
+    profileData,
+    friendshipData,
+    
+    // HTTP-replacement data
+    gameNews,
+    confinementStatus,
+    crimesList,
+    friendshipList,
+    pendingFriendships,
+    messages,
+    globalChatMessages,
+    unreadMessagesCount,
+    unclaimedTasksCount,
+    friendRequestsCount,
+    notificationsCount,
+    introStatus,
+    
+    // Methods
+    socketRequest,
+    
+    // Request methods (replacing HTTP calls)
+    requestHud: () => socket?.emit('hud:request'),
+    requestInventory: () => socket?.emit('inventory:request'),
+    requestBank: () => socket?.emit('bank:request'),
+    requestTasks: () => socket?.emit('tasks:request'),
+    requestJobs: () => socket?.emit('jobs:request'),
+    requestMinistryMissions: () => socket?.emit('ministryMission:request'),
+    requestCars: () => socket?.emit('cars:request'),
+    requestDogs: () => socket?.emit('dogs:request'),
+    requestHouses: () => socket?.emit('houses:request'),
+    requestBloodContracts: () => socket?.emit('bloodContract:request'),
+    requestCrime: () => socket?.emit('crime:request'),
+    requestFight: () => socket?.emit('fight:request'),
+    requestRankings: () => socket?.emit('rankings:request'),
+    requestBlackMarket: () => socket?.emit('blackMarket:request'),
+    requestShop: () => socket?.emit('shop:request'),
+    requestSpecialShop: () => socket?.emit('specialShop:request'),
+    requestLoginGifts: () => socket?.emit('loginGift:request'),
+    requestProfile: (targetUserId) => socket?.emit('profile:request', { targetUserId }),
+    requestGang: (gangId) => socket?.emit('gang:request', { gangId }),
+    
+    // Additional request methods for HTTP-replacement
+    requestGameNews: () => socket?.emit('gameNews:request'),
+    requestConfinement: () => socket?.emit('confinement:request'),
+    requestCrimes: () => socket?.emit('crimes:request'),
+    requestFriendshipList: () => socket?.emit('friendshipList:request'),
+    requestPendingFriendships: () => socket?.emit('pendingFriendships:request'),
+    requestMessages: (targetUserId) => socket?.emit('messages:request', { targetUserId }),
+    requestGlobalChatMessages: () => socket?.emit('globalChatMessages:request'),
+    requestUnreadMessagesCount: () => socket?.emit('unreadMessagesCount:request'),
+    requestUnclaimedTasksCount: () => socket?.emit('unclaimedTasksCount:request'),
+    requestFriendRequestsCount: () => socket?.emit('friendRequestsCount:request'),
+    requestNotificationsCount: () => socket?.emit('notificationsCount:request'),
+    requestIntroStatus: () => socket?.emit('introStatus:request'),
+  };
 
   return (
-    <SocketContext.Provider value={{ 
-      socket, 
-      cooldowns,
-      // Real-time game state
-      hudData,
-      crimeData,
-      fightData,
-      bloodContracts,
-      jobs,
-      ministryMissions,
-      cars,
-      dogs,
-      houses,
-      inventory,
-      bank,
-      tasks,
-      gang,
-      rankings,
-      blackMarket,
-      shop,
-      specialShop,
-      loginGifts,
-      profileData,
-      friendshipData,
-      // Helper functions to request updates
-      requestHudUpdate: () => socket?.emit('hud:request'),
-      requestCrimeUpdate: () => socket?.emit('crime:request'),
-      requestFightUpdate: () => socket?.emit('fight:request'),
-      requestBloodContractUpdate: () => socket?.emit('bloodContract:request'),
-      requestJobsUpdate: () => socket?.emit('jobs:request'),
-      requestMinistryMissionUpdate: () => socket?.emit('ministryMission:request'),
-      requestCarsUpdate: () => socket?.emit('cars:request'),
-      requestDogsUpdate: () => socket?.emit('dogs:request'),
-      requestHousesUpdate: () => socket?.emit('houses:request'),
-      requestInventoryUpdate: () => socket?.emit('inventory:request'),
-      requestBankUpdate: () => socket?.emit('bank:request'),
-      requestTasksUpdate: () => socket?.emit('tasks:request'),
-      requestGangUpdate: (gangId) => socket?.emit('gang:request', { gangId }),
-      requestRankingsUpdate: () => socket?.emit('rankings:request'),
-      requestBlackMarketUpdate: () => socket?.emit('blackMarket:request'),
-      requestShopUpdate: () => socket?.emit('shop:request'),
-      requestSpecialShopUpdate: () => socket?.emit('specialShop:request'),
-      requestLoginGiftUpdate: () => socket?.emit('loginGift:request'),
-      requestProfileUpdate: (targetUserId) => socket?.emit('profile:request', { targetUserId }),
-    }}>
+    <SocketContext.Provider value={contextValue}>
       {children}
     </SocketContext.Provider>
   );
 }
 
-export function useSocket() {
-  const ctx = useContext(SocketContext);
-  if (!ctx) throw new Error("useSocket must be used within <SocketProvider>");
-  return ctx;
-} 
+export const useSocket = () => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error('useSocket must be used within a SocketProvider');
+  }
+  return context;
+}; 
