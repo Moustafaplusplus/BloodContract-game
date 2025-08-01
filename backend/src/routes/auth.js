@@ -45,11 +45,27 @@ router.post('/firebase-token', async (req, res) => {
       const displayName = decodedToken.name || decodedToken.display_name || 'User';
       const photoURL = decodedToken.picture;
       
-      // Generate username from display name or email
-      let username = displayName.replace(/\s+/g, '_').toLowerCase();
-      if (!username || username === 'user') {
-        // Use email prefix if no display name
-        username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+      // Generate username for anonymous users
+      let username;
+      if (isAnonymous) {
+        // For anonymous users, generate a short username
+        const randomSuffix = Math.random().toString(36).substring(2, 6);
+        username = `ضيف_${randomSuffix}`;
+      } else {
+        // For regular users, use display name or email
+        username = displayName.replace(/\s+/g, '_').toLowerCase();
+        if (!username || username === 'user') {
+          // Use email prefix if no display name
+          username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+        }
+      }
+      
+      // Ensure username is within length limits (3-20 characters)
+      if (username.length > 20) {
+        username = username.substring(0, 17) + '...';
+      }
+      if (username.length < 3) {
+        username = username + '123';
       }
       
       let counter = 1;
@@ -57,9 +73,17 @@ router.post('/firebase-token', async (req, res) => {
       
       // Ensure unique username
       while (await User.findOne({ where: { username: finalUsername } })) {
-        finalUsername = `${username}_${counter}`;
+        const suffix = counter.toString();
+        finalUsername = username.substring(0, 20 - suffix.length - 1) + '_' + suffix;
         counter++;
       }
+      
+      console.log('🔍 Generated username:', {
+        original: username,
+        final: finalUsername,
+        length: finalUsername.length,
+        isAnonymous
+      });
 
       // Check if email already exists (for email/password users)
       const existingUserByEmail = await User.findOne({ where: { email } });

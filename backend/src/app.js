@@ -220,6 +220,39 @@ app.get('/api/performance', (req, res) => {
   });
 });
 
+// Debug endpoint to check Firebase environment variables
+app.get('/api/debug/firebase', (req, res) => {
+  const requiredEnvVars = [
+    'FIREBASE_TYPE',
+    'FIREBASE_PROJECT_ID', 
+    'FIREBASE_PRIVATE_KEY_ID',
+    'FIREBASE_PRIVATE_KEY',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_CLIENT_ID',
+    'FIREBASE_AUTH_URI',
+    'FIREBASE_TOKEN_URI',
+    'FIREBASE_AUTH_PROVIDER_X509_CERT_URL',
+    'FIREBASE_CLIENT_X509_CERT_URL',
+    'FIREBASE_STORAGE_BUCKET'
+  ];
+
+  const envStatus = {};
+  requiredEnvVars.forEach(varName => {
+    const value = process.env[varName];
+    envStatus[varName] = {
+      present: !!value,
+      length: value ? value.length : 0,
+      preview: value ? (varName.includes('PRIVATE_KEY') ? `${value.substring(0, 20)}...` : value.substring(0, 50)) : null
+    };
+  });
+
+  res.json({
+    environment: process.env.NODE_ENV,
+    firebase: envStatus,
+    missing: requiredEnvVars.filter(varName => !process.env[varName])
+  });
+});
+
 /* ─────────── Global error handler ─────────── */
 app.use(errorHandler);
 
