@@ -227,7 +227,7 @@ app.use(errorHandler);
 
 /* ─────────── Bootstrapping ─────────── */
 import { initSocket } from './socket.js';
-const PORT = process.env.PORT || process.env.API_PORT || 5000;
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 const startServer = async () => {
   try {
