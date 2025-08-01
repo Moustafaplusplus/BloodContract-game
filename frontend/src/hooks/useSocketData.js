@@ -1,4 +1,4 @@
-import { useSocket } from '@/contexts/SocketContext';
+import { useSocket } from '@/hooks/useSocket';
 import { useEffect } from 'react';
 
 // Hook to get character data via Socket.IO

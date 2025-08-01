@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSocket } from '@/contexts/SocketContext';
+import { useSocket } from '@/hooks/useSocket';
 import { FaWifi, FaExclamationTriangle } from 'react-icons/fa';
 
 export const ConnectionStatus = () => {

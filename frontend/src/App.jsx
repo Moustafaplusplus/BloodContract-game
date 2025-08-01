@@ -31,6 +31,7 @@ import { jwtDecode } from "jwt-decode";
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 import ConnectionStatus from "@/components/ConnectionStatus";
+import SocketTest from "@/components/SocketTest";
 
 // Lazy load all components
 const LandingPage = lazy(() => import("@/components/LandingPage"));
@@ -203,6 +204,7 @@ export default function App() {
                             <IntroCheckWrapper>
                               <>
                                 <ConnectionStatus />
+                                <SocketTest />
                                 <HUDWrapper />
                                 <DashboardLayout>
                                   <AdminReturnButton />

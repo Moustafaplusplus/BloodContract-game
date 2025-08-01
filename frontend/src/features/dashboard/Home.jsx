@@ -1,7 +1,7 @@
 // src/features/dashboard/Home.jsx
 import React, { useState, useEffect } from 'react';
-import { useSocket } from '@/contexts/SocketContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useFeatureUnlock } from '@/hooks/useFeatureUnlock';
 import { useConfinement } from '@/hooks/useConfinement';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
@@ -10,7 +10,7 @@ import { useFriendRequests } from '@/hooks/useFriendRequests';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useIntroStatus } from '@/hooks/useIntroStatus';
 import { useBackgroundMusic } from '@/hooks/useBackgroundMusic';
-import { useModal } from '@/contexts/ModalContext';
+import { useModalManager } from '@/hooks/useModalManager';
 import { useFamePopup } from '@/contexts/FamePopupContext';
 import { toast } from 'react-hot-toast';
 import { 
@@ -41,9 +41,11 @@ import {
   FaHandshake,
   FaSkull,
   FaHospital,
-  FaJail,
+  FaLock,
   FaMoneyBillWave,
-  FaCoins
+  FaCoins,
+  FaBuilding,
+  FaCrosshairs
 } from 'react-icons/fa';
 import { GiSwordman, GiCrossedSwords, GiPistolGun } from 'react-icons/gi';
 import { MdLocalHospital, MdLocalPolice } from 'react-icons/md';
@@ -56,10 +58,41 @@ import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
 import { VscDebugConsole } from 'react-icons/vsc';
 import { SiFirebase } from 'react-icons/si';
 import { CgProfile } from 'react-icons/cg';
-import { FiUsers, FiHome, FiCar, FiDog, FiShield, FiDumbbell, FiBriefcase, FiGraduationCap, FiShoppingBag, FiGift, FiMessageSquare, FiMail, FiUserPlus, FiCheckSquare, FiFileText, FiHandshake, FiZap, FiUser, FiHeart, FiStar, FiSearch, FiBell, FiSettings, FiTrophy, FiUsers as FiUsersIcon, FiHome as FiHomeIcon, FiCar as FiCarIcon, FiDog as FiDogIcon, FiShield as FiShieldIcon, FiDumbbell as FiDumbbellIcon, FiBriefcase as FiBriefcaseIcon, FiGraduationCap as FiGraduationCapIcon, FiShoppingBag as FiShoppingBagIcon, FiGift as FiGiftIcon, FiMessageSquare as FiMessageSquareIcon, FiMail as FiMailIcon, FiUserPlus as FiUserPlusIcon, FiCheckSquare as FiCheckSquareIcon, FiFileText as FiFileTextIcon, FiHandshake as FiHandshakeIcon, FiZap as FiZapIcon, FiUser as FiUserIcon, FiHeart as FiHeartIcon, FiStar as FiStarIcon, FiSearch as FiSearchIcon, FiBell as FiBellIcon, FiSettings as FiSettingsIcon, FiTrophy as FiTrophyIcon } from 'react-icons/fi';
+// Removed problematic react-icons/fi imports - using Lucide React icons instead
 import { Link } from "react-router-dom"
 import { FeatureProgressCard } from "@/components/FeatureUnlockNotification"
 import GuestSyncNotification from "@/components/GuestSyncNotification"
+import { 
+  Target, 
+  Zap, 
+  DollarSign, 
+  Shield, 
+  Activity, 
+  Star, 
+  Award, 
+  Calendar,
+  MapPin, 
+  HomeIcon, 
+  Car, 
+  Briefcase, 
+  Building2, 
+  Lock, 
+  Dumbbell,
+  TrendingUp, 
+  Users, 
+  X, 
+  Play, 
+  Heart, 
+  Battery, 
+  Crown, 
+  Sword,
+  MessageSquare, 
+  UserPlus, 
+  Gift, 
+  Trophy, 
+  Settings, 
+  LogOut
+} from "lucide-react"
 
 // Helper function to format time
 const formatTime = (seconds) => {
@@ -95,10 +128,10 @@ const CooldownGroup = ({ hospitalStatus, jailStatus, crimeCooldown, gymCooldown 
   }
 
   const activeCooldowns = []
-  if (hospitalStatus.inHospital) activeCooldowns.push({ label: "المستشفى", time: hospitalStatus.remainingSeconds, icon: Building2, color: "red" })
-  if (jailStatus.inJail) activeCooldowns.push({ label: "السجن", time: jailStatus.remainingSeconds, icon: Lock, color: "red" })
-  if (crimeCooldown > 0) activeCooldowns.push({ label: "الجرائم", time: crimeCooldown, icon: Target, color: "orange" })
-  if (gymCooldown > 0) activeCooldowns.push({ label: "النادي", time: gymCooldown, icon: Dumbbell, color: "blue" })
+  if (hospitalStatus.inHospital) activeCooldowns.push({ label: "المستشفى", time: hospitalStatus.remainingSeconds, icon: FaBuilding, color: "red" })
+  if (jailStatus.inJail) activeCooldowns.push({ label: "السجن", time: jailStatus.remainingSeconds, icon: FaLock, color: "red" })
+  if (crimeCooldown > 0) activeCooldowns.push({ label: "الجرائم", time: crimeCooldown, icon: FaCrosshairs, color: "orange" })
+  if (gymCooldown > 0) activeCooldowns.push({ label: "النادي", time: gymCooldown, icon: FaDumbbell, color: "blue" })
 
   return (
     <div className="bg-red-950/30 border border-red-500/50 rounded-lg p-4">
@@ -212,7 +245,7 @@ const CharacterStats = ({ character }) => {
 
       {/* Activity Stats */}
       <div className="space-y-2">
-        <StatDisplay icon={Target} label="الجرائم المرتكبة" value={character.crimesCommitted ?? 0} color="text-red-400" />
+        <StatDisplay icon={FaCrosshairs} label="الجرائم المرتكبة" value={character.crimesCommitted ?? 0} color="text-red-400" />
         <StatDisplay icon={Trophy} label="عدد القتل" value={character.killCount ?? 0} color="text-red-500" />
         <StatDisplay icon={Calendar} label="الأيام في اللعبة" value={daysInGame} color="text-green-400" />
         <StatDisplay icon={Activity} label="الأيام المتصلة" value={daysOnline} color="text-blue-400" />
@@ -233,7 +266,7 @@ const CharacterStats = ({ character }) => {
 }
 
 export default function Home() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useFirebaseAuth();
   const { 
     hudData, 
     gameNews, 
@@ -251,7 +284,7 @@ export default function Home() {
   const { unreadCount: notificationsCount } = useNotifications();
   const { hasCompletedIntro } = useIntroStatus();
   const { isPlaying, toggleMusic } = useBackgroundMusic();
-  const { openModal } = useModal();
+  const { showModal } = useModalManager();
   const { showFamePopup } = useFamePopup();
 
   // Request initial data via Socket.IO
@@ -408,14 +441,14 @@ export default function Home() {
 
   const quickActions = [
     {
-      icon: Target,
+      icon: FaCrosshairs,
       label: "الجرائم",
       href: "/crimes",
       disabled: currentCrimeCooldown > 0,
       cooldown: currentCrimeCooldown,
     },
     {
-      icon: Dumbbell,
+      icon: FaDumbbell,
       label: "النادي",
       href: "/gym",
       disabled: currentGymCooldown > 0,
