@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
 import { Banknote, ArrowDownToLine, ArrowUpToLine, TrendingUp } from "lucide-react";
@@ -11,7 +11,7 @@ import MoneyIcon from "@/components/MoneyIcon";
 const API = import.meta.env.VITE_API_URL;
 
 export default function Bank() {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { stats, invalidateHud, loading } = useHud();
   const navigate = useNavigate();
   const { socket } = useSocket();
@@ -23,12 +23,12 @@ export default function Bank() {
   const [interestRows, setInterestRows] = useState(null);
 
   useEffect(() => {
-    if (!token) {
+    if (!customToken) {
       navigate("/login");
       return;
     }
     fetch(`${API}/api/bank`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${customToken}` },
       cache: "no-store",
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to fetch"))))
@@ -37,13 +37,13 @@ export default function Bank() {
         setBalance(0);
         toast.error("لا يمكن الاتصال بالخادم - يتم عرض بيانات وهمية");
       });
-  }, [token, navigate]);
+  }, [customToken, navigate]);
 
   useEffect(() => {
     if (!socket) return;
     const fetchBalance = () => {
       fetch(`${API}/api/bank`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${customToken}` },
         cache: "no-store",
       })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to fetch"))))
@@ -56,13 +56,13 @@ export default function Bank() {
       socket.off('bank:update', fetchBalance);
       clearInterval(pollInterval);
     };
-  }, [socket, token]);
+  }, [socket, customToken]);
 
   useEffect(() => {
-    if (tab !== "interest" || !token) return;
+    if (tab !== "interest" || !customToken) return;
     setInterestRows(null);
     fetch(`${API}/api/bank/history`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${customToken}` },
       cache: "no-store",
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to fetch"))))
@@ -71,7 +71,7 @@ export default function Bank() {
         setInterestRows([]);
         toast.error("لا يمكن الاتصال بالخادم");
       });
-  }, [tab, token]);
+  }, [tab, customToken]);
 
   const amt = Number(amount);
   const canDeposit = amt > 0 && stats && amt <= stats.money && !loadingTx && !loading;
@@ -88,7 +88,7 @@ export default function Bank() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${customToken}`,
         },
         body: JSON.stringify({ amount: amt }),
       });

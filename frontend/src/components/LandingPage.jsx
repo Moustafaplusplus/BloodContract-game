@@ -1,12 +1,12 @@
 import { Link, Navigate } from "react-router-dom";
 import { Target, Shield, Sword, Crown, Users, Zap } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 
 export default function LandingPage() {
-  const { isAuthed, tokenLoaded } = useAuth();
+  const { user, loading } = useFirebaseAuth();
 
   // If authenticated, redirect to dashboard
-  if (tokenLoaded && isAuthed) {
+  if (!loading && user) {
     return <Navigate to="/dashboard" replace />;
   }
   return (

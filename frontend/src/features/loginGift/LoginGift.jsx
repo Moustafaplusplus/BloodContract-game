@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { 
@@ -20,7 +20,7 @@ import MoneyIcon from '@/components/MoneyIcon';
 import BlackcoinIcon from '@/components/BlackcoinIcon';
 
 const LoginGift = () => {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const queryClient = useQueryClient();
   const [isClaiming, setIsClaiming] = useState(false);
 
@@ -30,14 +30,14 @@ const LoginGift = () => {
     queryFn: async () => {
       const response = await fetch('/api/login-gift/status', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${customToken}`,
           'Content-Type': 'application/json'
         }
       });
       if (!response.ok) throw new Error('Failed to fetch status');
       return response.json();
     },
-    enabled: !!token
+    enabled: !!customToken
   });
 
   // Claim daily reward mutation
@@ -46,7 +46,7 @@ const LoginGift = () => {
       const response = await fetch('/api/login-gift/claim', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${customToken}`,
           'Content-Type': 'application/json'
         }
       });

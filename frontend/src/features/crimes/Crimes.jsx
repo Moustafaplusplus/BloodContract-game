@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "react-toastify";
@@ -38,7 +38,7 @@ function formatCooldown(sec) {
 export default function Crimes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { stats } = useHud();
   const { socket } = useSocket();
   const { showModal } = useModalManager();
@@ -61,10 +61,10 @@ export default function Crimes() {
 
   // Fetch jail/hospital status
   const fetchStatuses = useCallback(() => {
-    if (!token) return;
+    if (!customToken) return;
     axios.get("/api/confinement/jail").then(r => setJailStatus(r.data)).catch(() => setJailStatus({ inJail: false }));
     axios.get("/api/confinement/hospital").then(r => setHospitalStatus(r.data)).catch(() => setHospitalStatus({ inHospital: false }));
-  }, [token]);
+  }, [customToken]);
 
   useEffect(() => {
     fetchStatuses();

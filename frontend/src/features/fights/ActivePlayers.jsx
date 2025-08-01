@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useHud } from '@/hooks/useHud';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sword, User, Clock, AlertTriangle } from 'lucide-react';
@@ -89,14 +89,14 @@ function getXPWarning(attackerLevel, defenderLevel) {
 }
 
 export default function ActivePlayers() {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { stats } = useHud();
   const navigate = useNavigate();
   const [attacking, setAttacking] = useState(null);
 
   const { data: users = [], isLoading, error, refetch } = useQuery({
     queryKey: ['active-users'],
-    queryFn: () => fetch(`${API}/api/users/active`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    queryFn: () => fetch(`${API}/api/users/active`, { headers: { Authorization: `Bearer ${customToken}` } }).then(r => r.json()),
     refetchInterval: 60 * 1000,
   });
 
@@ -105,7 +105,7 @@ export default function ActivePlayers() {
     try {
       const res = await fetch(`${API}/api/fight/${userId}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${customToken}` },
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));

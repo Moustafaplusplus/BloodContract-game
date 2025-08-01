@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { useHud } from "@/hooks/useHud"
 import { useModalManager } from "@/hooks/useModalManager"
 import { useSocket } from "@/hooks/useSocket"
-import { useAuth } from "@/hooks/useAuth"
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { useNotificationContext } from "@/contexts/NotificationContext"
 import { useUnreadMessages } from "@/hooks/useUnreadMessages"
 import { useFriendRequests } from "@/hooks/useFriendRequests"
@@ -208,13 +208,13 @@ export default function HUD({ menuButton }) {
   const { stats, invalidateHud } = useHud()
   const { showModal, hideModal, isModalVisible } = useModalManager()
   const { socket } = useSocket()
-  const { token } = useAuth()
+  const { customToken } = useFirebaseAuth()
   const navigate = useNavigate()
   const { unreadCount: notificationCount } = useNotificationContext()
   const { unreadCount: messageCount } = useUnreadMessages()
   const { pendingCount: friendRequestCount } = useFriendRequests()
 
-  if (!token) return null
+  if (!customToken) return null
   if (!stats) return null
 
   // Calculate percentages

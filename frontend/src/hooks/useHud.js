@@ -1,7 +1,7 @@
 /* -------------------- src/hooks/useHud.js --------------------- */
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSocket } from '@/hooks/useSocket';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 
 /**
  * Central HUD store.
@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
  */
 export function useHud() {
   const { socket } = useSocket();
-  const { token, isAuthed } = useAuth();
+  const { customToken, user } = useFirebaseAuth();
   const [hud, setHud] = useState(null);
   const [loading, setLoading] = useState(false);
   const currentUserIdRef = useRef(null);
@@ -20,21 +20,21 @@ export function useHud() {
 
   // Extract userId from token for tracking user changes
   const getUserIdFromToken = useCallback(() => {
-    if (!token) return null;
+    if (!customToken) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(customToken.split('.')[1]));
       return payload.id;
     } catch {
       return null;
     }
-  }, [token]);
+  }, [customToken]);
 
   /* ─── helper callable from any component ─── */
   const invalidateHud = useCallback(() => {
-    if (socket && socket.connected && isAuthed) {
+    if (socket && socket.connected && user) {
       socket.emit('hud:request');
     }
-  }, [socket, isAuthed]);
+  }, [socket, user]);
 
   /* ─── track socket connection state ─── */
   useEffect(() => {
@@ -45,7 +45,7 @@ export function useHud() {
 
     const handleConnect = () => {
       setSocketConnected(true);
-      if (!hasRequestedInitialDataRef.current && isAuthed) {
+      if (!hasRequestedInitialDataRef.current && user) {
         hasRequestedInitialDataRef.current = true;
         invalidateHud();
       }
@@ -63,7 +63,7 @@ export function useHud() {
     socket.on('disconnect', handleDisconnect);
 
     // If already connected, request data
-    if (socket.connected && !hasRequestedInitialDataRef.current && isAuthed) {
+    if (socket.connected && !hasRequestedInitialDataRef.current && user) {
       hasRequestedInitialDataRef.current = true;
       invalidateHud();
     }
@@ -72,7 +72,7 @@ export function useHud() {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
     };
-  }, [socket, isAuthed, invalidateHud]);
+  }, [socket, user, invalidateHud]);
 
   /* ─── handle user changes ─── */
   useEffect(() => {
@@ -86,11 +86,11 @@ export function useHud() {
       setHud(null);
       setLoading(true);
     }
-  }, [token, getUserIdFromToken]);
+  }, [customToken, getUserIdFromToken]);
 
   /* ─── wire socket listener ─── */
   useEffect(() => {
-    if (!socket || !isAuthed) {
+    if (!socket || !user) {
       // Reset HUD data when socket is null or user is not authenticated
       setHud(null);
       setLoading(false);
@@ -113,29 +113,29 @@ export function useHud() {
     return () => {
       socket.off('hud:update', handleUpdate);
     };
-  }, [socket, isAuthed, getUserIdFromToken]);
+  }, [socket, user, getUserIdFromToken]);
 
   /* ─── handle logout ─── */
   useEffect(() => {
-    if (!isAuthed) {
+    if (!user) {
       setHud(null);
       setLoading(false);
       currentUserIdRef.current = null;
       hasRequestedInitialDataRef.current = false;
       setSocketConnected(false);
     }
-  }, [isAuthed]);
+  }, [user]);
 
   // Set loading to false if we have data or if we're not authenticated
   useEffect(() => {
-    if (hud || !isAuthed) {
+    if (hud || !user) {
       setLoading(false);
     }
-  }, [hud, isAuthed]);
+  }, [hud, user]);
 
   return {
     stats: hud,
-    loading: loading && isAuthed && !hud && socketConnected,
+    loading: loading && user && !hud && socketConnected,
     invalidateHud,
   };
 }

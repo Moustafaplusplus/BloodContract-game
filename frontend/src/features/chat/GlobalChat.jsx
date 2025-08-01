@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '@/hooks/useSocket';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useNavigate } from 'react-router-dom';
 
 import axios from 'axios';
@@ -23,14 +23,14 @@ export default function GlobalChat() {
   const [soundMuted, setSoundMuted] = useState(false);
   const messagesEndRef = useRef(null);
   const { socket } = useSocket();
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editContent, setEditContent] = useState('');
   
   // Get userId from JWT token instead of localStorage
-  const userId = token ? (() => {
+  const userId = customToken ? (() => {
     try {
-      const decoded = jwtDecode(token);
+      const decoded = jwtDecode(customToken);
       return decoded.id;
     } catch {
       return null;

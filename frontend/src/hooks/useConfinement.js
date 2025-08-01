@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useFirebaseAuth } from './useFirebaseAuth';
 import { useSocket } from './useSocket';
 import axios from 'axios';
 
 export function useConfinement() {
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { socket } = useSocket();
   const [hospitalStatus, setHospitalStatus] = useState(null);
   const [jailStatus, setJailStatus] = useState(null);
@@ -13,7 +13,7 @@ export function useConfinement() {
 
   // Fetch confinement status
   const fetchConfinementStatus = async () => {
-    if (!token) return;
+    if (!customToken) return;
     
     setLoading(true);
     setError(null);
@@ -113,7 +113,7 @@ export function useConfinement() {
   // Initial fetch
   useEffect(() => {
     fetchConfinementStatus();
-  }, [token]);
+  }, [customToken]);
 
   // Real-time updates via socket
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useUnclaimedTasks } from "@/hooks/useUnclaimedTasks";
@@ -221,7 +221,7 @@ export function MenuButton({ isOpen, setIsOpen }) {
 }
 
 export default function Navigation({ isOpen, setIsOpen }) {
-  const { logout, isAdmin } = useAuth();
+  const { logout, isAdmin } = useFirebaseAuth();
   const navigate = useNavigate();
   const { pendingCount } = useFriendRequests();
   const { unreadCount } = useUnreadMessages();

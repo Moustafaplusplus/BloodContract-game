@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@/hooks/useFirebaseAuth";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -23,7 +23,7 @@ import {
   ThumbsDown,
   Skull,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
 import { toast } from "react-hot-toast";
 import { Dialog } from '@headlessui/react';
@@ -113,7 +113,7 @@ function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
 export default function Profile() {
   // All hooks at the top level
   const { username } = useParams();
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
   const { stats: hudStats, invalidateHud } = useHud();
   const queryClient = useQueryClient();
   const [attacking, setAttacking] = useState(false);
@@ -172,7 +172,7 @@ export default function Profile() {
 
   // Fetch hospital status function
   const fetchHospitalStatus = async () => {
-    if (!token) return;
+    if (!customToken) return;
     
     try {
       let url = '/api/confinement/hospital';
@@ -180,7 +180,7 @@ export default function Profile() {
         url = `/api/confinement/hospital/${userId}`;
       }
       const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${customToken}` }
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -215,7 +215,7 @@ export default function Profile() {
     if (isOwnProfile || userId) {
       fetchHospitalStatus();
     }
-  }, [isOwnProfile, userId, token]);
+  }, [isOwnProfile, userId, customToken]);
 
   // Update timer
   useEffect(() => {
@@ -474,7 +474,7 @@ export default function Profile() {
         
         const res = await fetch(url, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${customToken}` },
         });
         
         if (!res.ok) {

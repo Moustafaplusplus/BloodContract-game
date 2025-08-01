@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useSocket } from '@/hooks/useSocket';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { User, Search } from 'lucide-react';
@@ -17,7 +17,7 @@ import { getImageUrl } from '@/utils/imageUtils.js';
 
 export default function Messages() {
   const { socket } = useSocket();
-  const { token } = useAuth();
+  const { token } = useFirebaseAuth();
   const { refetch: refetchUnreadCount } = useUnreadMessages();
   const location = useLocation();
   const [conversations, setConversations] = useState([]);

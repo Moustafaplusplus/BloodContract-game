@@ -10,8 +10,32 @@ let app;
 try {
   // Try to get existing app
   app = admin.app();
+  console.log('✅ Firebase Admin SDK already initialized');
 } catch (error) {
   // Initialize new app if none exists
+  console.log('🔄 Initializing Firebase Admin SDK...');
+  
+  // Check if required environment variables are present
+  const requiredEnvVars = [
+    'FIREBASE_TYPE',
+    'FIREBASE_PROJECT_ID', 
+    'FIREBASE_PRIVATE_KEY_ID',
+    'FIREBASE_PRIVATE_KEY',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_CLIENT_ID',
+    'FIREBASE_AUTH_URI',
+    'FIREBASE_TOKEN_URI',
+    'FIREBASE_AUTH_PROVIDER_X509_CERT_URL',
+    'FIREBASE_CLIENT_X509_CERT_URL',
+    'FIREBASE_STORAGE_BUCKET'
+  ];
+  
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  if (missingVars.length > 0) {
+    console.error('❌ Missing Firebase environment variables:', missingVars);
+    throw new Error(`Missing Firebase environment variables: ${missingVars.join(', ')}`);
+  }
+  
   const serviceAccount = {
     type: process.env.FIREBASE_TYPE,
     project_id: process.env.FIREBASE_PROJECT_ID,
@@ -25,12 +49,19 @@ try {
     client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
   };
 
-
+  console.log('📋 Firebase service account config:', {
+    type: serviceAccount.type,
+    project_id: serviceAccount.project_id,
+    client_email: serviceAccount.client_email,
+    private_key_length: serviceAccount.private_key?.length || 0
+  });
 
   app = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET
   });
+  
+  console.log('✅ Firebase Admin SDK initialized successfully');
 }
 
 const bucket = getStorage(app).bucket();

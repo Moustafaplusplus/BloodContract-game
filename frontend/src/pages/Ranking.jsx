@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '@/hooks/useAuth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { Heart, ThumbsUp, ThumbsDown, Trophy, Star, Target, Skull } from 'lucide-react';
 import MoneyIcon from '@/components/MoneyIcon';
 import { toast } from 'react-hot-toast';
@@ -51,7 +51,7 @@ function Ranking() {
   const [error, setError] = useState(null);
   const [ratings, setRatings] = useState({});
   const [ratingLoading, setRatingLoading] = useState({});
-  const { token } = useAuth();
+  const { customToken } = useFirebaseAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -70,13 +70,13 @@ function Ranking() {
   }, [activeTab]);
 
   const fetchRatingsForPlayers = async (playersList) => {
-    if (!token) return;
+    if (!customToken) return;
     
     const ratingsData = {};
     for (const player of playersList) {
       try {
         const response = await axios.get(`/api/profile/${player.userId}/ratings`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${customToken}` }
         });
         ratingsData[player.userId] = response.data;
       } catch (error) {
@@ -87,7 +87,7 @@ function Ranking() {
   };
 
   const handleRate = async (userId, rating) => {
-    if (!token) {
+    if (!customToken) {
       toast.error('يجب تسجيل الدخول لتقييم الملف الشخصي');
       return;
     }
@@ -95,7 +95,7 @@ function Ranking() {
     setRatingLoading(prev => ({ ...prev, [userId]: true }));
     try {
       await axios.post(`/api/profile/${userId}/rate`, { rating }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${customToken}` }
       });
       
       setRatings(prev => {

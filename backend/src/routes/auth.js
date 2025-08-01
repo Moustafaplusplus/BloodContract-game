@@ -11,12 +11,25 @@ router.post('/firebase-token', async (req, res) => {
     const { idToken } = req.body;
     
     if (!idToken) {
+      console.error('❌ No Firebase ID token provided');
       return res.status(400).json({ message: 'No Firebase ID token provided' });
     }
 
+    console.log('🔍 Verifying Firebase ID token...');
+    
     // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const firebaseUid = decodedToken.uid;
+    
+    console.log('✅ Firebase token verified for UID:', firebaseUid);
+    console.log('🔍 Token details:', {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      provider_id: decodedToken.provider_id,
+      isAnonymous: !decodedToken.email,
+      name: decodedToken.name,
+      picture: decodedToken.picture
+    });
     
     // Check if user exists in our database
     const { User } = await import('../models/User.js');
@@ -27,7 +40,8 @@ router.post('/firebase-token', async (req, res) => {
     
     if (!user) {
       // Create new user from Firebase auth
-      const email = decodedToken.email;
+      const isAnonymous = decodedToken.provider_id === 'anonymous' || !decodedToken.email;
+      const email = decodedToken.email || `${firebaseUid}@anonymous.local`;
       const displayName = decodedToken.name || decodedToken.display_name || 'User';
       const photoURL = decodedToken.picture;
       
@@ -64,7 +78,8 @@ router.post('/firebase-token', async (req, res) => {
           age: 18, // Default age
           gender: 'male', // Default gender
           password: Math.random().toString(36).slice(-10), // Random password for Firebase users
-          avatarUrl: photoURL
+          avatarUrl: photoURL,
+          isGuest: isAnonymous // Mark as guest if anonymous
         });
 
         // Create character for new user
@@ -81,6 +96,7 @@ router.post('/firebase-token', async (req, res) => {
     const { UserService } = await import('../services/UserService.js');
     const token = UserService.generateCustomToken(user.id, user.firebaseUid);
 
+    console.log('✅ Custom token generated for user:', user.id);
     res.json({
       token,
       user: {
@@ -93,8 +109,24 @@ router.post('/firebase-token', async (req, res) => {
       isNewUser
     });
   } catch (error) {
-    console.error('Firebase token verification error:', error);
-    res.status(401).json({ message: 'Invalid Firebase token' });
+    console.error('❌ Firebase token verification error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack
+    });
+    
+    // Provide more specific error messages
+    if (error.code === 'auth/id-token-expired') {
+      res.status(401).json({ message: 'Token expired. Please sign in again.' });
+    } else if (error.code === 'auth/id-token-revoked') {
+      res.status(401).json({ message: 'Token revoked. Please sign in again.' });
+    } else if (error.code === 'auth/invalid-id-token') {
+      res.status(401).json({ message: 'Invalid token format.' });
+    } else {
+      res.status(401).json({ message: 'Invalid Firebase token' });
+    }
   }
 });
 

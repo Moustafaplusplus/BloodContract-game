@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useFirebaseAuth } from './useFirebaseAuth';
 import axios from 'axios';
-import { useAuth } from './useAuth';
 import { useSocket } from './useSocket';
 
 export function useUnclaimedTasks() {
+  const { customToken } = useFirebaseAuth();
   const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const { token } = useAuth();
   const { socket } = useSocket();
 
   const fetchUnclaimedCount = async () => {
-    if (!token) return;
+    if (!customToken) return;
     
     try {
       setLoading(true);
       
       // Use the efficient backend endpoint
       const response = await axios.get('/api/tasks/unclaimed-count', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${customToken}` }
       });
 
       setUnclaimedCount(response.data.count);
@@ -31,7 +32,7 @@ export function useUnclaimedTasks() {
 
   useEffect(() => {
     fetchUnclaimedCount();
-  }, [token]);
+  }, [customToken]);
 
   // Listen for socket events to update count in real-time
   useEffect(() => {
@@ -46,7 +47,7 @@ export function useUnclaimedTasks() {
     return () => {
       socket.off('tasks:unclaimed-count-updated', handleUnclaimedCountUpdate);
     };
-  }, [socket, token]);
+  }, [socket, customToken]);
 
   return {
     unclaimedCount,

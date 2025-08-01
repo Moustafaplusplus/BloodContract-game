@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import { useState, useEffect, useRef } from "react"
 import { useSocket } from "@/hooks/useSocket"
-import { useAuth } from "@/hooks/useAuth"
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { jwtDecode } from "jwt-decode"
 import { Star, Trophy, Target, Shield, Crown, Calendar, Users, HomeIcon, Edit3, Activity, Skull } from "lucide-react"
 import { toast } from "react-hot-toast"
@@ -13,14 +13,14 @@ import LoadingOrErrorPlaceholder from "@/components/LoadingOrErrorPlaceholder"
 import { TIME, UI } from "@/utils/constants"
 
 export default function Character() {
-  const { token } = useAuth()
+  const { customToken } = useFirebaseAuth()
   const queryClient = useQueryClient()
 
   // Get userId from token for cache invalidation
-  const userId = token
+  const userId = customToken
     ? (() => {
         try {
-          const { id } = jwtDecode(token)
+          const { id } = jwtDecode(customToken)
           return id
         } catch {
           return null

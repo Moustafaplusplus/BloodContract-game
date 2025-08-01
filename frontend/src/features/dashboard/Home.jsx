@@ -3,7 +3,7 @@ import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { useSocket } from "@/hooks/useSocket"
-import { useAuth } from "@/hooks/useAuth"
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { jwtDecode } from "jwt-decode"
 import { useQueryClient } from "@tanstack/react-query"
 import { useIntroStatus } from "@/hooks/useIntroStatus"
@@ -41,17 +41,17 @@ const formatTime = (seconds) => {
 }
 
 export default function Home() {
-  const { token } = useAuth()
+  const { customToken } = useFirebaseAuth()
   const { socket } = useSocket()
   const queryClient = useQueryClient()
   const { hasSeenIntro, loading: introLoading } = useIntroStatus()
   const [showIntroNotification, setShowIntroNotification] = React.useState(false)
 
   // Get userId from token for cache invalidation
-  const userId = token
+  const userId = customToken
     ? (() => {
         try {
-          const { id } = jwtDecode(token)
+          const { id } = jwtDecode(customToken)
           return id
         } catch {
           return null

@@ -19,10 +19,12 @@ import {
 import { auth, googleProvider } from "@/config/firebase";
 import axios from "axios";
 
-// Set axios base URL - only set if VITE_API_URL is provided and we're not in development
+// Set axios base URL - use VITE_API_URL if provided, otherwise use localhost:5000 in development
 const API = import.meta.env.VITE_API_URL;
-if (API && import.meta.env.MODE !== 'development') {
+if (API) {
   axios.defaults.baseURL = API;
+} else if (import.meta.env.MODE === 'development') {
+  axios.defaults.baseURL = 'http://localhost:5000';
 }
 
 const FirebaseAuthCtx = createContext(null);
@@ -52,8 +54,12 @@ export function FirebaseAuthProvider({ children }) {
           
           if (response.data.token) {
             setCustomToken(response.data.token);
+            // Save token to localStorage for AuthProvider compatibility
+            localStorage.setItem('jwt', response.data.token);
             // Set axios interceptor with custom token
             axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            // Dispatch custom event for AuthProvider to react to auth changes
+            window.dispatchEvent(new CustomEvent('auth-change'));
           }
         } catch (error) {
           console.error('Failed to get custom token:', error);
@@ -62,6 +68,8 @@ export function FirebaseAuthProvider({ children }) {
         setUser(null);
         setIsGuest(false);
         setCustomToken(null);
+        // Clear token from localStorage
+        localStorage.removeItem('jwt');
         delete axios.defaults.headers.common['Authorization'];
       }
       
@@ -177,7 +185,11 @@ export function FirebaseAuthProvider({ children }) {
     try {
       await signOut(auth);
       setCustomToken(null);
+      // Clear token from localStorage
+      localStorage.removeItem('jwt');
       delete axios.defaults.headers.common['Authorization'];
+      // Dispatch custom event for AuthProvider to react to auth changes
+      window.dispatchEvent(new CustomEvent('auth-change'));
     } catch (error) {
       console.error('Sign out error:', error);
     }

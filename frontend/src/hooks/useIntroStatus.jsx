@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useFirebaseAuth } from './useFirebaseAuth';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
 
-export const useIntroStatus = () => {
-  const { token } = useAuth();
+export function useIntroStatus() {
+  const { customToken } = useFirebaseAuth();
   const [hasSeenIntro, setHasSeenIntro] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) {
+    if (!customToken) {
       setHasSeenIntro(false);
       setLoading(false);
       return;
@@ -19,7 +19,7 @@ export const useIntroStatus = () => {
       try {
         const response = await axios.get('/api/auth/intro-status', {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${customToken}`
           }
         });
         setHasSeenIntro(response.data.hasSeenIntro || false);
@@ -33,15 +33,15 @@ export const useIntroStatus = () => {
     };
 
     checkIntroStatus();
-  }, [token]);
+  }, [customToken]);
 
   const markIntroAsSeen = async () => {
-    if (!token) return;
+    if (!customToken) return;
 
     try {
       await axios.post('/api/auth/mark-intro-seen', {}, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       setHasSeenIntro(true);

@@ -37,28 +37,57 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Load token from localStorage on mount
+  // Load token from localStorage on mount and listen for changes
   useEffect(() => {
-    const saved = localStorage.getItem("jwt");
-    if (saved) {
-      setTokenState(saved);
-      setIsAuthed(true);
-      setTokenLoaded(true);
-      setValidating(false);
-      
-      // Decode token to check if user is guest
-      const decoded = decodeToken(saved);
-      if (decoded) {
-        setIsGuest(decoded.isGuest || false);
-        setUserInfo(decoded);
+    const getToken = () => {
+      return localStorage.getItem("jwt");
+    };
+
+    const updateAuthState = (saved) => {
+      if (saved) {
+        setTokenState(saved);
+        setIsAuthed(true);
+        setTokenLoaded(true);
+        setValidating(false);
+        
+        // Decode token to check if user is guest
+        const decoded = decodeToken(saved);
+        if (decoded) {
+          setIsGuest(decoded.isGuest || false);
+          setUserInfo(decoded);
+        }
+      } else {
+        setTokenState(null);
+        setTokenLoaded(true);
+        setIsAuthed(false);
+        setValidating(false);
+        setIsGuest(false);
+        setUserInfo(null);
       }
-    } else {
-      setTokenLoaded(true);
-      setIsAuthed(false);
-      setValidating(false);
-      setIsGuest(false);
-      setUserInfo(null);
-    }
+    };
+
+    // Set initial state
+    updateAuthState(getToken());
+
+    // Listen for storage changes (when Firebase auth updates localStorage)
+    const handleStorageChange = (e) => {
+      if (e.key === 'jwt') {
+        updateAuthState(e.newValue);
+      }
+    };
+
+    // Listen for custom auth events
+    const handleAuthChange = () => {
+      updateAuthState(getToken());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-change', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
   }, [decodeToken]);
 
   // Update axios interceptor when token changes

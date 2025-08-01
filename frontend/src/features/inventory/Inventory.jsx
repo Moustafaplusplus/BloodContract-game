@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useAuth } from "@/hooks/useAuth"
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { useHud } from "@/hooks/useHud"
 import { useQueryClient } from '@tanstack/react-query'
 import Modal from "@/components/Modal"
@@ -245,7 +245,7 @@ function SectionHeader({ icon: Icon, title, color = "text-red-500", accentColor 
 }
 
 export default function Inventory() {
-  const { token } = useAuth()
+  const { customToken } = useFirebaseAuth()
   const { invalidateHud } = useHud()
   const queryClient = useQueryClient()
   const [items, setItems] = useState([])
@@ -260,7 +260,7 @@ export default function Inventory() {
       setLoading(true)
       try {
         const res = await fetch(`${API}/api/inventory/`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${customToken}` },
         })
         if (!res.ok) throw new Error("فشل في تحميل الجرد")
         const data = await res.json()
@@ -272,7 +272,7 @@ export default function Inventory() {
       }
     }
     fetchInventory()
-  }, [token])
+  }, [customToken])
 
   const groupItems = () => {
     const weapons = items.filter((i) => weaponTypes.includes(i.type))
@@ -305,7 +305,7 @@ export default function Inventory() {
     try {
       const res = await fetch(`${API}/api/inventory/equip`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ type: item.type, itemId: item.itemId, slot }),
       })
       const data = await res.json()
@@ -324,7 +324,7 @@ export default function Inventory() {
     try {
       const res = await fetch(`${API}/api/inventory/unequip`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ type: item.type, slot: item.slot }),
       })
       const data = await res.json()
@@ -359,7 +359,7 @@ export default function Inventory() {
         try {
           const res = await fetch(`${API}/api/inventory/sell`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
             body: JSON.stringify({ type: item.type, itemId: item.itemId, sellOption: 'quick' }),
           })
           const data = await res.json()
@@ -429,7 +429,7 @@ export default function Inventory() {
             // First use the special item
             const useRes = await fetch(`${API}/api/inventory/use-special`, {
               method: "POST",
-              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
               body: JSON.stringify({ itemId: item.itemId }),
             });
             const useData = await useRes.json();
@@ -438,7 +438,7 @@ export default function Inventory() {
             // Then change the name
             const nameRes = await fetch(`${API}/api/character/change-name`, {
               method: "POST",
-              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
               body: JSON.stringify({ newName: newName.trim() }),
             });
             const nameData = await nameRes.json();
@@ -492,7 +492,7 @@ export default function Inventory() {
         try {
           const res = await fetch(`${API}/api/inventory/use-special`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
             body: JSON.stringify({ itemId: item.itemId }),
           })
           const data = await res.json()
