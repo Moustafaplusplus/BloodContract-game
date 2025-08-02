@@ -7,7 +7,7 @@ const SECRET = process.env.JWT_SECRET;
 if (!SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // Helper function to run database operations with timeout
-async function withTimeout(promise, timeoutMs = 5000) {
+async function withTimeout(promise, timeoutMs = 8000) {
   return Promise.race([
     promise,
     new Promise((_, reject) => 

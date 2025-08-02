@@ -2,6 +2,7 @@ import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
 const MessageController = {
   async sendMessage(req, res) {
@@ -140,44 +141,92 @@ const MessageController = {
   async inbox(req, res) {
     try {
       const myId = req.user.id;
-      const messages = await Message.findAll({
+      
+      // Use a single optimized query with JOINs instead of multiple queries
+      const conversations = await Message.findAll({
         where: {
           [Op.or]: [
             { senderId: myId },
             { receiverId: myId },
           ],
+          deleted: false
         },
-        attributes: ['senderId', 'receiverId'],
+        include: [
+          {
+            model: User,
+            as: 'sender',
+            attributes: ['id', 'username'],
+            include: [{
+              model: Character,
+              attributes: ['name', 'vipExpiresAt']
+            }]
+          },
+          {
+            model: User,
+            as: 'receiver',
+            attributes: ['id', 'username'],
+            include: [{
+              model: Character,
+              attributes: ['name', 'vipExpiresAt']
+            }]
+          }
+        ],
+        attributes: [
+          'senderId', 
+          'receiverId', 
+          'isRead',
+          'createdAt'
+        ],
+        order: [['createdAt', 'DESC']],
+        group: ['Message.id', 'sender.id', 'sender.Character.id', 'receiver.id', 'receiver.Character.id']
       });
-      const userIds = Array.from(new Set(messages.flatMap(m => [m.senderId, m.receiverId]).filter(id => id !== myId)));
-      const users = await User.findAll({ 
-        where: { id: { [Op.in]: userIds } }, 
+
+      // Get unique user IDs from conversations
+      const userIds = new Set();
+      conversations.forEach(msg => {
+        if (msg.senderId !== myId) userIds.add(msg.senderId);
+        if (msg.receiverId !== myId) userIds.add(msg.receiverId);
+      });
+
+      // Get users with their unread counts in a single query
+      const users = await User.findAll({
+        where: { id: { [Op.in]: Array.from(userIds) } },
         attributes: ['id', 'username'],
         include: [{
           model: Character,
           attributes: ['name', 'vipExpiresAt']
         }]
       });
-      
-      // Check for unread messages for each conversation
-      const result = await Promise.all(users.map(async (user) => {
-        const unreadCount = await Message.count({
-          where: {
-            senderId: user.id,
-            receiverId: myId,
-            isRead: false,
-            deleted: false
-          }
-        });
-        
-        return {
-          userId: user.id,
-          username: user.username,
-          displayName: user.Character?.name || user.username,
-          vipExpiresAt: user.Character?.vipExpiresAt,
-          hasUnreadMessages: unreadCount > 0,
-          unreadCount: unreadCount
-        };
+
+      // Get unread counts for all users in a single query
+      const unreadCounts = await Message.findAll({
+        where: {
+          senderId: { [Op.in]: Array.from(userIds) },
+          receiverId: myId,
+          isRead: false,
+          deleted: false
+        },
+        attributes: [
+          'senderId',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'unreadCount']
+        ],
+        group: ['senderId']
+      });
+
+      // Create a map for quick lookup
+      const unreadMap = new Map();
+      unreadCounts.forEach(item => {
+        unreadMap.set(item.senderId, parseInt(item.dataValues.unreadCount));
+      });
+
+      // Build the result
+      const result = users.map(user => ({
+        userId: user.id,
+        username: user.username,
+        displayName: user.Character?.name || user.username,
+        vipExpiresAt: user.Character?.vipExpiresAt,
+        hasUnreadMessages: (unreadMap.get(user.id) || 0) > 0,
+        unreadCount: unreadMap.get(user.id) || 0
       }));
       
       res.json(result);

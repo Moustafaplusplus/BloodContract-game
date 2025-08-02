@@ -62,38 +62,49 @@ export function initSocket(server) {
       /* helper to push one HUD snapshot */
       const pushHud = async () => {
         try {
-          const char = await Character.findOne({ 
-            where: { userId },
-            include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
-          });
-          if (char) {
-            const hudData = await char.toSafeJSON();
-            
-            // Get hospital and jail status
-            const { ConfinementService } = await import('./services/ConfinementService.js');
-            const hospitalStatus = await ConfinementService.getHospitalStatus(userId);
-            const jailStatus = await ConfinementService.getJailStatus(userId);
-            
-            // Calculate cooldowns
-            const now = Date.now();
-            const crimeCooldown = char.crimeCooldown && char.crimeCooldown > now 
-              ? Math.floor((char.crimeCooldown - now) / 1000) 
-              : 0;
-            const gymCooldown = char.gymCooldown && char.gymCooldown > now 
-              ? Math.floor((char.gymCooldown - now) / 1000) 
-              : 0;
-            
-            // Add status data to HUD
-            const enhancedHudData = {
-              ...hudData,
-              hospitalStatus,
-              jailStatus,
-              crimeCooldown,
-              gymCooldown
-            };
-            
-            socket.emit('hud:update', enhancedHudData);
-          }
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('HUD update timed out')), 10000)
+          );
+          
+          const hudPromise = (async () => {
+            const char = await Character.findOne({ 
+              where: { userId },
+              include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
+            });
+            if (char) {
+              const hudData = await char.toSafeJSON();
+              
+              // Get hospital and jail status with timeout
+              const { ConfinementService } = await import('./services/ConfinementService.js');
+              const [hospitalStatus, jailStatus] = await Promise.all([
+                ConfinementService.getHospitalStatus(userId),
+                ConfinementService.getJailStatus(userId)
+              ]);
+              
+              // Calculate cooldowns
+              const now = Date.now();
+              const crimeCooldown = char.crimeCooldown && char.crimeCooldown > now 
+                ? Math.floor((char.crimeCooldown - now) / 1000) 
+                : 0;
+              const gymCooldown = char.gymCooldown && char.gymCooldown > now 
+                ? Math.floor((char.gymCooldown - now) / 1000) 
+                : 0;
+              
+              // Add status data to HUD
+              const enhancedHudData = {
+                ...hudData,
+                hospitalStatus,
+                jailStatus,
+                crimeCooldown,
+                gymCooldown
+              };
+              
+              socket.emit('hud:update', enhancedHudData);
+            }
+          })();
+          
+          await Promise.race([hudPromise, timeoutPromise]);
         } catch (error) {
           console.error(`[Socket] Error pushing HUD for user ${userId}:`, error.message);
         }

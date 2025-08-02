@@ -243,17 +243,19 @@ export class TaskController {
     try {
       const userId = req.user.id;
       
-      // Get regular tasks
-      const tasks = await Task.findAll({ where: { isActive: true } });
-      const progresses = await UserTaskProgress.findAll({ where: { userId } });
-      const progressMap = {};
-      progresses.forEach(p => { progressMap[p.taskId] = p; });
-      
-      // Count unclaimed regular tasks
-      const unclaimedRegularTasks = tasks.filter(task => {
-        const progress = progressMap[task.id];
-        return progress?.isCompleted && !progress?.rewardCollected;
-      }).length;
+      // Use a single optimized query to count unclaimed tasks
+      const unclaimedRegularTasks = await UserTaskProgress.count({
+        where: {
+          userId,
+          isCompleted: true,
+          rewardCollected: false
+        },
+        include: [{
+          model: Task,
+          where: { isActive: true },
+          attributes: []
+        }]
+      });
 
       // Check daily task availability
       const dailyTaskStatus = await TaskService.getDailyTaskStatus(userId);
@@ -263,6 +265,7 @@ export class TaskController {
       
       res.json({ count: totalUnclaimed });
     } catch (err) {
+      console.error('[TASK] Error getting unclaimed count:', err);
       res.status(400).json({ error: err.message });
     }
   }

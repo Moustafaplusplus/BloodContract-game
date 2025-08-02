@@ -9,32 +9,41 @@ export function startJailRelease() {
   
   const checkJailReleases = async () => {
     try {
-      const now = new Date();
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Jail release job timed out')), 15000)
+      );
       
-      // Find all jail records that should be released
-      const expiredJails = await Jail.findAll({
-        where: {
-          releasedAt: { [Op.lte]: now }
-        }
-      });
-
-      if (expiredJails.length > 0) {
-        // Releasing players from jail
+      const jobPromise = (async () => {
+        const now = new Date();
         
-        for (const jail of expiredJails) {
-          // Find the character for this user ID
-          const character = await Character.findOne({ where: { userId: jail.userId } });
-          if (character) {
-            // Emit jail leave event
-            if (io) {
-              io.to(`user:${jail.userId}`).emit('jail:leave');
-            }
+        // Find all jail records that should be released
+        const expiredJails = await Jail.findAll({
+          where: {
+            releasedAt: { [Op.lte]: now }
           }
+        });
+
+        if (expiredJails.length > 0) {
+          // Releasing players from jail
           
-          // Delete the jail record
-          await jail.destroy();
+          for (const jail of expiredJails) {
+            // Find the character for this user ID
+            const character = await Character.findOne({ where: { userId: jail.userId } });
+            if (character) {
+              // Emit jail leave event
+              if (io) {
+                io.to(`user:${jail.userId}`).emit('jail:leave');
+              }
+            }
+            
+            // Delete the jail record
+            await jail.destroy();
+          }
         }
-      }
+      })();
+      
+      await Promise.race([jobPromise, timeoutPromise]);
     } catch (error) {
       console.error('❌ Jail release job error:', error);
     }

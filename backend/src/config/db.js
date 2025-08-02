@@ -8,30 +8,30 @@ const dbConfig = {
   logging: false, // Set to console.log for debugging if needed
   // Optimized connection pool for Railway with aggressive timeouts
   pool: {
-    max: 3, // Further reduced for Railway limits
-    min: 0, // Allow connections to drop to 0 when idle
-    acquire: 30000, // Reduced timeout for acquiring connections
-    idle: 5000, // Reduced idle time before releasing connections
-    evict: 10000, // Reduced eviction time
+    max: 5, // Increased for better concurrency
+    min: 1, // Keep at least one connection alive
+    acquire: 60000, // Increased timeout for acquiring connections
+    idle: 10000, // Increased idle time before releasing connections
+    evict: 30000, // Increased eviction time
     handleDisconnects: true, // Enable automatic reconnection
   },
   // Add retry configuration for better connection stability
   retry: {
-    max: 5, // Increased retry attempts
-    timeout: 5000, // Reduced timeout per retry
-    backoffBase: 1000, // Base backoff time
+    max: 3, // Reduced retry attempts to avoid overwhelming
+    timeout: 10000, // Increased timeout per retry
+    backoffBase: 2000, // Increased base backoff time
     backoffExponent: 1.5, // Exponential backoff
   },
-  // Optimized dialect options for Railway with shorter timeouts
+  // Optimized dialect options for Railway with better timeouts
   dialectOptions: {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    connectTimeout: 20000, // Reduced connection timeout
-    acquireTimeout: 20000, // Reduced acquire timeout
-    timeout: 15000, // Reduced query timeout
+    connectTimeout: 30000, // Increased connection timeout
+    acquireTimeout: 30000, // Increased acquire timeout
+    timeout: 30000, // Increased query timeout
     // Add statement timeout to prevent long-running queries
-    statement_timeout: 10000, // Reduced statement timeout
+    statement_timeout: 30000, // Increased statement timeout
     // Add idle session timeout
-    idle_in_transaction_session_timeout: 15000, // Reduced idle timeout
+    idle_in_transaction_session_timeout: 30000, // Increased idle timeout
     // Additional connection optimizations
     application_name: 'blood_contract_game',
     tcp_keepalives_idle: 600,
@@ -43,9 +43,9 @@ const dbConfig = {
     charset: 'utf8',
     timestamps: true,
   },
-  // Add transaction settings
-  transactionType: 'IMMEDIATE',
-  isolationLevel: 'READ_COMMITTED',
+  // Remove problematic transaction settings that cause PostgreSQL errors
+  // transactionType: 'IMMEDIATE',
+  // isolationLevel: 'READ_COMMITTED', // This was causing the PostgreSQL syntax errors
 };
 
 // Create Sequelize instance based on available configuration
