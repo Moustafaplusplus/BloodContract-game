@@ -3,6 +3,153 @@ import axios from 'axios';
 import MoneyIcon from '@/components/MoneyIcon';
 import { useUnclaimedTasks } from '@/hooks/useUnclaimedTasks';
 import { toast } from 'react-toastify';
+import { Target, Trophy, Gift, Star, TrendingUp, CheckCircle, Clock, ImageIcon, Award, Loader, Crown } from 'lucide-react';
+
+const TaskCard = ({ task, collecting, onCollectReward, getProgressPercentage, getMetricDisplayName }) => {
+  const progressPercentage = getProgressPercentage(task.progress, task.goal);
+  const isCompleted = task.isCompleted;
+  const isCollected = task.rewardCollected;
+
+  return (
+    <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm hover:border-blood-500/40 transition-all duration-300">
+      {/* Task Header with Progress Banner */}
+      <div className="relative h-12 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 rounded-lg mb-4 overflow-hidden">
+        {/* Background Pattern */}
+        <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23dc2626\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"10\" cy=\"10\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"}></div>
+        
+        {/* Progress Bar Background */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+          <div 
+            className={`h-full transition-all duration-500 ${
+              isCompleted ? 'bg-green-500' : 'bg-blood-500'
+            }`}
+            style={{ width: `${progressPercentage}%` }}
+          ></div>
+        </div>
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 h-full flex items-center justify-between p-3">
+          <div className="flex items-center space-x-2">
+            <div className={`w-6 h-6 rounded flex items-center justify-center ${
+              isCompleted ? 'bg-green-600/80' : 'bg-blood-600/80'
+            } backdrop-blur-sm`}>
+              {isCompleted ? (
+                <CheckCircle className="w-3 h-3 text-white" />
+              ) : (
+                <Target className="w-3 h-3 text-white" />
+              )}
+            </div>
+            <span className="text-xs font-medium text-white drop-shadow">
+              {task.progress} / {task.goal}
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            <ImageIcon className="w-3 h-3 text-white/60" />
+            {isCompleted && <Trophy className="w-3 h-3 text-yellow-400" />}
+          </div>
+        </div>
+      </div>
+
+      {/* Task Info */}
+      <div className="mb-4">
+        <h3 className="font-bold text-white mb-1 text-sm">{task.title}</h3>
+        <p className="text-blood-200 text-xs leading-relaxed line-clamp-2">{task.description}</p>
+      </div>
+
+      {/* Metric */}
+      <div className="mb-3">
+        <div className="flex items-center space-x-1 mb-1">
+          <Target className="w-3 h-3 text-blood-400" />
+          <span className="text-xs text-blood-300">المعيار</span>
+        </div>
+        <div className="text-sm text-white font-medium bg-blood-900/20 border border-blood-500/10 rounded p-1 text-center">
+          {getMetricDisplayName(task.metric)}
+        </div>
+      </div>
+
+      {/* Rewards */}
+      <div className="mb-4">
+        <div className="flex items-center space-x-1 mb-2">
+          <Gift className="w-3 h-3 text-blood-400" />
+          <span className="text-xs text-blood-300">المكافآت</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {task.rewardMoney > 0 && (
+            <div className="bg-green-900/20 border border-green-500/20 rounded p-1 text-center">
+              <div className="flex items-center justify-center space-x-1">
+                <MoneyIcon className="w-3 h-3" />
+                <span className="text-xs text-green-400 font-medium">{task.rewardMoney.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          {task.rewardExp > 0 && (
+            <div className="bg-blue-900/20 border border-blue-500/20 rounded p-1 text-center">
+              <div className="flex items-center justify-center space-x-1">
+                <Star className="w-3 h-3 text-blue-400" />
+                <span className="text-xs text-blue-400 font-medium">{task.rewardExp.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          {task.rewardBlackcoins > 0 && (
+            <div className="bg-purple-900/20 border border-purple-500/20 rounded p-1 text-center">
+              <div className="flex items-center justify-center space-x-1">
+                <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-3 h-3 object-contain" />
+                <span className="text-xs text-purple-400 font-medium">{task.rewardBlackcoins.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          {task.progressPoints > 0 && (
+            <div className="bg-yellow-900/20 border border-yellow-500/20 rounded p-1 text-center">
+              <div className="flex items-center justify-center space-x-1">
+                <TrendingUp className="w-3 h-3 text-yellow-400" />
+                <span className="text-xs text-yellow-400 font-medium">{task.progressPoints}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action Button */}
+      <div>
+        {isCompleted ? (
+          isCollected ? (
+            <div className="bg-green-900/20 border border-green-500/20 text-green-400 py-2 px-3 rounded-lg text-center text-sm font-medium flex items-center justify-center space-x-2">
+              <CheckCircle className="w-4 h-4" />
+              <span>تم جمع المكافأة</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => onCollectReward(task.id)}
+              disabled={collecting === task.id}
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-2 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none text-sm flex items-center justify-center space-x-2"
+            >
+              {collecting === task.id ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>جاري الجمع...</span>
+                </>
+              ) : (
+                <>
+                  <Gift className="w-4 h-4" />
+                  <span>جمع المكافأة</span>
+                </>
+              )}
+            </button>
+          )
+        ) : (
+          <div className="bg-blood-900/20 border border-blood-500/20 text-blood-300 py-2 px-3 rounded-lg text-center text-sm flex items-center justify-center space-x-2">
+            <Clock className="w-4 h-4" />
+            <span>أكمل المهمة لجمع المكافأة</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -53,13 +200,12 @@ export default function Tasks() {
     setCollecting(taskId);
     try {
       const res = await axios.post(`/api/tasks/${taskId}/collect`);
-      toast.success('تم جمع المكافأة بنجاح!');
-      // Update promotion status if it was included in response
+      toast.success('تم جمع المكافأة بن��اح!');
       if (res.data.promotionStatus) {
         setPromotionStatus(res.data.promotionStatus);
       }
-      fetchTasks(); // Refresh to update collected status
-      refetchUnclaimedCount(); // Refresh navigation badge
+      fetchTasks();
+      refetchUnclaimedCount();
     } catch (error) {
       toast.error(error.response?.data?.error || 'فشل في جمع المكافأة');
     } finally {
@@ -72,8 +218,8 @@ export default function Tasks() {
     try {
       const res = await axios.post('/api/tasks/daily/claim');
       toast.success('تم المطالبة بالمهمة اليومية بنجاح!');
-      fetchDailyTaskStatus(); // Refresh daily task status
-      refetchUnclaimedCount(); // Refresh navigation badge
+      fetchDailyTaskStatus();
+      refetchUnclaimedCount();
     } catch (error) {
       toast.error(error.response?.data?.error || 'فشل في المطالبة بالمهمة اليومية');
     } finally {
@@ -115,226 +261,176 @@ export default function Tasks() {
     return metricNames[metric] || metric;
   }
 
+  const completedTasks = tasks.filter(task => task.isCompleted && !task.rewardCollected).length;
+  const totalTasks = tasks.length;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center">
-            <div className="text-accent-red text-xl">جاري تحميل المهام...</div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 flex items-center justify-center p-4">
+        <div className="text-center bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 p-8">
+          <div className="w-16 h-16 border-4 border-blood-500/30 border-t-blood-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">جاري تحميل المهام...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bouya mb-4 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red">
-            المهام
-          </h1>
-          <div className="w-32 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto"></div>
-          <p className="text-hitman-300 mt-4">أكمل المهام واحصل على المكافآت</p>
+    <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 p-2 sm:p-4 space-y-4">
+      
+      {/* Tasks Header Banner with Background Image */}
+      <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+        {/* Background Image Placeholder */}
+        <div className="absolute inset-0 bg-gradient-to-r from-yellow-900 via-gray-800 to-purple-900">
+          <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"50\" height=\"50\" viewBox=\"0 0 50 50\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23eab308\" fill-opacity=\"0.1\"%3E%3Cpath d=\"M25 5l7 14h14l-11 8 4 14-14-10-14 10 4-14-11-8h14z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"}></div>
         </div>
-
-        {/* Daily Task */}
-        {dailyTask && (
-          <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 rounded-xl p-6 shadow-lg border border-yellow-500 mb-8">
-            <div className="text-center mb-4">
-              <h2 className="text-2xl font-bold text-yellow-400 mb-2">🎁 المهمة اليومية</h2>
-              <p className="text-hitman-300">سجل دخولك اليومي واحصل على مكافآت مجانية!</p>
+        
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/50"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-
-            {/* Rewards Display */}
-            <div className="flex justify-center gap-4 mb-4">
-              <span className="bg-green-900/50 text-green-300 px-3 py-1 rounded text-sm flex items-center gap-1">
-                <MoneyIcon className="w-4 h-4" />
-                1 بلاك كوين
-              </span>
-              <span className="bg-blue-900/50 text-blue-300 px-3 py-1 rounded text-sm">
-                ⭐ {dailyTask.expReward?.toLocaleString() || 0} خبرة
-              </span>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">المهام</h1>
+              <p className="text-xs sm:text-sm text-white/80 drop-shadow">أكمل المهام واحصل على المكافآت</p>
             </div>
-
-            {/* Action Button */}
-            <div className="text-center">
-              {dailyTask.isAvailable ? (
-                <button
-                  onClick={claimDailyTask}
-                  disabled={claimingDaily}
-                  className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 text-white px-8 py-3 rounded-lg font-bold transition text-lg"
-                >
-                  {claimingDaily ? 'جاري المطالبة...' : '🎁 احصل على المكافأة اليومية'}
-                </button>
-              ) : (
-                <div className="text-yellow-400 text-lg font-bold">
-                  ✅ تم المطالبة اليوم
-                </div>
-              )}
+          </div>
+          
+          <div className="flex items-center space-x-4 text-white">
+            <div className="hidden sm:flex items-center space-x-2">
+              <ImageIcon className="w-4 h-4 text-white/60" />
+              <Award className="w-4 h-4 text-yellow-400 animate-pulse" />
             </div>
-
-            {/* Next Available Time */}
-            {dailyTask.lastClaimDate && !dailyTask.isAvailable && (
-              <div className="text-center mt-3">
-                <p className="text-hitman-400 text-sm">
-                  المكافأة التالية متاحة بعد 24 ساعة من آخر مطالبة
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Promotion Status */}
-        {promotionStatus && (
-          <div className="bg-hitman-900/80 rounded-xl p-6 shadow-lg border border-accent-red mb-8">
-            <div className="text-center mb-4">
-              <h2 className="text-2xl font-bold text-accent-red mb-2">نظام الرتب</h2>
-              <div className="text-xl font-bold text-white">
-                الرتبة الحالية: {promotionStatus.currentTitle}
-              </div>
-              <div className="text-sm text-hitman-300 mt-1">
-                نقاط التقدم: {promotionStatus.totalProgressPoints.toLocaleString()}
-              </div>
-              {promotionStatus.powerBonus > 0 || promotionStatus.defenseBonus > 0 ? (
-                <div className="flex justify-center gap-4 mt-2">
-                  {promotionStatus.powerBonus > 0 && (
-                    <span className="bg-red-900/50 text-red-300 px-3 py-1 rounded text-sm">
-                      ⚔️ قوة +{promotionStatus.powerBonus}
-                    </span>
-                  )}
-                  {promotionStatus.defenseBonus > 0 && (
-                    <span className="bg-blue-900/50 text-blue-300 px-3 py-1 rounded text-sm">
-                      🛡️ دفاع +{promotionStatus.defenseBonus}
-                    </span>
-                  )}
-                </div>
-              ) : null}
+            <div className="text-right">
+              <div className="text-lg sm:text-xl font-bold drop-shadow-lg">{completedTasks}</div>
+              <div className="text-xs text-white/80 drop-shadow">Ready</div>
             </div>
-
-            {promotionStatus.nextTitle ? (
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-hitman-300">التقدم للرتبة التالية</span>
-                  <span className="text-white font-bold">
-                    {promotionStatus.pointsForNextRank} نقطة متبقية
-                  </span>
-                </div>
-                <div className="w-full bg-hitman-800 rounded-full h-3">
-                  <div 
-                    className="h-3 rounded-full bg-gradient-to-r from-accent-red to-red-400 transition-all duration-300"
-                    style={{ width: `${promotionStatus.progressPercentage}%` }}
-                  ></div>
-                </div>
-                <div className="text-center mt-2">
-                  <span className="text-sm text-hitman-300">الرتبة التالية: </span>
-                  <span className="text-sm font-bold text-accent-red">{promotionStatus.nextTitle}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-green-400 font-bold">
-                🏆 وصلت لأعلى رتبة! مبروك!
-              </div>
-            )}
           </div>
-        )}
-
-        {/* Tasks Grid */}
-        {tasks.length === 0 ? (
-          <div className="text-center text-hitman-400 text-xl">
-            لا توجد مهام متاحة حالياً
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tasks.map(task => (
-              <div key={task.id} className="bg-hitman-900/80 rounded-xl p-6 shadow-lg border border-hitman-700 hover:border-accent-red transition-all">
-                {/* Task Header */}
-                <div className="mb-4">
-                  <h3 className="text-xl font-bold text-accent-red mb-2">{task.title}</h3>
-                  <p className="text-hitman-300 text-sm">{task.description}</p>
-                </div>
-
-                {/* Progress */}
-                <div className="mb-4">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-hitman-300">التقدم</span>
-                    <span className="text-white font-bold">
-                      {task.progress} / {task.goal}
-                    </span>
-                  </div>
-                  <div className="w-full bg-hitman-800 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        task.isCompleted ? 'bg-green-500' : 'bg-accent-red'
-                      }`}
-                      style={{ width: `${getProgressPercentage(task.progress, task.goal)}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Metric */}
-                <div className="mb-4">
-                  <span className="text-xs text-hitman-400">المعيار:</span>
-                  <div className="text-sm text-white font-medium">
-                    {getMetricDisplayName(task.metric)}
-                  </div>
-                </div>
-
-                {/* Rewards */}
-                <div className="mb-4">
-                  <span className="text-xs text-hitman-400">المكافآت:</span>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {task.rewardMoney > 0 && (
-                      <span className="bg-green-900/50 text-green-300 px-2 py-1 rounded text-xs flex items-center gap-1">
-                        <MoneyIcon className="w-4 h-4" />
-                        {task.rewardMoney.toLocaleString()}
-                      </span>
-                    )}
-                    {task.rewardExp > 0 && (
-                      <span className="bg-blue-900/50 text-blue-300 px-2 py-1 rounded text-xs">
-                        ⭐ {task.rewardExp.toLocaleString()} خبرة
-                      </span>
-                    )}
-                    {task.rewardBlackcoins > 0 && (
-                      <span className="bg-purple-900/50 text-purple-300 px-2 py-1 rounded text-xs flex items-center gap-1">
-                        <img src="/images/blackcoins-icon.png" alt="Blackcoin" className="w-4 h-4 object-contain" />
-                        {task.rewardBlackcoins.toLocaleString()} بلاك كوين
-                      </span>
-                    )}
-                    {task.progressPoints > 0 && (
-                      <span className="bg-yellow-900/50 text-yellow-300 px-2 py-1 rounded text-xs">
-                        📊 {task.progressPoints} نقطة تقدم
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <div className="text-center">
-                  {task.isCompleted ? (
-                    task.rewardCollected ? (
-                      <div className="text-green-400 text-sm font-bold">✅ تم جمع المكافأة</div>
-                    ) : (
-                      <button
-                        onClick={() => collectReward(task.id)}
-                        disabled={collecting === task.id}
-                        className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-6 py-2 rounded font-bold transition w-full"
-                      >
-                        {collecting === task.id ? 'جاري الجمع...' : 'جمع المكافأة'}
-                      </button>
-                    )
-                  ) : (
-                    <div className="text-hitman-400 text-sm">
-                      {task.progress < task.goal ? 'أكمل المهمة لجمع المكافأة' : 'قريباً...'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* Daily Task */}
+      {dailyTask && (
+        <div className="bg-black/80 border border-yellow-500/30 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
+              <Gift className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h2 className="font-bold text-yellow-400">المهمة اليومية</h2>
+              <p className="text-xs text-white/80">سجل دخولك اليومي واحصل على مكافآت مجانية!</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-yellow-900/20 border border-yellow-500/20 rounded p-2 text-center">
+              <div className="flex items-center justify-center space-x-1 mb-1">
+                <MoneyIcon className="w-3 h-3" />
+                <span className="text-xs text-yellow-300">بلاك كوين</span>
+              </div>
+              <div className="text-sm font-bold text-yellow-400">1</div>
+            </div>
+            <div className="bg-blue-900/20 border border-blue-500/20 rounded p-2 text-center">
+              <div className="flex items-center justify-center space-x-1 mb-1">
+                <Star className="w-3 h-3 text-blue-400" />
+                <span className="text-xs text-blue-300">خبرة</span>
+              </div>
+              <div className="text-sm font-bold text-blue-400">{dailyTask.expReward?.toLocaleString() || 0}</div>
+            </div>
+          </div>
+
+          {dailyTask.isAvailable ? (
+            <button
+              onClick={claimDailyTask}
+              disabled={claimingDaily}
+              className="w-full bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-2"
+            >
+              {claimingDaily ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>جاري المطالبة...</span>
+                </>
+              ) : (
+                <>
+                  <Gift className="w-4 h-4" />
+                  <span>احصل على المكافأة اليومية</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="bg-green-900/20 border border-green-500/20 text-green-400 py-3 px-4 rounded-lg text-center font-bold flex items-center justify-center space-x-2">
+              <CheckCircle className="w-4 h-4" />
+              <span>تم المطالبة اليوم</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Promotion Status */}
+      {promotionStatus && (
+        <div className="bg-black/80 border border-purple-500/30 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+              <Crown className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h2 className="font-bold text-purple-400">نظام الرتب</h2>
+              <p className="text-sm text-white">{promotionStatus.currentTitle}</p>
+            </div>
+          </div>
+
+          {promotionStatus.nextTitle ? (
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-blood-300">التقدم للرتبة التالية</span>
+                <span className="text-white font-bold">{promotionStatus.pointsForNextRank} نقطة متبقية</span>
+              </div>
+              <div className="w-full bg-black/40 rounded-full h-2 mb-2">
+                <div 
+                  className="h-2 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all duration-300"
+                  style={{ width: `${promotionStatus.progressPercentage}%` }}
+                ></div>
+              </div>
+              <div className="text-center text-sm text-purple-300">
+                الرتبة التالية: <span className="font-bold">{promotionStatus.nextTitle}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-green-400 font-bold flex items-center justify-center space-x-2">
+              <Trophy className="w-4 h-4" />
+              <span>وصلت لأعلى رتبة! مبروك!</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tasks Grid */}
+      {tasks.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-blood-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-8 h-8 text-blood-400" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">لا توجد مهام متاحة حالياً</h3>
+          <p className="text-blood-300">ستظهر المهام الجديدة قريباً</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tasks.map(task => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              collecting={collecting}
+              onCollectReward={collectReward}
+              getProgressPercentage={getProgressPercentage}
+              getMetricDisplayName={getMetricDisplayName}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
-} 
+}

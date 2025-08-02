@@ -1,14 +1,147 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
 import { useSocket } from "@/hooks/useSocket";
-import { Banknote, ArrowDownToLine, ArrowUpToLine, TrendingUp } from "lucide-react";
+import { 
+  Banknote, 
+  ArrowDownToLine, 
+  ArrowUpToLine, 
+  TrendingUp, 
+  DollarSign,
+  PiggyBank,
+  History,
+  Wallet,
+  CreditCard,
+  ImageIcon,
+  Building2,
+  Coins,
+  Shield,
+  Percent,
+  Clock,
+  Loader
+} from "lucide-react";
 import MoneyIcon from "@/components/MoneyIcon";
 
 const API = import.meta.env.VITE_API_URL;
+
+// Enhanced Transaction Card Component
+const TransactionCard = ({ type, onExecute, amount, setAmount, canExecute, loading, balance, money }) => {
+  const isDeposit = type === 'deposit';
+  const icon = isDeposit ? ArrowDownToLine : ArrowUpToLine;
+  const IconComponent = icon;
+  const color = isDeposit ? 'green' : 'blood';
+  const maxAmount = isDeposit ? money : balance;
+  
+  return (
+    <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm hover:border-blood-500/40 transition-all duration-300">
+      {/* Transaction Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <div className={`w-8 h-8 ${isDeposit ? 'bg-green-600' : 'bg-blood-600'} rounded-lg flex items-center justify-center`}>
+            <IconComponent className="w-4 h-4 text-white" />
+          </div>
+          <h3 className={`font-semibold ${isDeposit ? 'text-green-400' : 'text-blood-400'}`}>
+            {isDeposit ? 'إيداع أموال' : 'سحب أموال'}
+          </h3>
+        </div>
+        <ImageIcon className="w-4 h-4 text-blood-300" />
+      </div>
+      
+      <div className="space-y-4">
+        {/* Available Amount */}
+        <div className={`${isDeposit ? 'bg-green-900/20 border-green-500/20' : 'bg-blood-900/20 border-blood-500/20'} border rounded-lg p-3 text-center`}>
+          <div className="text-xs text-blood-300 mb-1">
+            {isDeposit ? 'المتاح للإيداع' : 'المتاح للسحب'}
+          </div>
+          <div className={`text-lg font-bold ${isDeposit ? 'text-green-400' : 'text-blood-400'} flex items-center justify-center space-x-1`}>
+            <MoneyIcon className="w-4 h-4" />
+            <span>{maxAmount?.toLocaleString() || 0}</span>
+          </div>
+        </div>
+        
+        {/* Amount Input */}
+        <div>
+          <label className="block text-xs text-blood-300 mb-2">المبلغ</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="أدخل المبلغ..."
+            className="w-full bg-black/60 border border-blood-500/30 text-white placeholder-blood-300 rounded-lg px-3 py-2 text-center focus:outline-none focus:border-blood-500 focus:ring-1 focus:ring-blood-500 transition-all duration-300"
+            disabled={loading}
+            min="1"
+            max={maxAmount}
+          />
+        </div>
+        
+        {/* Quick Amount Buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          {[25, 50, 100].map(percent => {
+            const quickAmount = Math.floor((maxAmount || 0) * (percent / 100));
+            return (
+              <button
+                key={percent}
+                onClick={() => setAmount(quickAmount.toString())}
+                disabled={loading || !maxAmount}
+                className="bg-blood-800/30 border border-blood-500/20 text-blood-300 py-1 rounded text-xs hover:bg-blood-700/30 hover:border-blood-500/40 transition-all duration-300 disabled:opacity-50"
+              >
+                {percent}%
+              </button>
+            );
+          })}
+        </div>
+        
+        {/* Execute Button */}
+        <button
+          onClick={() => onExecute(type)}
+          disabled={!canExecute || loading}
+          className={`w-full ${
+            isDeposit 
+              ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' 
+              : 'bg-gradient-to-r from-blood-600 to-blood-700 hover:from-blood-700 hover:to-blood-800'
+          } text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg disabled:transform-none disabled:opacity-50 flex items-center justify-center space-x-2`}
+        >
+          {loading ? (
+            <>
+              <Loader className="w-4 h-4 animate-spin" />
+              <span className="text-sm">جاري المعالجة...</span>
+            </>
+          ) : (
+            <>
+              <IconComponent className="w-4 h-4" />
+              <span className="text-sm">{isDeposit ? 'إيداع' : 'سحب'}</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// History Item Component
+const HistoryItem = ({ item }) => (
+  <div className="bg-black/60 border border-blood-500/20 rounded-lg p-3 flex items-center justify-between hover:border-blood-500/40 transition-all duration-300">
+    <div className="flex items-center space-x-3">
+      <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+        <TrendingUp className="w-4 h-4 text-white" />
+      </div>
+      <div>
+        <div className="text-sm font-medium text-white">فوائد بنكية</div>
+        <div className="text-xs text-blood-300">
+          {new Date(item.createdAt).toLocaleDateString('ar-SA')}
+        </div>
+      </div>
+    </div>
+    <div className="text-right">
+      <div className="text-sm font-bold text-green-400">
+        +{item.amount?.toLocaleString() || 0}
+      </div>
+      <div className="text-xs text-blood-300">فوائد</div>
+    </div>
+  </div>
+);
 
 export default function Bank() {
   const { customToken } = useFirebaseAuth();
@@ -35,7 +168,7 @@ export default function Bank() {
       .then(({ balance }) => setBalance(balance))
       .catch(() => {
         setBalance(0);
-        toast.error("لا يمكن الاتصال بالخادم - يتم عرض بيانات وهمية");
+        toast.error("لا يمكن الاتصال بالخادم");
       });
   }, [customToken, navigate]);
 
@@ -59,14 +192,14 @@ export default function Bank() {
   }, [socket, customToken]);
 
   useEffect(() => {
-    if (tab !== "interest" || !customToken) return;
+    if (tab !== "history" || !customToken) return;
     setInterestRows(null);
     fetch(`${API}/api/bank/history`, {
       headers: { Authorization: `Bearer ${customToken}` },
       cache: "no-store",
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to fetch"))))
-      .then((data) => setInterestRows((Array.isArray(data) ? data : []).slice(0, 30)))
+      .then((data) => setInterestRows((Array.isArray(data) ? data : []).slice(0, 10)))
       .catch(() => {
         setInterestRows([]);
         toast.error("لا يمكن الاتصال بالخادم");
@@ -78,13 +211,11 @@ export default function Bank() {
   const canWithdraw = amt > 0 && balance !== null && amt <= balance && !loadingTx && !loading;
 
   const tx = async (type) => {
-    if (!amt || amt <= 0) {
-      toast.error("أدخل قيمة صحيحة");
-      return;
-    }
+    if ((!canDeposit && type === "deposit") || (!canWithdraw && type === "withdraw")) return;
     setLoadingTx(true);
+    
     try {
-      const res = await fetch(`${API}/api/bank/${type}`, {
+      const response = await fetch(`${API}/api/bank/${type}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -92,141 +223,236 @@ export default function Bank() {
         },
         body: JSON.stringify({ amount: amt }),
       });
-      if (!res.ok) throw new Error(await res.text());
-      const { balance: newBalance } = await res.json();
-      setBalance(newBalance);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "فشل في العملية");
+      }
+      
+      const data = await response.json();
+      setBalance(data.balance);
       setAmount("");
-      invalidateHud?.();
-      toast.success(
-        type === "deposit"
-          ? `تم إيداع ${amt}$ في البنك`
-          : `تم سحب ${amt}$ من البنك`
-      );
-    } catch (err) {
-      toast.error(err.message || "فشل العملية");
+      invalidateHud();
+      toast.success(type === "deposit" ? "تم الإيداع بنجاح" : "تم السحب بنجاح");
+    } catch (error) {
+      toast.error(error.message);
     } finally {
       setLoadingTx(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 flex items-center justify-center p-4">
+        <div className="text-center bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 p-8">
+          <div className="w-16 h-16 border-4 border-blood-500/30 border-t-blood-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">جاري تحميل البنك...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalWealth = (stats?.money || 0) + (balance || 0);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-hitman-950 via-black to-hitman-900 text-white px-4 py-6 md:py-10">
-      <div className="relative w-full h-40 sm:h-48 md:h-64 rounded-xl overflow-hidden mb-8 flex items-center justify-center bg-gradient-to-br from-accent-red/40 to-black/60 border border-accent-red shadow-xl">
-        <img src="/placeholder-bank-banner.png" alt="Bank Banner" className="absolute inset-0 w-full h-full object-cover opacity-40" />
-        <div className="relative z-10 text-center space-y-2">
-          <Banknote className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-accent-red animate-bounce" />
-          <h1 className="text-3xl sm:text-4xl font-bouya text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow">البنك</h1>
-          <p className="text-hitman-300 text-base sm:text-lg">احفظ أموالك بأمان واسحبها وقت الحاجة</p>
+    <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 p-2 sm:p-4 space-y-4">
+      
+      {/* Bank Header Banner with Background Image */}
+      <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+        {/* Background Image Placeholder */}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-900 via-gray-800 to-blue-900">
+          <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"40\" height=\"40\" viewBox=\"0 0 40 40\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%2316a34a\" fill-opacity=\"0.1\"%3E%3Cpath d=\"M20 20m-16 0a16,16 0 1,1 32,0a16,16 0 1,1 -32,0\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"}></div>
+        </div>
+
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/60"></div>
+
+        {/* Content */}
+        <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">البنك</h1>
+              <p className="text-xs sm:text-sm text-white/80 drop-shadow">Financial Center</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4 text-white">
+            <div className="hidden sm:flex items-center space-x-2">
+              <ImageIcon className="w-4 h-4 text-white/60" />
+              <Coins className="w-4 h-4 text-green-400 animate-pulse" />
+            </div>
+            <div className="text-right">
+              <div className="text-lg sm:text-xl font-bold drop-shadow-lg">${totalWealth.toLocaleString()}</div>
+              <div className="text-xs text-white/80 drop-shadow">Total Wealth</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex justify-center gap-2 mb-6 text-center">
+      {/* Account Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Wallet Balance */}
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
+                <Wallet className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <span className="font-semibold text-yellow-400 text-sm">المحفظة</span>
+                <div className="text-xs text-blood-300">نقد في اليد</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold text-yellow-400 flex items-center space-x-1">
+                <MoneyIcon className="w-4 h-4" />
+                <span>{stats?.money?.toLocaleString() || 0}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bank Balance */}
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                <PiggyBank className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <span className="font-semibold text-green-400 text-sm">الرصيد البنكي</span>
+                <div className="text-xs text-blood-300">محفوظ في البنك</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-bold text-green-400 flex items-center space-x-1">
+                <MoneyIcon className="w-4 h-4" />
+                <span>{balance?.toLocaleString() || 0}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex gap-2">
         <button
-          className={`flex-1 py-2 rounded-t-xl font-bold text-base sm:text-lg transition-all border-b-4 ${tab === "account" ? "border-accent-red bg-hitman-900 text-accent-red" : "border-transparent bg-hitman-800 text-hitman-300 hover:text-accent-red"}`}
           onClick={() => setTab("account")}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-300 ${
+            tab === "account" 
+              ? 'bg-blood-600 border border-blood-500 text-white' 
+              : 'bg-black/60 border border-blood-500/20 text-blood-300 hover:border-blood-500/40'
+          }`}
         >
-          الحساب البنكي
+          <CreditCard className="w-4 h-4" />
+          <span>الحساب</span>
         </button>
         <button
-          className={`flex-1 py-2 rounded-t-xl font-bold text-base sm:text-lg transition-all border-b-4 ${tab === "interest" ? "border-accent-green bg-hitman-900 text-accent-green" : "border-transparent bg-hitman-800 text-hitman-300 hover:text-accent-green"}`}
-          onClick={() => setTab("interest")}
+          onClick={() => setTab("history")}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-300 ${
+            tab === "history" 
+              ? 'bg-blood-600 border border-blood-500 text-white' 
+              : 'bg-black/60 border border-blood-500/20 text-blood-300 hover:border-blood-500/40'
+          }`}
         >
-          سجل الفوائد
+          <History className="w-4 h-4" />
+          <span>السجل</span>
         </button>
       </div>
 
+      {/* Tab Content */}
       {tab === "account" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-hitman-900/70 border border-hitman-700 rounded-xl p-4 sm:p-6 flex flex-col items-center text-center shadow-lg">
-              <span className="text-accent-red text-xl sm:text-2xl font-bold">رصيد البنك</span>
-              <span className="text-2xl sm:text-3xl font-mono text-accent-red mt-1">{balance !== null ? `${balance}` : "..."}</span>
-            </div>
-            <div className="bg-hitman-900/70 border border-hitman-700 rounded-xl p-4 sm:p-6 flex flex-col items-center text-center shadow-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <MoneyIcon className="w-10 h-10" />
-                <span className="text-accent-green text-xl sm:text-2xl font-bold">النقود</span>
-              </div>
-              <span className="text-2xl sm:text-3xl font-mono text-accent-green mt-1">{stats ? `${stats.money}` : "..."}</span>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Deposit */}
+          <TransactionCard
+            type="deposit"
+            onExecute={tx}
+            amount={amount}
+            setAmount={setAmount}
+            canExecute={canDeposit}
+            loading={loadingTx}
+            balance={balance}
+            money={stats?.money || 0}
+          />
 
-          <div className="bg-hitman-900/70 border border-hitman-700 rounded-xl p-6 sm:p-8 shadow-lg space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-accent-red">إيداع / سحب</h2>
-              <p className="text-hitman-300 text-sm sm:text-base">أدخل المبلغ الذي تريد إيداعه أو سحبه من البنك.</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <input
-                type="number"
-                min="1"
-                value={amount}
-                disabled={loadingTx || loading}
-                onChange={e => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
-                className="flex-1 rounded border p-3 bg-zinc-900 border-zinc-700 text-white text-center text-lg font-bold"
-                placeholder="0"
-                dir="rtl"
-              />
-              <button
-                disabled={!canDeposit}
-                onClick={() => tx("deposit")}
-                className="flex-1 sm:w-auto py-3 px-6 rounded-lg font-bold transition-all bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white transform hover:scale-105 hover:shadow-lg disabled:opacity-60 flex items-center justify-center"
-              >
-                <ArrowDownToLine className="w-5 h-5 ml-2" />
-                {loadingTx ? "..." : "إيداع"}
-              </button>
-              <button
-                disabled={!canWithdraw}
-                onClick={() => tx("withdraw")}
-                className="flex-1 sm:w-auto py-3 px-6 rounded-lg font-bold transition-all bg-gradient-to-r from-accent-green to-green-700 hover:from-green-600 hover:to-green-800 text-white transform hover:scale-105 hover:shadow-lg disabled:opacity-60 flex items-center justify-center"
-              >
-                <ArrowUpToLine className="w-5 h-5 ml-2" />
-                {loadingTx ? "..." : "سحب"}
-              </button>
-            </div>
-            <p className="text-center text-xs text-accent-red">لا يمكنك إيداع أكثر من نقودك أو سحب أكثر من رصيدك البنكي.</p>
-          </div>
+          {/* Withdraw */}
+          <TransactionCard
+            type="withdraw"
+            onExecute={tx}
+            amount={amount}
+            setAmount={setAmount}
+            canExecute={canWithdraw}
+            loading={loadingTx}
+            balance={balance}
+            money={stats?.money || 0}
+          />
         </div>
       )}
 
-      {tab === "interest" && (
-        <div className="bg-hitman-900/70 border border-hitman-700 rounded-xl p-6 sm:p-8 shadow-lg space-y-6">
-          <div className="flex items-center justify-center gap-2">
-            <TrendingUp className="w-6 h-6 text-accent-green animate-bounce" />
-            <h2 className="text-xl sm:text-2xl font-bold text-accent-green">سجل الفوائد البنكية</h2>
+      {tab === "history" && (
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="w-6 h-6 bg-blood-600 rounded flex items-center justify-center">
+              <History className="w-3 h-3 text-white" />
+            </div>
+            <h3 className="font-semibold text-white">سجل الفوائد البنكية</h3>
+            <ImageIcon className="w-4 h-4 text-blood-300 ml-auto" />
           </div>
+          
           {interestRows === null ? (
-            <p className="text-center text-hitman-300 animate-pulse">جارٍ تحميل سجل الفوائد…</p>
+            <div className="text-center py-8">
+              <div className="w-12 h-12 border-4 border-blood-500/30 border-t-blood-500 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-blood-300">جاري تحميل السجل...</p>
+            </div>
           ) : interestRows.length === 0 ? (
-            <p className="text-hitman-300 text-center">لا توجد فوائد مسجلة بعد.</p>
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-blood-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <History className="w-6 h-6 text-blood-400" />
+              </div>
+              <p className="text-blood-300">لا توجد عمليات فوائد بعد</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm rtl text-right border-separate border-spacing-y-2">
-                <thead>
-                  <tr className="bg-hitman-900/80">
-                    <th className="py-3 px-4 rounded-r-xl text-accent-green font-bold">التاريخ</th>
-                    <th className="py-3 px-4 rounded-l-xl text-accent-green font-bold text-left">المبلغ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interestRows.map(({ id, amount, createdAt }) => (
-                    <tr key={id} className="bg-hitman-800/60 hover:bg-hitman-700/80 transition rounded-xl">
-                      <td className="py-2 px-4 rounded-r-xl font-mono">
-                        {new Date(createdAt).toLocaleDateString("ar-EG", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className="py-2 px-4 rounded-l-xl text-left text-accent-green font-bold font-mono">+{amount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {interestRows.map((item, index) => (
+                <HistoryItem key={index} item={item} />
+              ))}
             </div>
           )}
         </div>
       )}
+
+      {/* Bank Info */}
+      <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+        <div className="flex items-center space-x-2 mb-3">
+          <div className="w-6 h-6 bg-blood-600 rounded flex items-center justify-center">
+            <Shield className="w-3 h-3 text-white" />
+          </div>
+          <h3 className="font-semibold text-blood-400">معلومات البنك</h3>
+          <ImageIcon className="w-4 h-4 text-blood-300 ml-auto" />
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-blood-200">
+          <div className="flex items-center space-x-2">
+            <Shield className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>احفظ أموالك لحمايتها من السرقة</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Percent className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>احصل على فوائد يومية على رصيدك</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>يمكنك الإيداع والسحب في أي وقت</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <DollarSign className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>لا توجد رسوم على العمليات</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

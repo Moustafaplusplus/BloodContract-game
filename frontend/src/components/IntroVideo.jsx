@@ -84,6 +84,7 @@ const IntroVideo = ({ onComplete }) => {
       
       {showSkipButton && (
         <button className="skip-button" onClick={handleSkip}>
+          <span className="mr-1">⏭️</span>
           تخطي
         </button>
       )}
@@ -104,11 +105,11 @@ const IntroVideo = ({ onComplete }) => {
       {!isPlaying && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
-          <p>جاري تحميل الفيديو...</p>
+          <p className="text-blood-200">جاري تحميل الفيديو...</p>
         </div>
       )}
     </div>
   );
 };
 
-export default IntroVideo; 
+export default IntroVideo;

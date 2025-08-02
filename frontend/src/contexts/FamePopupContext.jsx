@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useHud } from '@/hooks/useHud';
+import { useSocket } from '@/hooks/useSocket';
 
 const FamePopupContext = createContext(null);
 
-export function FamePopupProvider({ children }) {
+function FamePopupInner({ children }) {
   const { stats: hudStats } = useHud();
   const [famePopup, setFamePopup] = useState(null);
   const previousFameRef = useRef(null);
@@ -71,6 +72,21 @@ export function FamePopupProvider({ children }) {
       {famePopup && <FamePopupComponent popup={famePopup} />}
     </FamePopupContext.Provider>
   );
+}
+
+export function FamePopupProvider({ children }) {
+  const { socket } = useSocket();
+  
+  // Only render the inner component when socket is available
+  if (!socket) {
+    return (
+      <FamePopupContext.Provider value={{ famePopup: null, triggerFamePopup: () => {} }}>
+        {children}
+      </FamePopupContext.Provider>
+    );
+  }
+  
+  return <FamePopupInner>{children}</FamePopupInner>;
 }
 
 function FamePopupComponent({ popup }) {

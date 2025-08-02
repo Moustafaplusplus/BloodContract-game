@@ -11,15 +11,20 @@ export class FeatureController {
     try {
       const userId = req.user?.id;
       if (!userId) {
+        console.error('Feature info error: No user ID in request');
         return res.status(401).json({ message: 'غير مصرح' });
       }
 
+      console.log('Fetching character for userId:', userId);
       const character = await Character.findOne({ where: { userId } });
       if (!character) {
+        console.error('Feature info error: Character not found for userId:', userId);
         return res.status(404).json({ message: 'الشخصية غير موجودة' });
       }
 
-      const playerLevel = character.level;
+      const playerLevel = character.level || 1;
+      console.log('Player level:', playerLevel);
+      
       const unlockedFeatures = getUnlockedFeatures(playerLevel);
       const lockedFeatures = getLockedFeatures(playerLevel);
 
@@ -28,7 +33,7 @@ export class FeatureController {
         ? lockedFeatures.sort((a, b) => a.requiredLevel - b.requiredLevel)[0]
         : null;
 
-      res.json({
+      const response = {
         playerLevel,
         unlockedFeatures,
         lockedFeatures,
@@ -36,9 +41,13 @@ export class FeatureController {
         totalFeatures: unlockedFeatures.length + lockedFeatures.length,
         unlockedCount: unlockedFeatures.length,
         lockedCount: lockedFeatures.length
-      });
+      };
+
+      console.log('Feature info response:', response);
+      res.json(response);
     } catch (error) {
       console.error('Feature info error:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({ message: 'خطأ في جلب معلومات الميزات' });
     }
   }
@@ -110,24 +119,24 @@ function getRequiredLevel(featureName) {
     inventory: 1,
     chat: 1,
     loginGift: 1,
-      crimes: 1,
-  gym: 1,
-  jobs: 1,
-  suggestions: 1,
-      fights: 6,
-  bloodContracts: 6,
+    crimes: 1,
+    gym: 1,
+    jobs: 1,
+    suggestions: 1,
+    fights: 6,
+    bloodContracts: 6,
     friends: 1,
-  messages: 1,
-  gangs: 10,
-  ministryMissions: 5,
-  bank: 11,
-      specialShop: 1,
-  houses: 16,
-  cars: 18,
-  blackMarket: 20,
-      dogs: 21,
-  tasks: 1,
-  ranking: 30,
+    messages: 1,
+    gangs: 10,
+    ministryMissions: 5,
+    bank: 11,
+    specialShop: 1,
+    houses: 16,
+    cars: 18,
+    blackMarket: 20,
+    dogs: 21,
+    tasks: 1,
+    ranking: 30,
   };
   
   return FEATURE_REQUIREMENTS[featureName] || null;

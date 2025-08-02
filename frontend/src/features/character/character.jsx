@@ -1,11 +1,15 @@
-/* -------- src/features/character/character.jsx ---------- */
+/* -------- src/features/character/character.jsx - Enhanced Blood Contract Character ---------- */
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import { useState, useEffect, useRef } from "react"
 import { useSocket } from "@/hooks/useSocket"
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { jwtDecode } from "jwt-decode"
-import { Star, Trophy, Target, Shield, Crown, Calendar, Users, HomeIcon, Edit3, Activity, Skull } from "lucide-react"
+import { 
+  Star, Trophy, Target, Shield, Crown, Calendar, Users, HomeIcon, Edit3, Activity, 
+  Skull, Camera, User, Zap, Award, TrendingUp, Sword, Crosshair, MapPin,
+  ImageIcon, Flame, Eye, Heart, Battery, Coins
+} from "lucide-react"
 import { toast } from "react-hot-toast"
 import "../profile/vipSparkle.css"
 import VipName from "../profile/VipName.jsx"
@@ -166,55 +170,82 @@ export default function Character() {
   const fightsLost = displayCharacter.fightsLost ?? 0
   const fightsWon = displayCharacter.fightsWon ?? 0
   const fightsTotal = displayCharacter.fightsTotal ?? fightsWon + fightsLost
+  const winRate = fightsTotal > 0 ? Math.round((fightsWon / fightsTotal) * 100) : 0
 
-  // Add fame and assassinations to the stats array for display
-  const fameStat = {
-    icon: Trophy,
-    label: "الشهرة",
-    value: displayCharacter.fame ?? 0,
-    color: "text-yellow-400",
-  }
-
-  const assassinationsStat = {
-    icon: Skull,
-    label: "مرات الاغتيال",
-    value: character?.assassinations ?? 0,
-    color: "text-red-400",
-  }
-
-  // Insert fame and assassinations as the first stats
-  const stats = [
-    fameStat,
-    assassinationsStat,
+  // Enhanced stats for compact display with visual elements
+  const mainStats = [
     {
-      icon: Target,
-      label: "الجرائم المرتكبة",
+      icon: Trophy,
+      label: "الشهرة",
+      value: displayCharacter.fame ?? 0,
+      color: "yellow",
+      bgGrad: "from-yellow-950/30 to-amber-950/20"
+    },
+    {
+      icon: Crosshair,
+      label: "الجرائم",
       value: displayCharacter.crimesCommitted ?? 0,
-      color: "text-red-400",
+      color: "blood",
+      bgGrad: "from-blood-950/30 to-red-950/20"
+    },
+    {
+      icon: Skull,
+      label: "القتل",
+      value: displayCharacter.killCount ?? 0,
+      color: "red",
+      bgGrad: "from-red-950/40 to-black/20"
+    },
+    {
+      icon: Sword,
+      label: "المعارك",
+      value: fightsTotal,
+      color: "purple",
+      bgGrad: "from-purple-950/30 to-indigo-950/20",
+      subtitle: `نسبة الفوز: ${winRate}%`
+    },
+  ]
+
+  const powerStats = [
+    {
+      icon: Zap,
+      label: "القوة",
+      value: displayCharacter.strength ?? 0,
+      color: "orange",
+      bgGrad: "from-orange-950/30 to-red-950/20"
     },
     {
       icon: Shield,
-      label: "عدد الخسائر",
-      value: fightsLost,
-      color: "text-zinc-400",
+      label: "الدفاع",
+      value: displayCharacter.defense ?? 0,
+      color: "blue",
+      bgGrad: "from-blue-950/30 to-cyan-950/20"
     },
-    {
-      icon: Activity,
-      label: "إجمالي المعارك",
-      value: fightsTotal,
-      color: "text-purple-400",
-    },
+  ]
+
+  const secondaryStats = [
     {
       icon: Calendar,
-      label: "الأيام في اللعبة",
+      label: "الأيام",
       value: displayCharacter.daysInGame ?? 0,
-      color: "text-green-400",
+      color: "green",
     },
     {
       icon: Activity,
-      label: "عدد القتل",
-      value: displayCharacter.killCount ?? 0,
-      color: "text-orange-400",
+      label: "الخسائر",
+      value: fightsLost,
+      color: "gray",
+    },
+    {
+      icon: Heart,
+      label: "الصحة",
+      value: `${displayCharacter.hp || 0}/${displayCharacter.maxHp || 100}`,
+      color: "red",
+    },
+    {
+      icon: Battery,
+      label: "الطاقة",
+      value: `${displayCharacter.energy || 0}/${displayCharacter.maxEnergy || 100}`,
+      color: "blue",
     },
   ]
 
@@ -229,60 +260,108 @@ export default function Character() {
   if (!character) return null
 
   return (
-    <div className="min-h-screen bg-black text-white p-2 sm:p-4 overflow-x-hidden" dir="rtl">
+    <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom" dir="rtl">
+      <div className="container mx-auto max-w-6xl p-3 space-y-4">
 
-      {hospitalStatus?.inHospital && (
-        <div className="bg-black border border-white/20 text-white rounded-lg p-3 sm:p-4 mb-4 text-center shadow-md text-sm sm:text-base">
-          <span className="font-bold text-red-400">أنت في المستشفى</span>
-          <span className="mx-2">|</span>
-          <span>
-            الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span>
-          </span>
+        {/* Enhanced Header with Background Image */}
+        <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+          {/* Background Image Placeholder with 3 Circles Logo */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+            <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23dc2626\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3Ccircle cx=\"20\" cy=\"30\" r=\"3\"/%3E%3Ccircle cx=\"40\" cy=\"30\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+          </div>
+
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/50"></div>
+
+          {/* Content */}
+          <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">الملف الشخصي</h1>
+                <p className="text-xs sm:text-sm text-white/80 drop-shadow">{displayCharacter.name || displayCharacter.username}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 text-white">
+              <div className="hidden sm:flex items-center space-x-2">
+                <ImageIcon className="w-4 h-4 text-white/60" />
+                <Crown className="w-4 h-4 text-yellow-400 animate-pulse" />
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold drop-shadow-lg">Lv.{displayCharacter.level || 1}</div>
+                <div className="text-xs text-white/80 drop-shadow">Level</div>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
 
-      <div className="relative z-10 max-w-4xl mx-auto w-full">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-12">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 text-red-400">
-            الملف الشخصي
-          </h1>
-          <div className="w-20 sm:w-32 h-1 bg-red-500 mx-auto"></div>
-        </div>
+        {/* Hospital Status Alert */}
+        {hospitalStatus?.inHospital && (
+          <div className="card-3d bg-red-950/30 border-red-500/50 p-3 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Heart className="w-4 h-4 text-red-400 animate-pulse" />
+              <span className="font-bold text-red-400 text-sm">أنت في المستشفى</span>
+              <span className="mx-2 text-white/50">|</span>
+              <span className="text-white text-sm">
+                الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span>
+              </span>
+            </div>
+          </div>
+        )}
 
-        {/* Main Profile Section */}
-        <div className="flex flex-col gap-6 sm:gap-8 mb-8 lg:grid lg:grid-cols-3 lg:gap-8">
-          {/* Profile Card */}
-          <div className="lg:col-span-1 order-1">
-            <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-8 text-center">
-              {/* Avatar */}
-              <div className="relative mb-4 sm:mb-6 flex flex-col items-center">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="avatar"
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-red-500 bg-black mx-auto shadow-lg"
-                    onError={(e) => {
-                      e.target.style.display = "none"
-                      e.target.nextElementSibling.style.display = "flex"
-                    }}
-                  />
-                ) : null}
-                <div
-                  className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-black flex items-center justify-center text-4xl sm:text-5xl text-red-400 border-4 border-red-500 mx-auto shadow-lg ${
-                    avatarUrl ? "hidden" : "flex"
-                  }`}
-                >
-                  {(displayCharacter?.username || "?")[0]}
+        {/* Enhanced Main Profile Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          
+          {/* Enhanced Profile Card */}
+          <div className="card-3d p-4">
+            {/* Avatar Section with Visual Enhancement */}
+            <div className="text-center mb-4">
+              <div className="relative inline-block mb-3">
+                {/* Avatar Container with Background Image Placeholder */}
+                <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-blood-500/50 shadow-lg">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="avatar"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = "none"
+                        e.target.nextElementSibling.style.display = "flex"
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`w-full h-full bg-gradient-to-br from-blood-950/60 to-black/40 flex items-center justify-center text-blood-400 ${
+                      avatarUrl ? "hidden" : "flex"
+                    }`}
+                  >
+                    <User className="w-8 h-8" />
+                  </div>
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-red-600 rounded-full p-1 sm:p-2">
-                  <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                
+                {/* Level Badge */}
+                <div className="absolute -bottom-1 -right-1 card-3d bg-yellow-500/20 border-yellow-500/40 px-2 py-0.5">
+                  <span className="text-xs font-bold text-yellow-400">Lv.{displayCharacter.level || 1}</span>
                 </div>
+                
+                {/* Camera Icon for Upload */}
+                {isOwnCharacter && (
+                  <button
+                    className="absolute -top-1 -left-1 card-3d bg-blue-500/20 border-blue-500/40 p-1 hover:scale-110 transition-transform"
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={avatarUploading}
+                  >
+                    <Camera className="w-3 h-3 text-blue-400" />
+                  </button>
+                )}
               </div>
 
-              {/* Avatar Upload UI */}
+              {/* Avatar Upload */}
               {isOwnCharacter && (
-                <div className="mb-2 sm:mb-4 flex flex-col items-center gap-2">
+                <div className="mb-3">
                   <input
                     type="file"
                     accept="image/*"
@@ -291,160 +370,184 @@ export default function Character() {
                     onChange={handleAvatarChange}
                     disabled={avatarUploading}
                   />
-                  <button
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-lg shadow transition-all duration-200 disabled:opacity-50 text-sm sm:text-base border border-white/20"
-                    onClick={() => fileInputRef.current.click()}
-                    disabled={avatarUploading}
-                  >
-                    {avatarUploading ? "جاري الرفع..." : "تغيير الصورة الشخصية"}
-                  </button>
-                  {avatarError && <div className="text-red-400 text-xs mt-1">{avatarError}</div>}
+                  {avatarUploading && (
+                    <div className="text-blue-400 text-xs">جاري الرفع...</div>
+                  )}
+                  {avatarError && (
+                    <div className="text-red-400 text-xs mt-1">{avatarError}</div>
+                  )}
                 </div>
               )}
 
-              {/* Basic Info */}
-              <h2 className="text-lg sm:text-2xl font-bold flex items-center gap-2 justify-center">
+              {/* Name and Rank */}
+              <h2 className="text-base font-bold mb-1">
                 <VipName user={displayCharacter} className="large" />
               </h2>
-              <p className="text-red-400 font-medium mb-1 text-sm sm:text-base">
+              <p className="text-blood-400 text-xs mb-3">
                 الرتبة: {displayCharacter.rank || "مبتدئ"}
               </p>
 
-              {/* Quote */}
-              <div className="mb-4 sm:mb-6">
-                {editingQuote ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <textarea
-                      className="bg-black border border-white/20 text-white rounded-lg px-3 py-2 w-full text-center focus:outline-none focus:ring-2 focus:ring-red-500 transition placeholder:text-zinc-500 text-xs sm:text-sm"
-                      value={quoteInput}
-                      onChange={(e) => setQuoteInput(e.target.value)}
-                      maxLength={UI.MAX_QUOTE_LENGTH}
-                      rows={2}
-                      placeholder="اكتب اقتباسك الشخصي هنا..."
-                      disabled={savingQuote}
-                    />
-                    <div className="flex gap-2 justify-center">
-                      <button
-                        className="bg-red-600 text-white px-3 py-1 rounded-lg font-bold hover:bg-red-700 transition disabled:opacity-50 text-xs sm:text-sm border border-white/20"
-                        onClick={async () => {
-                          setSavingQuote(true)
-                          try {
-                            await axios.put("/api/profile", { quote: quoteInput })
-                            toast.success("تم تحديث الاقتباس الشخصي بنجاح!")
-                            setEditingQuote(false)
-                            queryClient.invalidateQueries(["character", userId])
-                          } catch (error) {
-                            const errorMessage = error.response?.data?.error || error.response?.data?.message || "فشل في تحديث الاقتباس"
-                            toast.error(errorMessage)
-                          } finally {
-                            setSavingQuote(false)
-                          }
-                        }}
-                        disabled={savingQuote || quoteInput.length > UI.MAX_QUOTE_LENGTH}
-                      >
-                        حفظ
-                      </button>
-                      <button
-                        className="bg-black text-white px-3 py-1 rounded-lg font-bold hover:bg-zinc-800 transition text-xs sm:text-sm border border-white/20"
-                        onClick={() => {
-                          setEditingQuote(false)
-                          setQuoteInput(displayCharacter.quote || "")
-                        }}
-                        disabled={savingQuote}
-                      >
-                        إلغاء
-                      </button>
+              {/* Power & Defense - Enhanced Compact */}
+              <div className="grid grid-cols-2 gap-2">
+                {powerStats.map((stat, index) => (
+                  <div key={index} className={`card-3d bg-gradient-to-br ${stat.bgGrad} border-${stat.color}-500/30 p-2 text-center group hover:border-${stat.color}-500/50 transition-colors duration-300`}>
+                    <stat.icon className={`w-4 h-4 text-${stat.color}-400 mx-auto mb-1 group-hover:scale-110 transition-transform duration-300`} />
+                    <div className={`text-sm font-bold text-${stat.color}-400`}>
+                      {stat.value.toLocaleString()}
                     </div>
-                  </div>
-                ) : (
-                  <div className="bg-black border border-white/20 rounded-lg p-2 sm:p-4 flex items-center justify-between">
-                    <span className="text-zinc-300 italic text-xs sm:text-sm">
-                      {displayCharacter.quote ? `"${displayCharacter.quote}"` : "لا يوجد اقتباس شخصي بعد"}
-                    </span>
-                    {isOwnCharacter && (
-                      <button
-                        className="ml-2 text-yellow-400 hover:text-white transition"
-                        onClick={() => setEditingQuote(true)}
-                        title="تعديل الاقتباس الشخصي"
-                      >
-                        <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Power & Defense */}
-              <div className="flex justify-around items-center mt-2 sm:mt-4 mb-2 gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="bg-black border border-white/20 rounded-lg p-3 mb-2">
-                    <Star className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
-                  </div>
-                  <span className="font-bold text-base sm:text-lg text-yellow-400">
-                    {displayCharacter.strength ?? 0}
-                  </span>
-                  <span className="text-xs text-zinc-400">القوة</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <div className="bg-black border border-white/20 rounded-lg p-3 mb-2">
-                    <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-                  </div>
-                  <span className="font-bold text-base sm:text-lg text-blue-400">{displayCharacter.defense ?? 0}</span>
-                  <span className="text-xs text-zinc-400">الدفاع</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats and Details */}
-          <div className="lg:col-span-2 order-2 flex flex-col gap-6 sm:gap-8">
-            {/* Stats Grid */}
-            <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center">
-                <Activity className="w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 text-blue-400" />
-                الإحصائيات
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
-                {stats.map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <div className="bg-black border border-white/20 rounded-lg p-2 sm:p-4 mb-1 sm:mb-2">
-                      <stat.icon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto ${stat.color}`} />
-                    </div>
-                    <div className={`text-lg sm:text-2xl font-bold ${stat.color}`}>{stat.value.toLocaleString()}</div>
-                    <div className="text-xs sm:text-sm text-zinc-400">{stat.label}</div>
+                    <div className="text-xs text-white/60">{stat.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Additional Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-4 flex items-center">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2 text-orange-400" />
-                  المعلومات الاجتماعية
-                </h3>
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-300 text-xs sm:text-base">العصابة:</span>
-                    <span className="font-medium text-orange-400 text-xs sm:text-base">
+            {/* Enhanced Quote Section */}
+            <div className="card-3d bg-black/40 border-white/10 p-3">
+              {editingQuote ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="input-3d text-center text-xs"
+                    value={quoteInput}
+                    onChange={(e) => setQuoteInput(e.target.value)}
+                    maxLength={UI.MAX_QUOTE_LENGTH}
+                    rows={2}
+                    placeholder="اكتب اقتباسك الشخصي هنا..."
+                    disabled={savingQuote}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-3d flex-1 text-xs py-1"
+                      onClick={async () => {
+                        setSavingQuote(true)
+                        try {
+                          await axios.put("/api/profile", { quote: quoteInput })
+                          toast.success("تم تحديث الاقتباس!")
+                          setEditingQuote(false)
+                          queryClient.invalidateQueries(["character", userId])
+                        } catch (error) {
+                          const errorMessage = error.response?.data?.error || error.response?.data?.message || "فشل في تحديث الاقتباس"
+                          toast.error(errorMessage)
+                        } finally {
+                          setSavingQuote(false)
+                        }
+                      }}
+                      disabled={savingQuote || quoteInput.length > UI.MAX_QUOTE_LENGTH}
+                    >
+                      حفظ
+                    </button>
+                    <button
+                      className="btn-3d-secondary flex-1 text-xs py-1"
+                      onClick={() => {
+                        setEditingQuote(false)
+                        setQuoteInput(displayCharacter.quote || "")
+                      }}
+                      disabled={savingQuote}
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-white/70 italic text-xs flex-1">
+                    {displayCharacter.quote ? `"${displayCharacter.quote}"` : "لا يوجد اقتباس شخصي"}
+                  </span>
+                  {isOwnCharacter && (
+                    <button
+                      className="text-yellow-400 hover:text-white transition-colors ml-2"
+                      onClick={() => setEditingQuote(true)}
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Enhanced Stats Section */}
+          <div className="lg:col-span-2 space-y-4">
+            
+            {/* Main Stats Grid with Visual Enhancement */}
+            <div className="card-3d p-4">
+              <h3 className="text-sm font-bold mb-3 flex items-center text-blood-400">
+                <Activity className="w-4 h-4 mr-2" />
+                الإحصائيات الرئيسية
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {mainStats.map((stat, index) => (
+                  <div key={index} className={`card-3d bg-gradient-to-br ${stat.bgGrad} border-${stat.color}-500/30 p-2 text-center group hover:border-${stat.color}-500/50 transition-colors duration-300`}>
+                    <stat.icon className={`w-5 h-5 mx-auto mb-1 text-${stat.color}-400 group-hover:scale-110 transition-transform duration-300`} />
+                    <div className={`text-sm font-bold text-${stat.color}-400 mb-0.5`}>
+                      {stat.value.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-white/60">{stat.label}</div>
+                    {stat.subtitle && (
+                      <div className="text-xs text-white/50 mt-0.5">{stat.subtitle}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Enhanced Additional Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              {/* Secondary Stats */}
+              <div className="card-3d p-3">
+                <h4 className="font-bold mb-3 flex items-center text-blue-400 text-sm">
+                  <Trophy className="w-4 h-4 mr-2" />
+                  إحصائيات إضافية
+                </h4>
+                <div className="space-y-2">
+                  {secondaryStats.map((stat, index) => (
+                    <div key={index} className="flex items-center justify-between card-3d bg-black/40 border-white/10 p-2 hover:border-white/20 transition-colors duration-300">
+                      <div className="flex items-center gap-2">
+                        <stat.icon className={`w-3 h-3 text-${stat.color}-400`} />
+                        <span className="text-white/70 text-xs">{stat.label}</span>
+                      </div>
+                      <span className={`font-bold text-${stat.color}-400 text-xs`}>
+                        {typeof stat.value === 'string' ? stat.value : stat.value.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Social & Assets Info */}
+              <div className="space-y-3">
+                <div className="card-3d p-3 bg-gradient-to-br from-orange-950/20 to-yellow-950/10 border-orange-500/20">
+                  <h4 className="font-bold mb-3 flex items-center text-orange-400 text-sm">
+                    <Users className="w-4 h-4 mr-2" />
+                    المعلومات الاجتماعية
+                  </h4>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/70 text-xs">العصابة:</span>
+                    <span className="font-medium text-orange-400 text-xs">
                       {displayCharacter.gangId || "لا يوجد"}
                     </span>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-black border border-white/20 rounded-lg p-4 sm:p-6">
-                <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-4 flex items-center">
-                  <HomeIcon className="w-4 h-4 sm:w-5 sm:h-5 ml-1 sm:ml-2 text-yellow-400" />
-                  الممتلكات
-                </h3>
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-300 text-xs sm:text-base">المنزل:</span>
-                    <span className="font-medium text-yellow-400 text-xs sm:text-base">
-                      {displayCharacter.equippedHouseId || "لا يوجد"}
-                    </span>
+                <div className="card-3d p-3 bg-gradient-to-br from-yellow-950/20 to-amber-950/10 border-yellow-500/20">
+                  <h4 className="font-bold mb-3 flex items-center text-yellow-400 text-sm">
+                    <HomeIcon className="w-4 h-4 mr-2" />
+                    الممتلكات
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white/70 text-xs">المنزل:</span>
+                      <span className="font-medium text-yellow-400 text-xs">
+                        {displayCharacter.equippedHouseId || "لا يوجد"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-white/70 text-xs">الأموال:</span>
+                      <span className="font-medium text-green-400 text-xs flex items-center gap-1">
+                        <Coins className="w-3 h-3" />
+                        ${(displayCharacter.money || 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -452,14 +555,14 @@ export default function Character() {
           </div>
         </div>
 
-        {/* Active Buffs */}
+        {/* Enhanced Active Buffs */}
         {displayCharacter?.buffs && (
-          <div className="mt-4 sm:mt-8 bg-black border border-white/20 rounded-lg p-4 sm:p-6">
-            <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center">
-              <Shield className="w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 text-green-400" />
+          <div className="card-3d p-4">
+            <h3 className="text-sm font-bold mb-3 flex items-center text-green-400">
+              <Shield className="w-4 h-4 mr-2" />
               التأثيرات النشطة
             </h3>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="flex flex-wrap gap-2">
               {(Array.isArray(displayCharacter.buffs)
                 ? displayCharacter.buffs
                 : typeof displayCharacter.buffs === "object"
@@ -468,14 +571,32 @@ export default function Character() {
               ).map((buff, index) => (
                 <div
                   key={index}
-                  className="bg-green-900/20 border border-green-600/30 rounded-lg px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-base"
+                  className="card-3d bg-green-500/10 border-green-500/30 px-3 py-1 hover:border-green-500/50 transition-colors duration-300"
                 >
-                  <span className="text-green-400 font-medium">{buff}</span>
+                  <span className="text-green-400 font-medium text-xs">{buff}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* Character Tips */}
+        <div className="card-3d p-4 bg-gradient-to-r from-blood-950/20 to-black/40 border-blood-500/20">
+          <h3 className="text-sm font-bold text-blood-400 mb-2 flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            نصائح تطوير الشخصية
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/70">
+            <div className="flex items-center gap-2">
+              <Eye className="w-3 h-3 text-blue-400" />
+              <span>ارفع مستواك لفتح المزيد من الميزات</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Flame className="w-3 h-3 text-orange-400" />
+              <span>دَرّب في النادي لزيادة قوتك ودفاعك</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

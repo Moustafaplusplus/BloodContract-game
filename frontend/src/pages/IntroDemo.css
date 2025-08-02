@@ -1,132 +1,88 @@
-.intro-demo {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  font-family: 'Arial', sans-serif;
-  color: #fff;
+/* IntroDemo - Minimal custom styles (most styling moved to Tailwind classes) */
+
+/* Additional animations for enhanced visual effects */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
 
-.demo-container {
-  max-width: 800px;
-  width: 100%;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 3rem;
-  border-radius: 20px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
-.demo-container h1 {
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
-  color: #ff4444;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+/* Custom gradient overlays for banners */
+.intro-demo .bg-gradient-overlay {
+  background: linear-gradient(135deg, 
+    rgba(220, 38, 38, 0.1) 0%, 
+    rgba(153, 27, 27, 0.2) 50%, 
+    rgba(127, 29, 29, 0.1) 100%
+  );
 }
 
-.demo-content {
-  margin-top: 2rem;
+/* Enhanced glow effects for interactive elements */
+.intro-demo button:hover {
+  box-shadow: 
+    0 0 20px rgba(220, 38, 38, 0.3),
+    0 0 40px rgba(220, 38, 38, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.demo-content p {
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
+/* Subtle backdrop blur enhancement */
+.intro-demo .backdrop-blur-md {
+  backdrop-filter: blur(12px) saturate(180%);
 }
 
-.start-button, .restart-button {
-  background: linear-gradient(45deg, #ff4444, #ff6666);
-  color: #fff;
-  border: none;
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 1rem;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+/* Custom scrollbar for mobile */
+.intro-demo::-webkit-scrollbar {
+  width: 2px;
 }
 
-.start-button:hover, .restart-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(255, 68, 68, 0.3);
+.intro-demo::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
 }
 
-.features {
-  margin-top: 3rem;
-  text-align: left;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 2rem;
-  border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.intro-demo::-webkit-scrollbar-thumb {
+  background: rgba(220, 38, 38, 0.3);
+  border-radius: 1px;
 }
 
-.features h3 {
-  color: #ff4444;
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
+/* RTL text support for Arabic */
+.intro-demo [dir="rtl"] {
+  direction: rtl;
+  text-align: right;
 }
 
-.features ul {
-  list-style: none;
-  padding: 0;
-}
-
-.features li {
-  padding: 0.5rem 0;
-  font-size: 1rem;
-  opacity: 0.9;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.features li:last-child {
-  border-bottom: none;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .demo-container {
-    padding: 2rem;
-    margin: 1rem;
+/* Enhanced mobile touch targets */
+@media (max-width: 640px) {
+  .intro-demo button {
+    min-height: 44px; /* iOS recommended touch target */
+    min-width: 44px;
   }
   
-  .demo-container h1 {
-    font-size: 2rem;
-  }
-  
-  .start-button, .restart-button {
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-  }
-  
-  .features {
-    padding: 1.5rem;
+  .intro-demo .grid-cols-2 > div {
+    min-height: 36px; /* Adequate touch target for grid items */
   }
 }
 
-@media (max-width: 480px) {
-  .demo-container {
-    padding: 1.5rem;
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .intro-demo .animate-pulse,
+  .intro-demo .animate-float {
+    animation: none;
   }
   
-  .demo-container h1 {
-    font-size: 1.5rem;
+  .intro-demo .transition-all {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .intro-demo .border-blood-500\/20 {
+    border-color: rgba(220, 38, 38, 0.6);
   }
   
-  .demo-content p {
-    font-size: 1rem;
+  .intro-demo .text-blood-200 {
+    color: rgb(254, 202, 202);
   }
-  
-  .features {
-    padding: 1rem;
-  }
-  
-  .features li {
-    font-size: 0.9rem;
-  }
-} 
+}

@@ -20,8 +20,101 @@ import {
   Users,
   Building,
   GraduationCap,
-  Crown
+  Crown,
+  ImageIcon,
+  Loader,
+  User,
+  Coins
 } from 'lucide-react';
+
+const JobCard = ({ job, onHire, isHiring, canHire, currentJob }) => {
+  const tierColors = {
+    1: { bg: 'from-green-600 to-green-700', text: 'text-green-400', icon: Users },
+    2: { bg: 'from-blue-600 to-blue-700', text: 'text-blue-400', icon: Building },
+    3: { bg: 'from-yellow-600 to-yellow-700', text: 'text-yellow-400', icon: GraduationCap },
+    4: { bg: 'from-orange-600 to-orange-700', text: 'text-orange-400', icon: Crown },
+    5: { bg: 'from-purple-600 to-purple-700', text: 'text-purple-400', icon: Crown }
+  };
+  
+  const tierInfo = tierColors[job.tier] || tierColors[1];
+  const TierIcon = tierInfo.icon;
+
+  return (
+    <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm hover:border-blood-500/40 transition-all duration-300 hover:scale-[1.02]">
+      {/* Job Header */}
+      <div className="text-center mb-4">
+        <div className={`w-12 h-12 bg-gradient-to-br ${tierInfo.bg} rounded-lg flex items-center justify-center mx-auto mb-3`}>
+          <TierIcon className="w-6 h-6 text-white" />
+        </div>
+        <h3 className="text-lg font-bold text-white mb-1">{job.name}</h3>
+        <p className="text-blood-200 text-sm mb-2 line-clamp-2">{job.description}</p>
+        <div className="flex items-center justify-center text-xs text-blood-300">
+          <Target className="w-3 h-3 mr-1" />
+          <span>المستوى المطلوب: {job.minLevel}</span>
+        </div>
+      </div>
+
+      {/* Job Stats */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-green-900/20 border border-green-500/20 rounded p-2 text-center">
+          <div className="flex items-center justify-center space-x-1 mb-1">
+            <DollarSign className="w-3 h-3 text-green-400" />
+            <span className="text-xs text-green-300">راتب يومي</span>
+          </div>
+          <div className="text-sm font-bold text-green-400">${job.salary}</div>
+        </div>
+        
+        <div className="bg-blue-900/20 border border-blue-500/20 rounded p-2 text-center">
+          <div className="flex items-center justify-center space-x-1 mb-1">
+            <Star className="w-3 h-3 text-blue-400" />
+            <span className="text-xs text-blue-300">خبرة يومية</span>
+          </div>
+          <div className="text-sm font-bold text-blue-400">+{job.expPerDay}</div>
+        </div>
+      </div>
+
+      {/* Tier Badge */}
+      <div className="text-center mb-4">
+        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${tierInfo.bg} text-white`}>
+          المستوى {job.tier}
+        </span>
+      </div>
+
+      {/* Hire Button */}
+      <button
+        onClick={() => onHire(job.id)}
+        disabled={!canHire || isHiring || currentJob}
+        className={`w-full py-3 px-4 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2 text-sm ${
+          canHire && !isHiring && !currentJob
+            ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white hover:shadow-lg hover:shadow-green-500/30'
+            : 'bg-gray-600 text-gray-300 cursor-not-allowed transform-none'
+        }`}
+      >
+        {isHiring ? (
+          <>
+            <Loader className="w-4 h-4 animate-spin" />
+            <span>جاري التوظيف...</span>
+          </>
+        ) : currentJob ? (
+          <>
+            <XCircle className="w-4 h-4" />
+            <span>لديك وظيفة بالفعل</span>
+          </>
+        ) : canHire ? (
+          <>
+            <UserCheck className="w-4 h-4" />
+            <span>توظف الآن</span>
+          </>
+        ) : (
+          <>
+            <XCircle className="w-4 h-4" />
+            <span>المستوى {job.minLevel} مطلوب</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+};
 
 export default function Jobs() {
   const { 
@@ -65,7 +158,6 @@ export default function Jobs() {
   const currentJobLoading = false;
   const currentJobError = null;
 
-
   // Hire mutation
   const hireMutation = useMutation({
     mutationFn: async (jobId) => {
@@ -85,7 +177,6 @@ export default function Jobs() {
     },
     onSuccess: (data) => {
       setHiringJobId(null);
-      // Request fresh jobs data
       if (socket && socket.connected) {
         requestJobsUpdate();
       }
@@ -116,7 +207,6 @@ export default function Jobs() {
     },
     onSuccess: (data) => {
       setQuittingJob(false);
-      // Request fresh jobs data
       if (socket && socket.connected) {
         requestJobsUpdate();
       }
@@ -151,15 +241,10 @@ export default function Jobs() {
 
   if (jobsLoading || currentJobLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="loading-spinner"></div>
-            <Briefcase className="w-8 h-8 text-accent-red absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-white text-lg font-medium animate-pulse">
-            جاري تحميل الوظائف...
-          </p>
+      <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 flex items-center justify-center p-4">
+        <div className="text-center bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 p-8">
+          <div className="w-16 h-16 border-4 border-blood-500/30 border-t-blood-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">جاري تحميل الوظائف...</p>
         </div>
       </div>
     );
@@ -167,11 +252,11 @@ export default function Jobs() {
 
   if (jobsError || currentJobError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-accent-red/30 rounded-xl p-8">
-          <AlertCircle className="w-16 h-16 text-accent-red mx-auto mb-4" />
+      <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 flex items-center justify-center p-4">
+        <div className="text-center bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 p-8">
+          <AlertCircle className="w-16 h-16 text-blood-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">خطأ في التحميل</h2>
-          <p className="text-hitman-300">فشل في تحميل بيانات الوظائف</p>
+          <p className="text-blood-300">فشل في تحميل بيانات الوظائف</p>
         </div>
       </div>
     );
@@ -180,77 +265,106 @@ export default function Jobs() {
   const currentJob = currentJobData?.currentJob;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="hitman-background opacity-30"></div>
-        <div className="background-grid"></div>
-      </div>
-
-      {/* Banner */}
-      <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-10 flex items-center justify-center bg-gradient-to-br from-accent-red/40 to-black/60 border-2 border-accent-red animate-fade-in">
-        <img src="/placeholder-jobs-banner.png" alt="Jobs Banner" className="absolute inset-0 w-full h-full object-cover opacity-40" />
-        <div className="relative z-10 text-center">
-          <Briefcase className="w-16 h-16 mx-auto text-accent-red mb-2 animate-bounce" />
-          <h1 className="text-4xl font-bouya mb-2 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow">الوظائف</h1>
-          <p className="text-hitman-300 text-lg">ابحث عن وظيفة مناسبة وابدأ حياتك المهنية</p>
+    <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 p-2 sm:p-4 space-y-4">
+      
+      {/* Jobs Header Banner with Background Image */}
+      <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+        {/* Background Image Placeholder with 3 Circles Logo */}
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+          <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23dc2626\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3Ccircle cx=\"20\" cy=\"30\" r=\"3\"/%3E%3Ccircle cx=\"40\" cy=\"30\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+        </div>
+        
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/50"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">الوظائف</h1>
+              <p className="text-xs sm:text-sm text-white/80 drop-shadow">ابحث عن وظيفة مناسبة وابدأ حياتك المهنية</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4 text-white">
+            <div className="hidden sm:flex items-center space-x-2">
+              <ImageIcon className="w-4 h-4 text-white/60" />
+              <Briefcase className="w-4 h-4 text-green-400 animate-pulse" />
+            </div>
+            <div className="text-right">
+              <div className="text-lg sm:text-xl font-bold drop-shadow-lg">{availableJobs.length}</div>
+              <div className="text-xs text-white/80 drop-shadow">Jobs</div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Current Job Status */}
       {currentJob && currentJob.jobInfo && (
-        <div className="max-w-4xl mx-auto mb-8 animate-slide-up">
-          <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-2xl p-6 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-accent-green to-green-700 rounded-lg flex items-center justify-center mr-4">
-                  <UserCheck className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{currentJob.jobInfo.name}</h2>
-                  <p className="text-hitman-300">{currentJob.jobInfo.description}</p>
-                </div>
+        <div className="bg-black/80 border border-green-500/30 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-white" />
               </div>
-              <button
-                onClick={handleQuit}
-                disabled={quittingJob}
-                className="bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white px-6 py-3 rounded-lg font-bold transition-all duration-300 flex items-center disabled:opacity-60"
-              >
-                {quittingJob ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    جاري الاستقالة...
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    استقالة
-                  </>
-                )}
-              </button>
+              <div>
+                <h2 className="text-lg font-bold text-white">{currentJob.jobInfo.name}</h2>
+                <p className="text-blood-200 text-sm">{currentJob.jobInfo.description}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleQuit}
+              disabled={quittingJob}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 disabled:transform-none flex items-center space-x-2 text-sm"
+            >
+              {quittingJob ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>جاري الاستقالة...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  <span>استقالة</span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-green-900/20 border border-green-500/20 rounded p-3 text-center">
+              <div className="flex items-center justify-center space-x-1 mb-1">
+                <DollarSign className="w-3 h-3 text-green-400" />
+                <span className="text-xs text-green-300">راتب يومي</span>
+              </div>
+              <div className="text-sm font-bold text-green-400">${currentJob.jobInfo.salary}</div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-hitman-800/30 rounded-lg p-4 text-center">
-                <DollarSign className="w-6 h-6 text-accent-green mx-auto mb-2" />
-                <div className="text-xl font-bold text-accent-green">{currentJob.jobInfo.salary}$</div>
-                <div className="text-sm text-hitman-400">الراتب اليومي</div>
+            <div className="bg-blue-900/20 border border-blue-500/20 rounded p-3 text-center">
+              <div className="flex items-center justify-center space-x-1 mb-1">
+                <Star className="w-3 h-3 text-blue-400" />
+                <span className="text-xs text-blue-300">خبرة يومية</span>
               </div>
-              <div className="bg-hitman-800/30 rounded-lg p-4 text-center">
-                <Star className="w-6 h-6 text-accent-blue mx-auto mb-2" />
-                <div className="text-xl font-bold text-accent-blue">+{currentJob.jobInfo.expPerDay}</div>
-                <div className="text-sm text-hitman-400">الخبرة اليومية</div>
+              <div className="text-sm font-bold text-blue-400">+{currentJob.jobInfo.expPerDay}</div>
+            </div>
+            
+            <div className="bg-yellow-900/20 border border-yellow-500/20 rounded p-3 text-center">
+              <div className="flex items-center justify-center space-x-1 mb-1">
+                <Calendar className="w-3 h-3 text-yellow-400" />
+                <span className="text-xs text-yellow-300">أيام العمل</span>
               </div>
-              <div className="bg-hitman-800/30 rounded-lg p-4 text-center">
-                <Calendar className="w-6 h-6 text-accent-yellow mx-auto mb-2" />
-                <div className="text-xl font-bold text-accent-yellow">{currentJob.daysWorked}</div>
-                <div className="text-sm text-hitman-400">أيام العمل</div>
+              <div className="text-sm font-bold text-yellow-400">{currentJob.daysWorked}</div>
+            </div>
+            
+            <div className="bg-purple-900/20 border border-purple-500/20 rounded p-3 text-center">
+              <div className="flex items-center justify-center space-x-1 mb-1">
+                <Coins className="w-3 h-3 text-purple-400" />
+                <span className="text-xs text-purple-300">إجمالي الأرباح</span>
               </div>
-              <div className="bg-hitman-800/30 rounded-lg p-4 text-center">
-                <DollarSign className="w-6 h-6 text-accent-green mx-auto mb-2" />
-                <div className="text-xl font-bold text-accent-green">{currentJob.totalEarned}$</div>
-                <div className="text-sm text-hitman-400">إجمالي الأرباح</div>
-              </div>
+              <div className="text-sm font-bold text-purple-400">${currentJob.totalEarned}</div>
             </div>
           </div>
         </div>
@@ -258,29 +372,31 @@ export default function Jobs() {
 
       {/* Job Statistics */}
       {hudData && (
-        <div className="max-w-4xl mx-auto mb-8 animate-slide-up">
-          <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-2xl p-6">
-            <h3 className="text-xl font-bold text-accent-red mb-4 flex items-center">
-              <Award className="w-5 h-5 mr-2" />
-              إحصائيات الوظائف
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-green">{hudData.totalJobs}</div>
-                <div className="text-sm text-hitman-400">الوظائف السابقة</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-green">{hudData.totalEarned}$</div>
-                <div className="text-sm text-hitman-400">إجمالي الأرباح</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-blue">{hudData.totalExpEarned}</div>
-                <div className="text-sm text-hitman-400">إجمالي الخبرة</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-yellow">{hudData.totalDaysWorked}</div>
-                <div className="text-sm text-hitman-400">أيام العمل</div>
-              </div>
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="w-6 h-6 bg-blood-600 rounded flex items-center justify-center">
+              <Award className="w-3 h-3 text-white" />
+            </div>
+            <h3 className="font-semibold text-blood-400">إحصائيات الوظائف</h3>
+            <ImageIcon className="w-4 h-4 text-blood-300 ml-auto" />
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-blood-900/20 border border-blood-500/10 rounded p-3 text-center">
+              <div className="text-lg font-bold text-green-400">{hudData.totalJobs}</div>
+              <div className="text-xs text-blood-300">الوظائف السابقة</div>
+            </div>
+            <div className="bg-blood-900/20 border border-blood-500/10 rounded p-3 text-center">
+              <div className="text-lg font-bold text-green-400">${hudData.totalEarned}</div>
+              <div className="text-xs text-blood-300">إجمالي الأرباح</div>
+            </div>
+            <div className="bg-blood-900/20 border border-blood-500/10 rounded p-3 text-center">
+              <div className="text-lg font-bold text-blue-400">{hudData.totalExpEarned}</div>
+              <div className="text-xs text-blood-300">إجمالي الخبرة</div>
+            </div>
+            <div className="bg-blood-900/20 border border-blood-500/10 rounded p-3 text-center">
+              <div className="text-lg font-bold text-yellow-400">{hudData.totalDaysWorked}</div>
+              <div className="text-xs text-blood-300">أيام العمل</div>
             </div>
           </div>
         </div>
@@ -288,101 +404,27 @@ export default function Jobs() {
 
       {/* Available Jobs */}
       {!currentJob && (
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold text-accent-red mb-6 text-center">الوظائف المتاحة</h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div>
+          <div className="flex items-center space-x-2 mb-4">
+            <Users className="w-5 h-5 text-blood-400" />
+            <h2 className="text-lg font-bold text-white">الوظائف المتاحة</h2>
+            <span className="text-sm text-blood-300">({availableJobs.length})</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {availableJobs.map((job) => {
               const isHiring = hiringJobId === job.id;
               const canHire = hudData && hudData.level >= job.minLevel;
               
               return (
-                <div 
-                  key={job.id} 
-                  className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-slide-up hover:scale-105"
-                >
-                  {/* Job Header */}
-                  <div className="text-center mb-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${
-                      job.tier === 1 ? 'bg-gradient-to-br from-accent-green to-green-700' :
-                      job.tier === 2 ? 'bg-gradient-to-br from-accent-blue to-blue-700' :
-                      job.tier === 3 ? 'bg-gradient-to-br from-accent-yellow to-yellow-700' :
-                      job.tier === 4 ? 'bg-gradient-to-br from-accent-orange to-orange-700' :
-                      'bg-gradient-to-br from-accent-red to-red-700'
-                    }`}>
-                      {job.tier === 1 ? <Users className="w-6 h-6 text-white" /> :
-                       job.tier === 2 ? <Building className="w-6 h-6 text-white" /> :
-                       job.tier === 3 ? <GraduationCap className="w-6 h-6 text-white" /> :
-                       job.tier === 4 ? <Crown className="w-6 h-6 text-white" /> :
-                       <Crown className="w-6 h-6 text-white" />}
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-1">{job.name}</h3>
-                    <p className="text-hitman-300 text-sm mb-2">{job.description}</p>
-                    <div className="flex items-center justify-center text-xs text-hitman-400">
-                      <Target className="w-3 h-3 mr-1" />
-                      <span>المستوى المطلوب: {job.minLevel}</span>
-                    </div>
-                  </div>
-
-                  {/* Job Stats */}
-                  <div className="space-y-3 mb-6">
-                    <div className="flex justify-between items-center">
-                      <span className="text-hitman-300 text-sm">الراتب اليومي:</span>
-                      <div className="flex items-center">
-                        <DollarSign className="w-4 h-4 text-accent-green mr-1" />
-                        <span className="font-bold text-accent-green">{job.salary}$</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-hitman-300 text-sm">الخبرة اليومية:</span>
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 text-accent-blue mr-1" />
-                        <span className="font-bold text-accent-blue">+{job.expPerDay}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hire Button */}
-                  <button
-                    onClick={() => handleHire(job.id)}
-                    disabled={!canHire || isHiring}
-                    className={`w-full py-3 px-4 rounded-lg font-bold transition-all duration-300 flex items-center justify-center ${
-                      canHire && !isHiring
-                        ? 'bg-gradient-to-r from-accent-green to-green-700 hover:from-green-600 hover:to-green-800 text-white transform hover:scale-105 hover:shadow-lg'
-                        : 'bg-hitman-700 text-hitman-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {isHiring ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        جاري التوظيف...
-                      </>
-                    ) : canHire ? (
-                      <>
-                        <UserCheck className="w-4 h-4 mr-2" />
-                        توظف الآن
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-4 h-4 mr-2" />
-                        المستوى {job.minLevel} مطلوب
-                      </>
-                    )}
-                  </button>
-
-                  {/* Tier Badge */}
-                  <div className="mt-3 text-center">
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
-                      job.tier === 1 ? 'bg-green-600 text-white' :
-                      job.tier === 2 ? 'bg-blue-600 text-white' :
-                      job.tier === 3 ? 'bg-yellow-600 text-black' :
-                      job.tier === 4 ? 'bg-orange-600 text-white' :
-                      'bg-red-600 text-white'
-                    }`}>
-                      المستوى {job.tier}
-                    </span>
-                  </div>
-                </div>
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onHire={handleHire}
+                  isHiring={isHiring}
+                  canHire={canHire}
+                  currentJob={currentJob}
+                />
               );
             })}
           </div>
@@ -390,25 +432,30 @@ export default function Jobs() {
       )}
 
       {/* Info Section */}
-      <div className="max-w-2xl mx-auto mt-12 animate-fade-in">
-        <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 text-center">
-          <h3 className="text-lg font-bold text-accent-red mb-3">معلومات مهمة</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-hitman-300">
-            <div className="flex items-center justify-center">
-              <Clock className="w-4 h-4 text-accent-yellow mr-2" />
-              <span>الراتب يدفع يومياً</span>
-            </div>
-            <div className="flex items-center justify-center">
-              <Target className="w-4 h-4 text-accent-red mr-2" />
-              <span>لا يمكن العمل في وظيفتين</span>
-            </div>
-            <div className="flex items-center justify-center">
-              <Star className="w-4 h-4 text-accent-blue mr-2" />
-              <span>الخبرة تساعدك على التطور</span>
-            </div>
+      <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+        <div className="flex items-center space-x-2 mb-3">
+          <div className="w-6 h-6 bg-blood-600 rounded flex items-center justify-center">
+            <AlertCircle className="w-3 h-3 text-white" />
+          </div>
+          <h3 className="font-semibold text-blood-400">معلومات مهمة</h3>
+          <ImageIcon className="w-4 h-4 text-blood-300 ml-auto" />
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-blood-200">
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>الراتب يدفع يومياً</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Target className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>لا يمكن العمل في وظيفتين</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Star className="w-3 h-3 text-blood-400 flex-shrink-0" />
+            <span>الخبرة تساعدك على التطور</span>
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -5,7 +5,11 @@
   "scripts": {
     "start": "cd backend && npm start",
     "dev": "cd backend && npm run dev",
-    "build": "cd backend && npm run verify"
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:both": "npm run dev:backend & npm run dev:frontend",
+    "build": "cd backend && npm run verify",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
   "engines": {
     "node": "20.x"

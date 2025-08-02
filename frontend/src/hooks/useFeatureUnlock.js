@@ -32,15 +32,16 @@ export const useFeatureUnlock = () => {
       
       return response.json();
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 60000, // 1 minute - increased to reduce requests
     retry: (failureCount, error) => {
       // Don't retry on auth errors or when no token
       if (error.message.includes('401') || error.message.includes('No authentication token')) {
         return false;
       }
-      // Retry up to 3 times for other errors
-      return failureCount < 3;
+      // Only retry once for other errors to prevent spam
+      return failureCount < 1;
     },
+    retryDelay: 2000, // 2 second delay between retries
     enabled: !!localStorage.getItem('jwt'), // Only run when user is authenticated
   });
 

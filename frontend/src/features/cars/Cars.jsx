@@ -1,373 +1,390 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import axios from 'axios';
-import { extractErrorMessage } from '@/utils/errorHandler';
-import { 
-  Car, 
-  Shield, 
-  Zap, 
-  Sword, 
-  DollarSign, 
-  Star,
-  ImageIcon,
-  ShoppingCart,
-  Settings,
-  Trash2
-} from 'lucide-react';
-import { handleImageError } from '@/utils/imageUtils';
+import { useAuth } from '../../hooks/useAuth';
 
-const TABS = [
-  { key: 'owned', label: 'سياراتك' },
-  { key: 'market', label: 'سوق السيارات' },
-];
+const carService = {
+  async getCars() {
+    const response = await fetch('/api/cars', {
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch cars');
+    }
+    return response.json();
+  },
 
-// Rarity colors
-const rarityColors = {
-  common: 'text-gray-400',
-  uncommon: 'text-green-400',
-  rare: 'text-blue-400',
-  epic: 'text-purple-400',
-  legend: 'text-yellow-400'
+  async getOwnedCars() {
+    const response = await fetch('/api/cars/user', {
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch owned cars');
+    }
+    return response.json();
+  },
+
+  async buyCar(carId) {
+    const response = await fetch('/api/cars/buy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ carId })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to buy car');
+    }
+    return response.json();
+  },
+
+  async sellCar(carId) {
+    const response = await fetch(`/api/cars/${carId}/sell`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to sell car');
+    }
+    return response.json();
+  },
+
+  async activateCar(carId) {
+    const response = await fetch(`/api/cars/${carId}/activate`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to activate car');
+    }
+    return response.json();
+  },
+
+  async deactivateCar() {
+    const response = await fetch('/api/cars/deactivate', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to deactivate car');
+    }
+    return response.json();
+  }
 };
 
-// Rarity icons
-const rarityIcons = {
-  common: '⭐',
-  uncommon: '⭐⭐',
-  rare: '⭐⭐⭐',
-  epic: '⭐⭐⭐⭐',
-  legend: '⭐⭐⭐⭐⭐'
-};
+const Cars = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('owned');
 
-function CarCard({ car, isOwned = false, isActive = false, onBuy, onEquip, onUnequip, onSell, buying, equipping, unequipping, selling }) {
-  const rarity = car.rarity?.toLowerCase() || 'common';
-  
-  return (
-    <div className={`relative bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border rounded-xl p-4 space-y-3 hover:bg-hitman-700/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-red/20 ${
-      isActive ? 'border-accent-red shadow-lg shadow-accent-red/30' : 
-      isOwned ? 'border-hitman-700 opacity-60' : 'border-hitman-700'
-    }`}>
-      {/* Active Badge */}
-      {isActive && (
-        <span className="absolute top-2 right-2 bg-accent-red text-white text-xs px-2 py-1 rounded font-bold z-10">
-          السيارة الحالية
-        </span>
-      )}
+  const { data: availableCars = [], isLoading: loadingCars } = useQuery({
+    queryKey: ['cars'],
+    queryFn: carService.getCars,
+    enabled: !!user && activeTab === 'market'
+  });
 
-      {/* Car Image */}
-      <div className="relative w-full h-24 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-lg flex items-center justify-center border border-hitman-600">
-        {car.imageUrl ? (
-          <img 
-            src={car.imageUrl} 
-            alt={car.name}
-            className="w-full h-full object-cover rounded-lg"
-            onError={(e) => handleImageError(e, car.imageUrl)}
-          />
-        ) : null}
-        <div className={`absolute inset-0 flex items-center justify-center ${car.imageUrl ? 'hidden' : 'flex'}`}>
-          <Car className="w-8 h-8 text-hitman-400" />
-        </div>
-      </div>
+  const { data: ownedCars = [], isLoading: loadingOwned } = useQuery({
+    queryKey: ['owned-cars'],
+    queryFn: carService.getOwnedCars,
+    enabled: !!user
+  });
 
-      {/* Car Info */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="font-semibold text-white text-sm truncate">{car.name}</h4>
-          <span className={`text-xs ${rarityColors[rarity]}`}>
-            {rarityIcons[rarity]}
-          </span>
-        </div>
+  const buyCarMutation = useMutation({
+    mutationFn: carService.buyCar,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['owned-cars'] });
+      queryClient.invalidateQueries({ queryKey: ['cars'] });
+      queryClient.invalidateQueries({ queryKey: ['character'] });
+      toast.success(data.message || 'Car purchased successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
 
-        {/* Car Stats */}
-        <div className="space-y-1 text-xs">
-          {car.attackBonus > 0 && (
-            <div className="flex items-center text-red-400">
-              <Sword className="w-3 h-3 mr-1" />
-              <span>هجوم: +{car.attackBonus}</span>
+  const sellCarMutation = useMutation({
+    mutationFn: carService.sellCar,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['owned-cars'] });
+      queryClient.invalidateQueries({ queryKey: ['cars'] });
+      queryClient.invalidateQueries({ queryKey: ['character'] });
+      const currencyText = data.currency === 'blackcoin' ? 'blackcoins' : 'cash';
+      toast.success(`Car sold! You received $${data.refund} ${currencyText}`);
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const activateCarMutation = useMutation({
+    mutationFn: carService.activateCar,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['owned-cars'] });
+      queryClient.invalidateQueries({ queryKey: ['character'] });
+      toast.success(data.message || 'Car activated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const deactivateCarMutation = useMutation({
+    mutationFn: carService.deactivateCar,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['owned-cars'] });
+      queryClient.invalidateQueries({ queryKey: ['character'] });
+      toast.success(data.message || 'Car deactivated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const handleBuyCar = (carId) => {
+    buyCarMutation.mutate(carId);
+  };
+
+  const handleSellCar = (carId) => {
+    if (window.confirm('Are you sure you want to sell this car?')) {
+      sellCarMutation.mutate(carId);
+    }
+  };
+
+  const handleActivateCar = (carId) => {
+    activateCarMutation.mutate(carId);
+  };
+
+  const handleDeactivateCar = () => {
+    deactivateCarMutation.mutate();
+  };
+
+  const getRarityColor = (rarity) => {
+    const colors = {
+      common: 'text-gray-400',
+      uncommon: 'text-green-400',
+      rare: 'text-blue-400',
+      epic: 'text-purple-400',
+      legend: 'text-yellow-400'
+    };
+    return colors[rarity?.toLowerCase()] || colors.common;
+  };
+
+  const getRarityStars = (rarity) => {
+    const stars = {
+      common: '⭐',
+      uncommon: '⭐⭐',
+      rare: '⭐⭐⭐',
+      epic: '⭐⭐⭐⭐',
+      legend: '⭐⭐⭐⭐⭐'
+    };
+    return stars[rarity?.toLowerCase()] || stars.common;
+  };
+
+  const CarCard = ({ car, type = 'owned', isActive = false }) => {
+    const isLoading = buyCarMutation.isPending || sellCarMutation.isPending || 
+                     activateCarMutation.isPending || deactivateCarMutation.isPending;
+
+    return (
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 backdrop-blur-md border border-blood-600/30 rounded-lg p-3 shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blood-500/20">
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blood-600 to-blood-700 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-white text-sm font-bold">🚗</span>
+              </div>
+              <h3 className="text-white font-semibold text-sm">{car.name}</h3>
             </div>
-          )}
-          {car.defenseBonus > 0 && (
-            <div className="flex items-center text-blue-400">
-              <Shield className="w-3 h-3 mr-1" />
-              <span>دفاع: +{car.defenseBonus}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Price */}
-        <div className="flex items-center text-accent-green font-bold text-sm">
-          {car.currency === 'blackcoin' ? (
-            <>
-              <span className="inline-block w-4 h-4 rounded-full bg-black border border-accent-red flex items-center justify-center mr-1">
-                <span className="text-xs text-accent-red font-bold">ع</span>
+            <div className="flex items-center space-x-1">
+              {isActive && (
+                <span className="bg-blood-600 text-white text-xs px-2 py-1 rounded-full">
+                  Active
+                </span>
+              )}
+              <span className={`text-xs ${getRarityColor(car.rarity)}`}>
+                {getRarityStars(car.rarity)}
               </span>
-              <span className="text-accent-red">{car.cost?.toLocaleString()}</span>
-            </>
-          ) : (
-            <>
-              <DollarSign className="w-3 h-3 mr-1" />
-              <span>{car.cost?.toLocaleString()}</span>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
 
-        {/* Action Buttons */}
-        {!isOwned ? (
-          <button
-            onClick={() => onBuy(car.id)}
-            disabled={buying === car.id}
-            className="w-full bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white text-xs px-3 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center hover:scale-105 disabled:opacity-60"
-          >
-            <ShoppingCart className="w-3 h-3 mr-1" />
-            {buying === car.id ? '...جاري الشراء' : 'شراء'}
-          </button>
-        ) : (
-          <div className="flex space-x-2 rtl:space-x-reverse">
-            {isActive ? (
-              <button
-                onClick={() => onUnequip()}
-                disabled={unequipping}
-                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
-              >
-                <Settings className="w-3 h-3 mr-1" />
-                {unequipping ? '...جاري الإلغاء' : 'إلغاء التفعيل'}
-              </button>
+          <div className="w-full h-16 bg-black/30 rounded flex items-center justify-center">
+            {car.imageUrl ? (
+              <img 
+                src={car.imageUrl} 
+                alt={car.name}
+                className="w-full h-full object-cover rounded"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className="w-full h-full flex items-center justify-center text-2xl">
+              🚗
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {car.attackBonus > 0 && (
+              <div className="bg-black/30 rounded p-1">
+                <span className="text-gray-400">Attack:</span>
+                <span className="text-blood-400 ml-1">+{car.attackBonus}</span>
+              </div>
+            )}
+            {car.defenseBonus > 0 && (
+              <div className="bg-black/30 rounded p-1">
+                <span className="text-gray-400">Defense:</span>
+                <span className="text-blue-400 ml-1">+{car.defenseBonus}</span>
+              </div>
+            )}
+          </div>
+
+          {type === 'market' && (
+            <div className="bg-black/30 rounded p-1 text-xs">
+              <span className="text-gray-400">Price:</span>
+              <span className={`ml-1 ${car.currency === 'blackcoin' ? 'text-blood-400' : 'text-green-400'}`}>
+                {car.currency === 'blackcoin' ? '⚫' : '$'}{car.cost?.toLocaleString() || 'N/A'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex gap-2 mt-2">
+            {type === 'owned' ? (
+              <>
+                {isActive ? (
+                  <button
+                    onClick={handleDeactivateCar}
+                    disabled={isLoading}
+                    className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                  >
+                    Deactivate
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleActivateCar(car.id)}
+                    disabled={isLoading}
+                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                  >
+                    Activate
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSellCar(car.id)}
+                  disabled={isLoading}
+                  className="flex-1 bg-gradient-to-r from-blood-600 to-blood-700 hover:from-blood-700 hover:to-blood-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                >
+                  Sell
+                </button>
+              </>
             ) : (
               <button
-                onClick={() => onEquip(car.id)}
-                disabled={equipping === car.id}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center disabled:opacity-60"
+                onClick={() => handleBuyCar(car.id)}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
               >
-                <Settings className="w-3 h-3 mr-1" />
-                {equipping === car.id ? '...جاري التفعيل' : 'تفعيل'}
+                Buy
               </button>
             )}
-            <button
-              onClick={() => onSell(car.id)}
-              disabled={selling === car.id}
-              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-xs px-2 py-2 rounded-lg font-bold transition-all duration-300 flex items-center justify-center border border-accent-red disabled:opacity-60"
-            >
-              <Trash2 className="w-3 h-3 mr-1" />
-              {selling === car.id ? '...جاري البيع' : 'بيع'}
-            </button>
           </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function Cars() {
-  const queryClient = useQueryClient();
-  const [tab, setTab] = useState('owned');
-  const [activating, setActivating] = useState(null);
-  const [selling, setSelling] = useState(null);
-  const [buying, setBuying] = useState(null);
-  const [unequipping, setUnequipping] = useState(null);
-
-  // Fetch all available cars (market) - only regular money cars
-  const {
-    data: cars = [],
-    isLoading: carsLoading,
-    error: carsError
-  } = useQuery({
-    queryKey: ['cars'],
-    queryFn: () => axios.get('/api/cars').then(res => res.data),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch all owned cars
-  const {
-    data: ownedCars = [],
-    isLoading: ownedLoading,
-    error: ownedError
-  } = useQuery({
-    queryKey: ['owned-cars'],
-    queryFn: () => axios.get('/api/cars/user').then(res => res.data),
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // Fetch character (to get active car)
-  const {
-    data: character,
-    isLoading: charLoading,
-    error: charError
-  } = useQuery({
-    queryKey: ['character'],
-    queryFn: () => axios.get('/api/character').then(res => res.data),
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // Activate car mutation (equip)
-  const activateMutation = useMutation({
-    mutationFn: (carId) => axios.post(`/api/cars/${carId}/activate`).then(res => res.data),
-    onMutate: (carId) => setActivating(carId),
-    onSettled: () => setActivating(null),
-    onSuccess: () => {
-      toast.success('تم تفعيل السيارة!');
-      queryClient.invalidateQueries(['character']);
-      queryClient.invalidateQueries(['owned-cars']);
-    },
-    onError: (error) => toast.error(extractErrorMessage(error)),
-  });
-
-  // Deactivate car mutation (unequip)
-  const deactivateMutation = useMutation({
-    mutationFn: () => axios.post('/api/cars/deactivate').then(res => res.data),
-    onMutate: () => setUnequipping(true),
-    onSettled: () => setUnequipping(null),
-    onSuccess: () => {
-      toast.success('تم إلغاء تفعيل السيارة!');
-      queryClient.invalidateQueries(['character']);
-      queryClient.invalidateQueries(['owned-cars']);
-    },
-    onError: (error) => toast.error(extractErrorMessage(error)),
-  });
-
-  // Sell car mutation
-  const sellMutation = useMutation({
-    mutationFn: (carId) => axios.delete(`/api/cars/${carId}/sell`).then(res => res.data),
-    onMutate: (carId) => setSelling(carId),
-    onSettled: () => setSelling(null),
-    onSuccess: (data) => {
-      const currencyText = data.currency === 'blackcoin' ? 'عملة سوداء' : 'نقود';
-      toast.success(`تم بيع السيارة! حصلت على ${data.refund} ${currencyText}`);
-      queryClient.invalidateQueries(['owned-cars']);
-      queryClient.invalidateQueries(['character']);
-    },
-    onError: (error) => toast.error(extractErrorMessage(error)),
-  });
-
-  // Buy car mutation
-  const buyMutation = useMutation({
-    mutationFn: (carId) => axios.post('/api/cars/buy', { carId }).then(res => res.data),
-    onMutate: (carId) => setBuying(carId),
-    onSettled: () => setBuying(null),
-    onSuccess: () => {
-      toast.success('تم شراء السيارة!');
-      queryClient.invalidateQueries(['owned-cars']);
-      queryClient.invalidateQueries(['character']);
-    },
-    onError: (error) => toast.error(extractErrorMessage(error)),
-  });
-
-  if (carsLoading || ownedLoading || charLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="loading-spinner"></div>
-            <Car className="w-8 h-8 text-accent-red absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-white text-lg font-medium animate-pulse">
-            جاري تحميل السيارات...
-          </p>
         </div>
       </div>
     );
-  }
-  
-  if (carsError || ownedError || charError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-red-500 text-lg">خطأ في تحميل بيانات السيارات</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Helper: is car active
-  const isActive = (carId) => ownedCars.find((uc) => uc.carId === carId && uc.isActive);
-  // Helper: is car owned
-  const isOwned = (carId) => ownedCars.some((uc) => uc.carId === carId);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Banner */}
-      <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-8 flex items-center justify-center bg-gradient-to-br from-accent-red/40 to-black/60 border-2 border-accent-red animate-fade-in">
-        <div className="relative z-10 text-center">
-          <Car className="w-16 h-16 mx-auto text-accent-red mb-2 animate-bounce" />
-          <h1 className="text-4xl font-bouya mb-2 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow">السيارات</h1>
-          <p className="text-hitman-300 text-lg">ادفع سيارتك وارتقِ بقوتك</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900">
+      <div className="relative h-32 overflow-hidden">
+        <div className="absolute inset-0">
+          <svg className="w-full h-full object-cover opacity-20" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="circles" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                <circle cx="25" cy="25" r="20" fill="currentColor" className="text-blood-600" opacity="0.3"/>
+                <circle cx="75" cy="25" r="15" fill="currentColor" className="text-blood-500" opacity="0.2"/>
+                <circle cx="50" cy="75" r="18" fill="currentColor" className="text-blood-700" opacity="0.25"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#circles)"/>
+          </svg>
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/80"></div>
+        <div className="relative z-10 flex items-center justify-center h-full">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-white drop-shadow-lg">Cars</h1>
+            <p className="text-blood-300 mt-1">Manage your vehicle collection</p>
+          </div>
         </div>
       </div>
 
-      {/* Category Tabs */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="flex flex-wrap gap-2 justify-center">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
-                tab === t.key
-                  ? 'bg-gradient-to-r from-accent-red to-red-700 text-white shadow-lg shadow-accent-red/30'
-                  : 'bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 text-hitman-300 hover:bg-hitman-700/50 hover:text-white'
-              }`}
-            >
-              <Car className="w-5 h-5 mr-2" />
-              <span>{t.label}</span>
-            </button>
-          ))}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="flex bg-gray-800/50 backdrop-blur-md rounded-lg p-1 mb-6 border border-blood-600/30">
+          <button
+            onClick={() => setActiveTab('owned')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              activeTab === 'owned'
+                ? 'bg-blood-600 text-white shadow-md'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+            }`}
+          >
+            My Cars ({ownedCars.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('market')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              activeTab === 'market'
+                ? 'bg-blood-600 text-white shadow-md'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+            }`}
+          >
+            Car Market
+          </button>
         </div>
-      </div>
 
-      {/* Cars Grid */}
-      <div className="max-w-7xl mx-auto">
-        {tab === 'owned' && (
+        {activeTab === 'owned' ? (
           <div>
-            <h2 className="text-xl font-bold text-accent-red mb-6 text-center">سياراتك</h2>
-            {ownedCars.length === 0 ? (
-              <div className="text-center py-12">
-                <Car className="w-16 h-16 text-hitman-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-hitman-400 mb-2">لا تملك أي سيارة بعد</h3>
-                <p className="text-hitman-500">اذهب إلى سوق السيارات لشراء أول سيارة لك</p>
+            {loadingOwned ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blood-500"></div>
               </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {ownedCars.map(({ Car: carData, carId, id, isActive: carIsActive }) => (
-                  <CarCard
-                    key={id}
-                    car={carData}
-                    isOwned={true}
-                    isActive={carIsActive}
-                    onEquip={activateMutation.mutate}
-                    onUnequip={deactivateMutation.mutate}
-                    onSell={sellMutation.mutate}
-                    equipping={activating}
-                    unequipping={unequipping}
-                    selling={selling}
+            ) : ownedCars.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {ownedCars.map((ownedCar) => (
+                  <CarCard 
+                    key={ownedCar.id} 
+                    car={ownedCar.Car || ownedCar} 
+                    type="owned" 
+                    isActive={ownedCar.isActive}
                   />
                 ))}
               </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">🚗</div>
+                <h3 className="text-xl font-semibold text-white mb-2">No Cars Yet</h3>
+                <p className="text-gray-400">Visit the Car Market to buy your first vehicle</p>
+              </div>
             )}
           </div>
-        )}
-
-        {tab === 'market' && (
+        ) : (
           <div>
-            <h2 className="text-xl font-bold text-accent-red mb-6 text-center">سوق السيارات</h2>
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {cars.map((car) => (
-                <CarCard
-                  key={car.id}
-                  car={car}
-                  isOwned={isOwned(car.id)}
-                  isActive={isActive(car.id)}
-                  onBuy={buyMutation.mutate}
-                  onUnequip={deactivateMutation.mutate}
-                  buying={buying}
-                  unequipping={unequipping}
-                />
-              ))}
-            </div>
-            {cars.length === 0 && (
-              <div className="text-center py-12">
-                <Car className="w-16 h-16 text-hitman-600 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-hitman-400 mb-2">لا توجد سيارات متاحة</h3>
-                <p className="text-hitman-500">لا توجد سيارات في السوق حالياً</p>
+            {loadingCars ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blood-500"></div>
+              </div>
+            ) : availableCars.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {availableCars.map((car) => (
+                  <CarCard key={car.id} car={car} type="market" />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-6xl mb-4">🚗</div>
+                <h3 className="text-xl font-semibold text-white mb-2">No Cars Available</h3>
+                <p className="text-gray-400">Check back later for new vehicles</p>
               </div>
             )}
           </div>
@@ -375,4 +392,6 @@ export default function Cars() {
       </div>
     </div>
   );
-} 
+};
+
+export default Cars;

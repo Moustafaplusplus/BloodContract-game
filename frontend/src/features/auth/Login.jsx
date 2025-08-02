@@ -1,9 +1,9 @@
-// src/features/auth/Login.jsx
+// src/features/auth/Login.jsx - Enhanced Blood Contract Login
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useBackgroundMusicContext } from "@/contexts/BackgroundMusicContext";
-import { Eye, EyeOff, User, Lock, Target, Shield, UserCheck, Mail } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Target, Shield, UserCheck, Mail, Skull, LogIn, Chrome, Users } from "lucide-react";
 import Modal from "@/components/Modal";
 import { extractErrorMessage } from "@/utils/errorHandler";
 
@@ -25,13 +25,13 @@ export default function Login() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center blood-gradient">
+        <div className="text-center card-3d p-6">
           <div className="relative">
-            <div className="loading-spinner"></div>
-            <Target className="w-8 h-8 text-accent-red absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+            <div className="loading-shimmer w-12 h-12 rounded-full mx-auto"></div>
+            <Skull className="w-6 h-6 text-blood-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
           </div>
-          <p className="text-white mt-6 text-lg font-medium">
+          <p className="text-white mt-4 text-sm font-medium animate-pulse">
             جاري التحقق من الجلسة…
           </p>
         </div>
@@ -45,7 +45,7 @@ export default function Login() {
     if (!email.trim() || !password) {
       setModal({
         isOpen: true,
-        title: "خطأ في الإدخال",
+        title: "خطأ في ال��دخال",
         message: "يرجى إدخال البريد الإلكتروني وكلمة المرور",
         type: "error"
       });
@@ -156,42 +156,46 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
+    <div className="min-h-screen flex items-center justify-center blood-gradient p-3 safe-area-top safe-area-bottom">
+      <div className="w-full max-w-sm">
+        {/* Enhanced Header */}
+        <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
             <div className="relative">
-              <Shield className="w-16 h-16 text-accent-red" />
-              <UserCheck className="w-8 h-8 text-white absolute -bottom-2 -right-2" />
+              <div className="card-3d p-4 bg-gradient-to-br from-blood-950/60 to-black/40 border-blood-500/50">
+                <div className="relative">
+                  <Shield className="w-12 h-12 text-blood-400" />
+                  <Skull className="w-6 h-6 text-white absolute -bottom-1 -right-1 bg-blood-600 p-1 rounded-full" />
+                </div>
+              </div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">تسجيل الدخول</h1>
-          <p className="text-gray-400">مرحباً بك في عالم الدم والعقود</p>
+          <h1 className="text-xl font-bold text-blood-400 mb-2 animate-glow-blood">عقد الدم</h1>
+          <p className="text-xs text-white/60">ادخل إلى عالم الجريمة والعقود</p>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800">
+        {/* Enhanced Login Form */}
+        <div className="card-3d p-4 border-blood-500/30">
           {/* Email/Password Form */}
-          <form onSubmit={handleEmailLogin} className="mb-6">
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                <Mail className="w-4 h-4 inline ml-2" />
+          <form onSubmit={handleEmailLogin} className="mb-4">
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-white/80 mb-2">
+                <Mail className="w-3 h-3 inline ml-1" />
                 البريد الإلكتروني
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-red focus:border-transparent"
+                className="input-3d text-sm py-2.5"
                 placeholder="أدخل البريد الإلكتروني"
                 required
               />
             </div>
             
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                <Lock className="w-4 h-4 inline ml-2" />
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-white/80 mb-2">
+                <Lock className="w-3 h-3 inline ml-1" />
                 كلمة المرور
               </label>
               <div className="relative">
@@ -199,16 +203,16 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-red focus:border-transparent pr-12"
+                  className="input-3d text-sm py-2.5 pr-10"
                   placeholder="أدخل كلمة المرور"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -216,93 +220,95 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-accent-red text-white font-semibold py-3 px-4 rounded-xl mb-4 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className="btn-3d w-full py-2.5 text-sm flex items-center justify-center gap-2 mb-4 hover:border-blood-500/60"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="loading-shimmer w-4 h-4 rounded-full"></div>
               ) : (
                 <>
-                  <User className="w-5 h-5" />
+                  <LogIn className="w-4 h-4" />
                   تسجيل الدخول
                 </>
               )}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
+          {/* Enhanced Divider */}
+          <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700"></div>
+              <div className="w-full border-t border-white/10"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-900/50 text-gray-400">أو</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-black/60 text-white/50">أو</span>
             </div>
           </div>
 
-          {/* Google Login Button */}
+          {/* Enhanced Google Login Button */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full bg-white text-gray-900 font-semibold py-3 px-4 rounded-xl mb-4 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="btn-3d-secondary w-full py-2.5 text-sm flex items-center justify-center gap-2 mb-3 hover:border-blue-500/40 bg-white/5"
           >
             {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+              <div className="loading-shimmer w-4 h-4 rounded-full"></div>
             ) : (
               <>
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                تسجيل الدخول بـ Google
+                <Chrome className="w-4 h-4 text-blue-400" />
+                <span className="text-white">Google</span>
               </>
             )}
           </button>
 
-          {/* Guest Login Button */}
+          {/* Enhanced Guest Login Button */}
           <button
             onClick={handleGuestLogin}
             disabled={guestLoading}
-            className="w-full bg-gray-700 text-white font-semibold py-3 px-4 rounded-xl mb-4 hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="btn-3d-secondary w-full py-2.5 text-sm flex items-center justify-center gap-2 mb-4 hover:border-yellow-500/40 bg-yellow-500/5"
           >
             {guestLoading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <div className="loading-shimmer w-4 h-4 rounded-full"></div>
             ) : (
               <>
-                <User className="w-5 h-5" />
-                تسجيل الدخول كضيف
+                <Users className="w-4 h-4 text-yellow-400" />
+                <span className="text-white">دخول كضيف</span>
               </>
             )}
           </button>
 
-          {/* Sign Up Link */}
-          <div className="text-center mt-6">
-            <p className="text-gray-400">
+          {/* Enhanced Sign Up Link */}
+          <div className="text-center mt-4">
+            <p className="text-xs text-white/60">
               ليس لديك حساب؟{" "}
-              <Link to="/signup" className="text-accent-red hover:text-red-400 transition-colors">
-                إنشاء حساب جديد
+              <Link to="/signup" className="text-blood-400 hover:text-blood-300 transition-colors font-medium">
+                إنشاء حساب
               </Link>
             </p>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-gray-500 text-sm">
+        {/* Enhanced Footer */}
+        <div className="text-center mt-6">
+          <p className="text-xs text-white/40">
             بتسجيل الدخول، أنت توافق على{" "}
-            <Link to="/terms" className="text-accent-red hover:text-red-400">
-              الشروط والأحكام
+            <Link to="/terms" className="text-blood-400 hover:text-blood-300 transition-colors">
+              الشروط
             </Link>{" "}
             و{" "}
-            <Link to="/privacy" className="text-accent-red hover:text-red-400">
-              سياسة الخصوصية
+            <Link to="/privacy" className="text-blood-400 hover:text-blood-300 transition-colors">
+              الخصوصية
             </Link>
           </p>
+          
+          {/* Blood Contract branding */}
+          <div className="mt-4 flex items-center justify-center gap-2 text-blood-500/60">
+            <Target className="w-3 h-3" />
+            <span className="text-xs">Blood Contract Game</span>
+            <Target className="w-3 h-3" />
+          </div>
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Enhanced Modal */}
       <Modal
         isOpen={modal.isOpen}
         onClose={() => setModal({ ...modal, isOpen: false })}

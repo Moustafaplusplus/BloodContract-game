@@ -1,16 +1,28 @@
 /* ============================================================================
- *  src/features/gym/Gym.jsx – minimal MVP
- * ----------------------------------------------------------------------------
- *  • User enters how much energy to spend (1‑10, capped by current energy)
- *  • POST /api/jobs/gym/train  { energy }
- *  • Shows gained money / exp; HUD auto‑updates via socket / refetch
+ *  src/features/gym/Gym.jsx – Enhanced Mobile-First 3D Design
  * ----------------------------------------------------------------------------*/
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { useHud } from '@/hooks/useHud';
 import { useSocket } from '@/hooks/useSocket';
-import { Dumbbell, Clock, Star, TrendingUp } from 'lucide-react';
+import { 
+  Dumbbell, 
+  Clock, 
+  Star, 
+  TrendingUp, 
+  Zap, 
+  Timer, 
+  Target,
+  Crown,
+  Activity,
+  Plus,
+  Minus,
+  ImageIcon,
+  Loader,
+  Award,
+  CheckCircle
+} from 'lucide-react';
 import MoneyIcon from '@/components/MoneyIcon';
 
 function formatCooldown(sec) {
@@ -19,267 +31,461 @@ function formatCooldown(sec) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// Helper function to calculate exp needed for any level (exponential/linear system)
+// Helper function to calculate exp needed for any level
 function calculateExpNeeded(level) {
   if (level <= 20) {
-    // Steep exponential scaling for early game: 200 * 1.15^(level-1)
     return Math.floor(200 * Math.pow(1.15, level - 1));
   } else if (level <= 50) {
-    // Moderate exponential scaling for mid game: baseExp * 1.12^(level-20)
-    const baseExp = Math.floor(200 * Math.pow(1.15, 19)); // exp needed for level 20
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19));
     return Math.floor(baseExp * Math.pow(1.12, level - 20));
   } else if (level <= 80) {
-    // Steep linear scaling for late game: baseExp + (level-50) * 15000
-    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)); // exp needed for level 50
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30));
     return baseExp + (level - 50) * 15000;
   } else {
-    // Very steep linear scaling for end game: baseExp + (level-80) * 25000
-    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000); // exp needed for level 80
+    const baseExp = Math.floor(200 * Math.pow(1.15, 19) * Math.pow(1.12, 30)) + (30 * 15000);
     return baseExp + (level - 80) * 25000;
   }
 }
 
+// Energy Input Component
+const EnergyInput = ({ energy, setEnergy, maxEnergy, disabled }) => {
+  return (
+    <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+      <div className="flex items-center space-x-2 mb-4">
+        <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+          <Zap className="w-3 h-3 text-white" />
+        </div>
+        <h3 className="font-semibold text-blue-400">كمية الطاقة للتدريب</h3>
+      </div>
+      
+      <div className="flex items-center space-x-3 mb-4">
+        <button
+          onClick={() => setEnergy(Math.max(1, energy - 1))}
+          disabled={disabled || energy <= 1}
+          className="w-8 h-8 bg-blood-900/40 border border-blood-500/30 rounded flex items-center justify-center text-white hover:bg-blood-800/40 disabled:opacity-50 transition-all duration-300"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        
+        <div className="flex-1 text-center">
+          <div className="text-xl font-bold text-blue-400 mb-2">{energy}</div>
+          <input
+            type="range"
+            min="1"
+            max={maxEnergy}
+            value={energy}
+            onChange={(e) => setEnergy(parseInt(e.target.value))}
+            disabled={disabled}
+            className="w-full h-2 bg-black/40 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${(energy/maxEnergy)*100}%, #1f2937 ${(energy/maxEnergy)*100}%, #1f2937 100%)`
+            }}
+          />
+          <div className="text-xs text-blood-300 mt-1">
+            الحد الأقصى: {maxEnergy}
+          </div>
+        </div>
+        
+        <button
+          onClick={() => setEnergy(Math.min(maxEnergy, energy + 1))}
+          disabled={disabled || energy >= maxEnergy}
+          className="w-8 h-8 bg-blood-900/40 border border-blood-500/30 rounded flex items-center justify-center text-white hover:bg-blood-800/40 disabled:opacity-50 transition-all duration-300"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setEnergy(Math.min(maxEnergy, 5))}
+          disabled={disabled}
+          className="bg-blood-800/30 border border-blood-500/20 text-white py-1 rounded text-sm hover:bg-blood-700/30 transition-all duration-300"
+        >
+          5
+        </button>
+        <button
+          onClick={() => setEnergy(maxEnergy)}
+          disabled={disabled}
+          className="bg-blood-800/30 border border-blood-500/20 text-white py-1 rounded text-sm hover:bg-blood-700/30 transition-all duration-300"
+        >
+          الكل
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Training Result Component
+const TrainingResult = ({ result, onClose }) => {
+  if (!result) return null;
+
+  return (
+    <div className="bg-black/90 border border-green-500/30 rounded-xl p-4 backdrop-blur-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+            <CheckCircle className="w-4 h-4 text-white" />
+          </div>
+          <h3 className="font-bold text-green-400">نتائج التدريب</h3>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-white/60 hover:text-white/80 transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {result.moneyEarned > 0 && (
+          <div className="bg-green-900/20 border border-green-500/20 rounded p-3 text-center">
+            <div className="flex items-center justify-center space-x-1 mb-1">
+              <MoneyIcon className="w-4 h-4" />
+              <span className="text-sm text-green-300">مال</span>
+            </div>
+            <div className="text-lg font-bold text-green-400">+{result.moneyEarned.toLocaleString()}</div>
+          </div>
+        )}
+        
+        {result.expGained > 0 && (
+          <div className="bg-yellow-900/20 border border-yellow-500/20 rounded p-3 text-center">
+            <div className="flex items-center justify-center space-x-1 mb-1">
+              <Star className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm text-yellow-300">خبرة</span>
+            </div>
+            <div className="text-lg font-bold text-yellow-400">+{result.expGained.toLocaleString()}</div>
+          </div>
+        )}
+      </div>
+
+      {result.levelUp && (
+        <div className="mt-4 bg-purple-900/20 border border-purple-500/20 rounded p-3 text-center">
+          <div className="flex items-center justify-center space-x-2 text-purple-400">
+            <Crown className="w-5 h-5" />
+            <span className="font-bold">تهانينا! لقد وصلت للمستوى {result.newLevel}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Gym() {
-  const { stats } = useHud();
-  const { socket } = useSocket();
   const [energy, setEnergy] = useState(1);
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [result, setResult] = useState(null);
+  const { stats, loading } = useHud();
+  const { socket } = useSocket();
   const qc = useQueryClient();
 
-  // Initialize cooldown from HUD data
-  useEffect(() => {
-    if (stats?.gymCooldown && stats.gymCooldown > 0) {
-      setCooldownLeft(stats.gymCooldown);
-    }
-  }, [stats?.gymCooldown]);
-
-  // Live countdown timer
+  // Cooldown timer
   useEffect(() => {
     if (cooldownLeft <= 0) return;
     
-    const timer = setInterval(() => {
-      setCooldownLeft(prev => {
-        const newTime = prev - 1;
-        if (newTime <= 0) {
-          return 0;
-        }
-        return newTime;
-      });
+    const interval = setInterval(() => {
+      setCooldownLeft(prev => Math.max(prev - 1, 0));
     }, 1000);
     
-    return () => clearInterval(timer);
+    return () => clearInterval(interval);
   }, [cooldownLeft]);
 
-  // Listen for HUD updates to sync cooldown
+  // Real-time updates
   useEffect(() => {
     if (!socket) return;
     
-    const handleHudUpdate = () => {
-      // The HUD data will be updated via the useHud hook
-      // We just need to re-initialize the cooldown when stats change
-      if (stats?.gymCooldown && stats.gymCooldown > 0) {
-        setCooldownLeft(stats.gymCooldown);
+    const handleHudUpdate = (data) => {
+      if (data?.gymCooldown !== undefined) {
+        setCooldownLeft(data.gymCooldown);
       }
     };
     
     socket.on('hud:update', handleHudUpdate);
     
-    // Also poll for updates every 10 seconds as a fallback
-    const pollInterval = setInterval(() => {
-      if (stats?.gymCooldown && stats.gymCooldown > 0) {
-        setCooldownLeft(stats.gymCooldown);
-      }
-    }, 10000);
-    
     return () => {
       socket.off('hud:update', handleHudUpdate);
-      clearInterval(pollInterval);
     };
   }, [socket, stats?.gymCooldown]);
 
-  // Preview calculations (match backend logic, including VIP)
-  const safeLevel = result?.level ?? stats?.level ?? 1;
-  const isVip = stats?.vipExpiresAt && new Date(stats.vipExpiresAt) > new Date();
-  const maxEnergyPerSession = 20;
-  
-  // Money reward: Scalable like EXP
-  // Base: $5 per energy
-  // Level scaling: 1 + (level / 10) - so level 10 gets 2x, level 20 gets 3x
-  const baseMoney = energy * 5 * (1 + safeLevel / 10);
-  
-  // Experience: Much more conservative to prevent level jumping
-  // Base: 2 exp per energy (reduced from 3)
-  // Level scaling: 1 + (level / 10) - so level 10 gets 2x, level 20 gets 3x
-  const baseExp = energy * 2 * (1 + safeLevel / 10);
-  
-  // Additional level scaling: Diminishing returns (logarithmic scaling)
-  // Formula: 1 + log10(level) * 0.1 (reduced from 0.2)
-  const levelScaling = 1 + Math.log10(Math.max(1, safeLevel)) * 0.1;
-  
-  // Apply level scaling to both money and exp
-  const levelMoney = Math.floor(baseMoney * levelScaling);
-  const levelExp = Math.floor(baseExp * levelScaling);
-  
-  // VIP bonus: 50% bonus for money and exp
-  const vipMoney = isVip ? Math.floor(levelMoney * 1.5) : levelMoney;
-  const vipExp = isVip ? Math.floor(levelExp * 1.5) : levelExp;
-  
-  // Safety check: Limit exp gain to prevent level jumping
-  // Calculate how much exp is needed for next level using the exponential/linear system
-  const expNeededForNextLevel = calculateExpNeeded(safeLevel);
-  const maxExpGain = Math.min(vipExp, Math.floor(expNeededForNextLevel * 0.3)); // Max 30% of next level's exp
-  
-  // For display - round money to whole numbers
-  const moneyPreview = Math.round(vipMoney);
-  const expPreview = maxExpGain;
-  const cooldownPreview = energy * 10; // 10 seconds per energy (match backend)
-
-  const train = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/jobs/gym`, {
+  const mutation = useMutation({
+    mutationFn: async (energyAmount) => {
+      const response = await fetch('/api/jobs/gym/train', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('jwt')}`,
+          'Authorization': `Bearer ${localStorage.getItem('jwt')}`,
         },
-        body: JSON.stringify({ energy }),
+        body: JSON.stringify({ energy: energyAmount }),
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'فشل في التدريب');
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
       setResult(data);
-      setCooldownLeft(Math.floor((data.cooldown || 0)));
-      toast.success(`+${data.moneyGain}$ مال ⭐ +${data.expGain} خبرة`);
+      setCooldownLeft(data.cooldownLeft || 60);
+      qc.invalidateQueries(['character']);
       qc.invalidateQueries(['hud']);
+      toast.success('تم التدريب بنجاح!');
     },
-    onError: (err) => {
-      if (err.message.includes('wait before training')) {
-        toast.error('يجب الانتظار قبل التمرين مرة أخرى!');
-        setCooldownLeft(60); // fallback: 1 min
-      } else if (err.message.includes('Maximum')) {
-        toast.error(err.message);
-      } else {
-        toast.error(err.message || 'Training failed');
-      }
+    onError: (error) => {
+      toast.error(error.message || 'فشل في التدريب');
     },
   });
 
-  if (!stats) return null;
-  const maxSpend = Math.min(stats.energy, maxEnergyPerSession);
+  const currentEnergy = stats?.energy || 0;
+  const maxEnergy = stats?.maxEnergy || 100;
+  const level = stats?.level || 1;
+  const currentExp = stats?.exp || 0;
+  const nextLevelExp = stats?.nextLevelExp || calculateExpNeeded(level + 1);
+
+  const canTrain = cooldownLeft <= 0 && currentEnergy >= energy && !mutation.isPending;
+  const expProgress = nextLevelExp > 0 ? (currentExp / nextLevelExp) * 100 : 0;
+
+  const handleTrain = () => {
+    if (!canTrain) return;
+    mutation.mutate(energy);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 flex items-center justify-center p-4">
+        <div className="text-center bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 p-8">
+          <div className="w-16 h-16 border-4 border-blood-500/30 border-t-blood-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">جاري تحميل النادي...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Banner */}
-      <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-10 flex items-center justify-center bg-gradient-to-br from-accent-red/40 to-black/60 border-2 border-accent-red animate-fade-in">
-        {/* Replace src with real gym image if available */}
-        <img src="/placeholder-gym-banner.png" alt="Gym Banner" className="absolute inset-0 w-full h-full object-cover opacity-40" />
-        <div className="relative z-10 text-center">
-          <Dumbbell className="w-16 h-16 mx-auto text-accent-red mb-2 animate-bounce" />
-          <h1 className="text-4xl font-bouya mb-2 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow">النادي الرياضي</h1>
-          <p className="text-hitman-300 text-lg">اكسب المال والخبرة عبر التمارين المكثفة</p>
+    <div className="min-h-screen bg-gradient-to-br from-black via-blood-900 to-blood-800 p-2 sm:p-4 space-y-4">
+      
+      {/* Gym Header Banner with Background Image */}
+      <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+        {/* Background Image Placeholder with 3 Circles Logo */}
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+          <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%232563eb\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3Ccircle cx=\"20\" cy=\"30\" r=\"3\"/%3E%3Ccircle cx=\"40\" cy=\"30\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+        </div>
+        
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/50"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">النادي الرياضي</h1>
+              <p className="text-xs sm:text-sm text-white/80 drop-shadow">تدريب وتطوير قدراتك</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4 text-white">
+            <div className="hidden sm:flex items-center space-x-2">
+              <ImageIcon className="w-4 h-4 text-white/60" />
+              <Activity className="w-4 h-4 text-blue-400 animate-pulse" />
+            </div>
+            <div className="text-right">
+              <div className="text-lg sm:text-xl font-bold drop-shadow-lg">Lv.{level}</div>
+              <div className="text-xs text-white/80 drop-shadow">Level</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Cooldown Warning */}
-      {cooldownLeft > 0 && (
-        <div className="mb-8 animate-slide-up">
-          <div className="bg-gradient-to-r from-accent-red/20 to-accent-orange/20 border border-accent-red/30 rounded-xl p-6 backdrop-blur-sm">
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-4">
-                <Clock className="w-8 h-8 text-accent-red mr-3 animate-pulse" />
-                <h3 className="text-xl font-bold text-accent-red">فترة هدوء مطلوبة</h3>
+      {/* Status Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Energy Status */}
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                <Zap className="w-3 h-3 text-white" />
+              </div>
+              <span className="font-semibold text-blue-400">الطاقة</span>
+            </div>
+            <span className="text-white font-bold">{currentEnergy}/{maxEnergy}</span>
+          </div>
+          <div className="w-full bg-black/40 rounded-full h-2">
+            <div 
+              className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300"
+              style={{ width: `${(currentEnergy / maxEnergy) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Cooldown Status */}
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-yellow-600 rounded flex items-center justify-center">
+                <Timer className="w-3 h-3 text-white" />
+              </div>
+              <span className="font-semibold text-yellow-400">التبريد</span>
+            </div>
+            <span className={`font-bold font-mono ${
+              cooldownLeft > 0 ? 'text-red-400' : 'text-green-400'
+            }`}>
+              {cooldownLeft > 0 ? formatCooldown(cooldownLeft) : 'جاهز'}
+            </span>
+          </div>
+        </div>
+
+        {/* Level Progress */}
+        <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-yellow-600 rounded flex items-center justify-center">
+                <Crown className="w-3 h-3 text-white" />
+              </div>
+              <span className="font-semibold text-yellow-400">المستوى {level}</span>
+            </div>
+            <span className="text-white text-sm">{Math.round(expProgress)}%</span>
+          </div>
+          <div className="w-full bg-black/40 rounded-full h-2 mb-1">
+            <div 
+              className="h-2 rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-300"
+              style={{ width: `${expProgress}%` }}
+            ></div>
+          </div>
+          <div className="text-xs text-blood-300">
+            {currentExp.toLocaleString()} / {nextLevelExp.toLocaleString()} خبرة
+          </div>
+        </div>
+      </div>
+
+      {/* Training Result */}
+      {result && (
+        <TrainingResult 
+          result={result} 
+          onClose={() => setResult(null)} 
+        />
+      )}
+
+      {/* Training Interface */}
+      {!result && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          {/* Energy Input */}
+          <EnergyInput
+            energy={energy}
+            setEnergy={setEnergy}
+            maxEnergy={Math.min(currentEnergy, 10)}
+            disabled={!canTrain}
+          />
+          
+          {/* Training Info & Action */}
+          <div className="space-y-4">
+            
+            {/* Expected Rewards */}
+            <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center">
+                  <TrendingUp className="w-3 h-3 text-white" />
+                </div>
+                <h3 className="font-semibold text-green-400">المكافآت المتوقعة</h3>
               </div>
               
-              {/* Timer Display */}
-              <div className="text-center mb-4">
-                <div className="text-4xl font-mono text-accent-red mb-2 font-bold">
-                  {formatCooldown(cooldownLeft)}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-green-900/20 border border-green-500/20 rounded p-3 text-center">
+                  <div className="flex items-center justify-center space-x-1 mb-1">
+                    <MoneyIcon className="w-3 h-3" />
+                    <span className="text-xs text-green-300">مال</span>
+                  </div>
+                  <div className="text-lg font-bold text-green-400">
+                    ~{(energy * 50).toLocaleString()}
+                  </div>
                 </div>
-                <p className="text-hitman-300 text-sm">الوقت المتبقي قبل التمرين التالي</p>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-hitman-300">تقدم فترة الهدوء</span>
-                  <span className="text-accent-red font-bold">
-                    {Math.round(((cooldownPreview - cooldownLeft) / cooldownPreview) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-hitman-700 rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-accent-red to-red-600 h-3 rounded-full transition-all duration-1000"
-                    style={{ 
-                      width: `${Math.max(0, Math.min(100, ((cooldownPreview - cooldownLeft) / cooldownPreview) * 100))}%` 
-                    }}
-                  ></div>
+                <div className="bg-yellow-900/20 border border-yellow-500/20 rounded p-3 text-center">
+                  <div className="flex items-center justify-center space-x-1 mb-1">
+                    <Star className="w-3 h-3 text-yellow-400" />
+                    <span className="text-xs text-yellow-300">خبرة</span>
+                  </div>
+                  <div className="text-lg font-bold text-yellow-400">
+                    ~{(energy * 10).toLocaleString()}
+                  </div>
                 </div>
               </div>
+            </div>
+            
+            {/* Training Action */}
+            <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+              {cooldownLeft > 0 ? (
+                <div className="text-center py-4">
+                  <Clock className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
+                  <div className="text-yellow-400 font-bold mb-1">انتظر قليلاً</div>
+                  <div className="text-white/80 text-sm mb-2">
+                    يمكنك التدريب مرة أخرى خلال
+                  </div>
+                  <div className="text-xl font-mono font-bold text-red-400">
+                    {formatCooldown(cooldownLeft)}
+                  </div>
+                </div>
+              ) : currentEnergy < energy ? (
+                <div className="text-center py-4">
+                  <Zap className="w-8 h-8 text-red-400 mx-auto mb-3" />
+                  <div className="text-red-400 font-bold mb-1">طاقة غير كافية</div>
+                  <div className="text-white/80 text-sm">
+                    تحتاج إلى {energy} طاقة للتدريب
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleTrain}
+                  disabled={!canTrain}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-2"
+                >
+                  {mutation.isPending ? (
+                    <>
+                      <Loader className="w-5 h-5 animate-spin" />
+                      <span>جاري التدريب...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Dumbbell className="w-5 h-5" />
+                      <span>تدريب ({energy} طاقة)</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Gym Form & Stats */}
-      <div className="max-w-xl mx-auto bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-2xl p-8 shadow-lg animate-fade-in">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-bold mb-2 text-accent-red">ابدأ التمرين</h2>
-          <p className="text-hitman-300">
-            كل نقطة طاقة تمنحك <span className="text-accent-green font-bold">مال وخبرة تزدادان مع المستوى</span>.
-            <br />
-            <span className="text-accent-green">يشمل زيادة المستوى وVIP تلقائياً في الحساب</span>
-            <br />
-            <span className="text-accent-yellow">الحد الأقصى: {maxEnergyPerSession} طاقة لكل تمرين</span>
-          </p>
-        </div>
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-center mb-6">
-          <label className="flex-1">
-            <span className="block text-sm mb-1">كم طاقة تريد إنفاقها؟ (1‑{maxSpend})</span>
-            <input
-              type="number"
-              min="1"
-              max={maxSpend}
-              value={energy}
-              disabled={train.isLoading || cooldownLeft > 0}
-              onChange={e => setEnergy(Math.max(1, Math.min(maxSpend, Number(e.target.value))))}
-              className="w-full rounded border p-2 bg-zinc-900 border-zinc-700 text-white text-center text-lg font-bold"
-            />
-          </label>
-          <button
-            disabled={train.isLoading || cooldownLeft > 0}
-            onClick={() => train.mutate()}
-            className="w-full md:w-40 py-3 px-6 rounded-lg font-bold transition-all duration-300 flex items-center justify-center bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white transform hover:scale-105 hover:shadow-lg disabled:opacity-60"
-          >
-            {train.isLoading ? 'جاري التمرين…' : 'ابدأ التمرين'}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-          <div className="bg-hitman-800/30 rounded-lg p-3 text-center">
-            <MoneyIcon className="w-6 h-6 mx-auto mb-1" />
-            <div className="font-bold text-accent-green text-xl">+{result ? Math.round(result.moneyGain) : moneyPreview}$</div>
-            <div className="text-xs text-hitman-400">المال المكتسب</div>
+      {/* Training Tips */}
+      <div className="bg-black/80 border border-blood-500/20 rounded-xl p-4 backdrop-blur-sm">
+        <div className="flex items-center space-x-2 mb-3">
+          <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center">
+            <Activity className="w-3 h-3 text-white" />
           </div>
-          <div className="bg-hitman-800/30 rounded-lg p-3 text-center">
-            <Star className="w-6 h-6 text-accent-blue mx-auto mb-1" />
-            <div className="font-bold text-accent-blue text-xl">+{result ? result.expGain : expPreview}</div>
-            <div className="text-xs text-hitman-400">الخبرة المكتسبة</div>
-          </div>
-          <div className="bg-hitman-800/30 rounded-lg p-3 text-center">
-            <Clock className="w-6 h-6 text-accent-red mx-auto mb-1" />
-            <div className="font-bold text-accent-red text-xl">{cooldownLeft > 0 ? formatCooldown(cooldownLeft) : formatCooldown(cooldownPreview)}</div>
-            <div className="text-xs text-hitman-400">حالة التبريد</div>
-          </div>
+          <h3 className="font-semibold text-purple-400">نصائح التدريب</h3>
+          <ImageIcon className="w-4 h-4 text-blood-300 ml-auto" />
         </div>
-        {/* Bonus breakdown rows */}
-        <div className="text-center text-sm text-hitman-300 mt-8">
-          <div>مجموع البونص من المستوى: <span className="text-accent-green font-bold">+{Math.round(levelMoney - baseMoney)}$</span> مال، <span className="text-accent-blue font-bold">+{Math.round(levelExp - baseExp)}</span> خبرة</div>
-          {isVip && (
-            <div>مجموع بونص VIP: <span className="text-accent-green font-bold">+{Math.round(vipMoney - levelMoney)}$</span> مال، <span className="text-accent-blue font-bold">+{Math.round(vipExp - levelExp)}</span> خبرة</div>
-          )}
-          <div className="mt-2">طاقتك الحالية: <strong className="text-accent-red">{stats.energy}</strong></div>
-          <div className="text-xs text-accent-yellow mt-1">الخبرة المطلوبة للمستوى التالي: {expNeededForNextLevel}</div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-blood-200">
+          <div className="flex items-center space-x-2">
+            <TrendingUp className="w-3 h-3 text-purple-400 flex-shrink-0" />
+            <span>كلما زادت الطاقة المستخدمة، زادت المكافآت</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Star className="w-3 h-3 text-purple-400 flex-shrink-0" />
+            <span>التدريب يحسن من مستواك ويزيد خبرتك</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3 h-3 text-purple-400 flex-shrink-0" />
+            <span>يمكنك التدريب مرة واحدة كل دقيقة</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Award className="w-3 h-3 text-purple-400 flex-shrink-0" />
+            <span>استخدم كل طاقتك للحصول على أفضل النتائج</span>
+          </div>
         </div>
       </div>
     </div>

@@ -5,6 +5,16 @@ import { io, emitNotification } from '../socket.js';
 import { Op } from 'sequelize';
 import { NotificationService } from './NotificationService.js';
 
+// Helper function to run database operations with timeout
+async function withTimeout(promise, timeoutMs = 3000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timed out')), timeoutMs)
+    )
+  ]);
+}
+
 export class ConfinementService {
   // Helper functions
   static now() {
@@ -27,46 +37,64 @@ export class ConfinementService {
 
   // Jail operations
   static async getJailStatus(userId) {
-    // First get the character ID for this user
-    const character = await Character.findOne({ where: { userId } });
-    if (!character) return { inJail: false };
-    
-    const rec = await Jail.findOne({ 
-      where: { userId: userId, releasedAt: { [Op.gt]: this.now() } } 
-    });
-    
-    if (!rec) return { inJail: false };
-    
-    const remainingSeconds = this.secondsLeft(rec.releasedAt);
-          // Fixed bail cost: 100 money per minute
+    try {
+      // First get the character ID for this user with timeout
+      const character = await withTimeout(
+        Character.findOne({ where: { userId } }),
+        2000
+      );
+      if (!character) return { inJail: false };
+      
+      const rec = await withTimeout(
+        Jail.findOne({ 
+          where: { userId: userId, releasedAt: { [Op.gt]: this.now() } } 
+        }),
+        2000
+      );
+      
+      if (!rec) return { inJail: false };
+      
+      const remainingSeconds = this.secondsLeft(rec.releasedAt);
+      // Fixed bail cost: 100 money per minute
       const minutesLeft = Math.ceil(remainingSeconds / 60);
       const cost = minutesLeft * 100;
-    
-    return { 
-      inJail: true, 
-      remainingSeconds: remainingSeconds, 
-      cost: cost, 
-      crimeId: rec.crimeId,
-      startedAt: rec.startedAt,
-      releaseAt: rec.releasedAt
-    };
+      
+      return { 
+        inJail: true, 
+        remainingSeconds: remainingSeconds, 
+        cost: cost, 
+        crimeId: rec.crimeId,
+        startedAt: rec.startedAt,
+        releaseAt: rec.releasedAt
+      };
+    } catch (error) {
+      console.error('[JAIL_SERVICE] Error in getJailStatus:', error.message);
+      // Return default state if database is unavailable
+      return { inJail: false };
+    }
   }
 
   static async bailOut(userId) {
     const t = await sequelize.transaction();
     try {
       // First get the character ID for this user
-      const character = await Character.findOne({ where: { userId }, transaction: t });
+      const character = await withTimeout(
+        Character.findOne({ where: { userId }, transaction: t }),
+        3000
+      );
       if (!character) {
         await t.rollback();
         throw new Error("Character not found");
       }
       
-      const rec = await Jail.findOne({ 
-        where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
-        transaction: t, 
-        lock: t.LOCK.UPDATE 
-      });
+      const rec = await withTimeout(
+        Jail.findOne({ 
+          where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
+          transaction: t, 
+          lock: t.LOCK.UPDATE 
+        }),
+        3000
+      );
       
       if (!rec) {
         await t.rollback();
@@ -94,14 +122,15 @@ export class ConfinementService {
         io.to(`user:${userId}`).emit('jail:leave');
       }
 
-      // Create notification for jail release
-      try {
-        const notification = await NotificationService.createOutOfJailNotification(userId);
-        emitNotification(userId, notification);
-      } catch (notificationError) {
-        console.error('[ConfinementService] Notification error:', notificationError);
-        // Continue even if notifications fail
-      }
+      // Create notification for jail release (non-blocking)
+      setImmediate(async () => {
+        try {
+          const notification = await NotificationService.createOutOfJailNotification(userId);
+          emitNotification(userId, notification);
+        } catch (notificationError) {
+          console.error('[ConfinementService] Notification error:', notificationError.message);
+        }
+      });
       
       return { success: true, newCash: character.money };
     } catch (err) {
@@ -112,24 +141,38 @@ export class ConfinementService {
 
   // Jail operations
   static async getJailCount() {
-    const now = this.now();
-    return await Jail.count({ where: { releasedAt: { [Op.gt]: now } } });
+    try {
+      const now = this.now();
+      return await withTimeout(
+        Jail.count({ where: { releasedAt: { [Op.gt]: now } } }),
+        2000
+      );
+    } catch (error) {
+      console.error('[JAIL_SERVICE] Error in getJailCount:', error.message);
+      return 0;
+    }
   }
 
   // Hospital operations
   static async getHospitalStatus(userId) {
     try {
-      // First get the character ID for this user
-      const character = await Character.findOne({ where: { userId } });
+      // First get the character ID for this user with timeout
+      const character = await withTimeout(
+        Character.findOne({ where: { userId } }),
+        2000
+      );
       if (!character) {
         return { inHospital: false };
       }
       
       const now = this.now();
       
-      const rec = await Hospital.findOne({ 
-        where: { userId: userId, releasedAt: { [Op.gt]: now } } 
-      });
+      const rec = await withTimeout(
+        Hospital.findOne({ 
+          where: { userId: userId, releasedAt: { [Op.gt]: now } } 
+        }),
+        2000
+      );
       
       if (!rec) {
         return { inHospital: false };
@@ -152,9 +195,9 @@ export class ConfinementService {
       
       return result;
     } catch (error) {
-      console.error('[HOSPITAL_SERVICE] Error in getHospitalStatus:', error);
-      console.error('[HOSPITAL_SERVICE] Error stack:', error.stack);
-      throw error;
+      console.error('[HOSPITAL_SERVICE] Error in getHospitalStatus:', error.message);
+      // Return default state if database is unavailable
+      return { inHospital: false };
     }
   }
 
@@ -164,7 +207,10 @@ export class ConfinementService {
       console.log('[ConfinementService] Starting healOut for userId:', userId);
       
       // First get the character ID for this user
-      const character = await Character.findOne({ where: { userId }, transaction: t });
+      const character = await withTimeout(
+        Character.findOne({ where: { userId }, transaction: t }),
+        3000
+      );
       if (!character) {
         console.log('[ConfinementService] Character not found for userId:', userId);
         await t.rollback();
@@ -173,11 +219,14 @@ export class ConfinementService {
       
       console.log('[ConfinementService] Found character:', character.id);
       
-      const rec = await Hospital.findOne({ 
-        where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
-        transaction: t, 
-        lock: t.LOCK.UPDATE 
-      });
+      const rec = await withTimeout(
+        Hospital.findOne({ 
+          where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
+          transaction: t, 
+          lock: t.LOCK.UPDATE 
+        }),
+        3000
+      );
       
       if (!rec) {
         console.log('[ConfinementService] No active hospital record found for userId:', userId);
@@ -220,20 +269,20 @@ export class ConfinementService {
         io.to(`user:${userId}`).emit('hospital:leave');
       }
 
-      // Create notification for hospital release (optional - don't fail if this fails)
-      try {
-        const notification = await NotificationService.createOutOfHospitalNotification(userId);
-        emitNotification(userId, notification);
-        console.log('[ConfinementService] Hospital notification created successfully');
-      } catch (notificationError) {
-        console.error('[ConfinementService] Notification error (non-critical):', notificationError);
-        // Continue even if notifications fail - this should not break the heal process
-      }
+      // Create notification for hospital release (non-blocking)
+      setImmediate(async () => {
+        try {
+          const notification = await NotificationService.createOutOfHospitalNotification(userId);
+          emitNotification(userId, notification);
+          console.log('[ConfinementService] Hospital notification created successfully');
+        } catch (notificationError) {
+          console.error('[ConfinementService] Notification error (non-critical):', notificationError.message);
+        }
+      });
       
       return { success: true, newCash: character.money, hp: character.hp };
     } catch (err) {
-      console.error('[ConfinementService] Error in healOut:', err);
-      console.error('[ConfinementService] Error stack:', err.stack);
+      console.error('[ConfinementService] Error in healOut:', err.message);
       await t.rollback();
       throw err;
     }
@@ -241,7 +290,15 @@ export class ConfinementService {
 
   // Hospital operations
   static async getHospitalCount() {
-    const now = this.now();
-    return await Hospital.count({ where: { releasedAt: { [Op.gt]: now } } });
+    try {
+      const now = this.now();
+      return await withTimeout(
+        Hospital.count({ where: { releasedAt: { [Op.gt]: now } } }),
+        2000
+      );
+    } catch (error) {
+      console.error('[HOSPITAL_SERVICE] Error in getHospitalCount:', error.message);
+      return 0;
+    }
   }
-} 
+}
