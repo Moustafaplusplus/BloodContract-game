@@ -1,19 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
+import { useFirebaseAuth } from './useFirebaseAuth';
 import axios from 'axios';
 
 export const useUnreadMessages = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
+  const { customToken } = useFirebaseAuth();
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
+      if (!customToken) return;
       
       const response = await axios.get('/api/messages/inbox', {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       
@@ -27,7 +28,7 @@ export const useUnreadMessages = () => {
       console.error('Error fetching unread messages count:', error);
       setUnreadCount(0);
     }
-  }, []);
+  }, [customToken]);
 
   // Listen for socket events
   useEffect(() => {
@@ -64,20 +65,21 @@ export const useUnreadMessages = () => {
 
   // Initial fetch
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
-    if (token) {
+    if (customToken) {
       fetchUnreadCount();
     }
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, customToken]);
 
   // Poll for updates every 30 seconds
   useEffect(() => {
+    if (!customToken) return;
+    
     const interval = setInterval(() => {
       fetchUnreadCount();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, customToken]);
 
   return {
     unreadCount,

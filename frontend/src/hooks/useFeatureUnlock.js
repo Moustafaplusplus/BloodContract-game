@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useFirebaseAuth } from './useFirebaseAuth';
 import { 
   isFeatureUnlocked, 
   getUnlockedFeatures, 
@@ -11,18 +12,19 @@ import {
 } from '@/utils/featureUnlock';
 
 export const useFeatureUnlock = () => {
+  const { customToken } = useFirebaseAuth();
+  
   // Get feature unlock data from API
   const { data: apiFeatureData, error: apiError } = useQuery({
     queryKey: ['feature-unlock'],
     queryFn: async () => {
-      const token = localStorage.getItem('jwt');
-      if (!token) {
+      if (!customToken) {
         throw new Error('No authentication token');
       }
       
       const response = await axios.get('/api/features/info', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${customToken}`,
           'Content-Type': 'application/json'
         }
       });
@@ -39,7 +41,7 @@ export const useFeatureUnlock = () => {
       return failureCount < 1;
     },
     retryDelay: 2000, // 2 second delay between retries
-    enabled: !!localStorage.getItem('jwt'), // Only run when user is authenticated
+    enabled: !!customToken, // Only run when user is authenticated
   });
 
   const playerLevel = apiFeatureData?.playerLevel || 1;

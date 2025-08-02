@@ -4,21 +4,20 @@ import axios from 'axios';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import { useNotificationContext } from '@/contexts/NotificationContext';
 import { useSocket } from '@/hooks/useSocket';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'react-toastify';
 import MoneyIcon from '@/components/MoneyIcon';
 
 const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { customToken } = useFirebaseAuth();
 
   const handleMarkAsRead = async () => {
-    if (!notification.isRead) {
+    if (!notification.isRead && customToken) {
       try {
-        const token = localStorage.getItem('jwt');
-        if (!token) return;
-        
         await axios.patch(`/api/notifications/${notification.id}/read`, {}, {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${customToken}`
           }
         });
         onMarkAsRead(notification.id);
@@ -29,14 +28,12 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
   };
 
   const handleDelete = async () => {
+    if (!customToken) return;
     try {
       setIsDeleting(true);
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
-      
       await axios.delete(`/api/notifications/${notification.id}`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       onDelete(notification.id);
@@ -181,6 +178,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 const Notifications = () => {
   const { fetchNotifications, markAsRead, markAllAsRead, deleteNotification, notifications: contextNotifications, unreadCount } = useNotificationContext();
   const { socket } = useSocket();
+  const { customToken } = useFirebaseAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -321,12 +319,11 @@ const Notifications = () => {
 
     try {
       setDeletingAll(true);
-      const token = localStorage.getItem('jwt');
-      if (!token) throw new Error('No authentication token');
+      if (!customToken) throw new Error('No authentication token');
       
       await axios.delete('/api/notifications', {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       setNotifications([]);

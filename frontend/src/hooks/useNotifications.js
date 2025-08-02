@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
+import { useFirebaseAuth } from './useFirebaseAuth';
 import axios from 'axios';
 
 export const useNotifications = () => {
@@ -7,15 +8,15 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const { socket } = useSocket();
+  const { customToken } = useFirebaseAuth();
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
+      if (!customToken) return;
       
       const response = await axios.get('/api/notifications/unread-count', {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       if (response.data.success) {
@@ -24,17 +25,16 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
-  }, []);
+  }, [customToken]);
 
   const fetchNotifications = useCallback(async (page = 1, limit = 30) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('jwt');
-      if (!token) throw new Error('No authentication token');
+      if (!customToken) throw new Error('No authentication token');
       
       const response = await axios.get(`/api/notifications?page=${page}&limit=${limit}`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       if (response.data.success) {
@@ -46,16 +46,15 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [customToken]);
 
   const markAsRead = useCallback(async (notificationId) => {
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
+      if (!customToken) return;
       
       await axios.patch(`/api/notifications/${notificationId}/read`, {}, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       setNotifications(prev => 
@@ -69,16 +68,15 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  }, []);
+  }, [customToken]);
 
   const markAllAsRead = useCallback(async () => {
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
+      if (!customToken) return;
       
       await axios.patch('/api/notifications/mark-all-read', {}, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       setNotifications(prev => 
@@ -88,16 +86,15 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  }, []);
+  }, [customToken]);
 
   const deleteNotification = useCallback(async (notificationId) => {
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
+      if (!customToken) return;
       
       await axios.delete(`/api/notifications/${notificationId}`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       setNotifications(prev => 
@@ -111,10 +108,9 @@ export const useNotifications = () => {
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
-  }, [notifications]);
+  }, [notifications, customToken]);
 
   const addNotification = useCallback((notification) => {
-
     setNotifications(prev => [notification, ...prev]);
     if (!notification.isRead) {
       setUnreadCount(prev => prev + 1);
@@ -124,35 +120,30 @@ export const useNotifications = () => {
   // Listen for socket events - improved to handle connection state changes
   useEffect(() => {
     if (!socket) {
-  
       return;
     }
 
-
-
     const handleNewNotification = (notification) => {
-      
       addNotification(notification);
       // Play notification sound
       try {
         const audio = new Audio('/notification.mp3');
         audio.volume = 0.5; // Set volume to 50%
         audio.play().catch((error) => {
-  
+          // Silently handle audio play errors
         });
       } catch (error) {
-
+        // Silently handle audio creation errors
       }
     };
 
     const handleConnect = () => {
-      
       // Re-fetch unread count when socket connects
       fetchUnreadCount();
     };
 
     const handleDisconnect = () => {
-      
+      // Handle disconnect if needed
     };
 
     // Always set up the notification listener, regardless of connection state
@@ -162,12 +153,10 @@ export const useNotifications = () => {
 
     // If socket is already connected, fetch unread count immediately
     if (socket.connected) {
-      
       fetchUnreadCount();
     }
 
     return () => {
-      
       socket.off('notification', handleNewNotification);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
@@ -176,11 +165,10 @@ export const useNotifications = () => {
 
   // Initial fetch
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
-    if (token) {
+    if (customToken) {
       fetchUnreadCount();
     }
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, customToken]);
 
   return {
     unreadCount,

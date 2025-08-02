@@ -140,15 +140,15 @@ export default function Profile() {
   } = useQuery({
     queryKey: ["character", username],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
       return axios
         .get(username ? `/api/profile/username/${username}` : "/api/profile", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: customToken ? { Authorization: `Bearer ${customToken}` } : {},
         })
         .then((res) => res.data);
     },
     staleTime: 1 * 60 * 1000,
     retry: false,
+    enabled: !!customToken,
   });
 
 
@@ -309,20 +309,20 @@ export default function Profile() {
       
       // Initial fetch function
       const fetchFriendshipStatus = async () => {
-        const token = localStorage.getItem('jwt');
+        if (!customToken) return;
         try {
           console.log('Fetching friendship status for:', character.userId, 'from user:', hudStats.userId);
           
           // Check if they are friends
           const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
-            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+            headers: { Authorization: `Bearer ${customToken}` } 
           });
           console.log('Friend response:', friendRes.data);
           setIsFriend(friendRes.data.isFriend);
           
           // Check pending requests
           const pendingRes = await axios.get('/api/friendship/pending', { 
-            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+            headers: { Authorization: `Bearer ${customToken}` } 
           });
           console.log('Pending requests:', pendingRes.data);
           
@@ -383,19 +383,19 @@ export default function Profile() {
       // Add a small delay to ensure all data is loaded
       const timer = setTimeout(() => {
         const fetchFriendshipStatus = async () => {
-          const token = localStorage.getItem('jwt');
+          if (!customToken) return;
           try {
             console.log('Refetching friendship status...');
             // Check if they are friends
             const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
-              headers: token ? { Authorization: `Bearer ${token}` } : {} 
+              headers: { Authorization: `Bearer ${customToken}` } 
             });
             console.log('Refetch friend response:', friendRes.data);
             setIsFriend(friendRes.data.isFriend);
             
             // Check pending requests
             const pendingRes = await axios.get('/api/friendship/pending', { 
-              headers: token ? { Authorization: `Bearer ${token}` } : {} 
+              headers: { Authorization: `Bearer ${customToken}` } 
             });
             console.log('Refetch pending requests:', pendingRes.data);
             
@@ -459,17 +459,16 @@ export default function Profile() {
     
     // Real-time friendship status updates
     const handleFriendshipUpdate = async () => {
-      if (!isOwnProfile && character?.userId) {
+      if (!isOwnProfile && character?.userId && customToken) {
         console.log('Socket: Refetching friendship status due to update');
-        const token = localStorage.getItem('jwt');
         try {
           const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
-            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+            headers: { Authorization: `Bearer ${customToken}` } 
           });
           setIsFriend(friendRes.data.isFriend);
           
           const pendingRes = await axios.get('/api/friendship/pending', { 
-            headers: token ? { Authorization: `Bearer ${token}` } : {} 
+            headers: { Authorization: `Bearer ${customToken}` } 
           });
           
           // Check if current user sent a request to this character
@@ -514,33 +513,30 @@ export default function Profile() {
   }, [socket, fetchHospitalStatus, fetchJailStatus, character?.userId, isOwnProfile, hudStats?.userId]);
 
   useEffect(() => {
-    if (character?.userId) {
+    if (character?.userId && customToken) {
       setFriendsLoading(true);
-      const token = localStorage.getItem('jwt');
-      axios.get(`/api/friendship/list/${character.userId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      axios.get(`/api/friendship/list/${character.userId}`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => setProfileFriends(res.data))
         .catch(() => setProfileFriends([]))
         .finally(() => setFriendsLoading(false));
     }
-  }, [character?.userId]);
+  }, [character?.userId, customToken]);
 
   // Fetch profile ratings
   useEffect(() => {
-    if (character?.userId) {
-      const token = localStorage.getItem('jwt');
-      axios.get(`/api/profile/${character.userId}/ratings`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    if (character?.userId && customToken) {
+      axios.get(`/api/profile/${character.userId}/ratings`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => setProfileRatings(res.data))
         .catch(() => setProfileRatings({ likes: 0, dislikes: 0, userRating: null }));
     }
-  }, [character?.userId]);
+  }, [character?.userId, customToken]);
 
   // Handle like/dislike
   const handleRate = async (rating) => {
-    if (!character?.userId) return;
+    if (!character?.userId || !customToken) return;
     setRatingLoading(true);
     try {
-      const token = localStorage.getItem('jwt');
-      await axios.post(`/api/profile/${character.userId}/rate`, { rating }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      await axios.post(`/api/profile/${character.userId}/rate`, { rating }, { headers: { Authorization: `Bearer ${customToken}` } });
       setProfileRatings(prev => ({ ...prev, userRating: rating, likes: rating === 'LIKE' ? prev.likes + (prev.userRating === 'DISLIKE' ? 1 : prev.userRating === 'LIKE' ? 0 : 1) : prev.likes - (prev.userRating === 'LIKE' ? 1 : 0), dislikes: rating === 'DISLIKE' ? prev.dislikes + (prev.userRating === 'LIKE' ? 1 : prev.userRating === 'DISLIKE' ? 0 : 1) : prev.dislikes - (prev.userRating === 'DISLIKE' ? 1 : 0) }));
     } catch (e) {
       toast.error('حدث خطأ أثناء التقييم');
@@ -550,9 +546,12 @@ export default function Profile() {
   };
 
   const handleAddFriend = async () => {
+    if (!customToken) return;
     setFriendLoading(true);
     try {
-      await axios.post('/api/friendship/add', { friendId: character.userId });
+      await axios.post('/api/friendship/add', { friendId: character.userId }, { 
+        headers: { Authorization: `Bearer ${customToken}` } 
+      });
       setPendingStatus('sent');
       setIsFriend(false); // Ensure we're not friends yet
       toast.success('تم إرسال طلب الصداقة بنجاح');
@@ -565,9 +564,12 @@ export default function Profile() {
   };
 
   const handleUnfriend = async () => {
+    if (!customToken) return;
     setFriendLoading(true);
     try {
-      await axios.post('/api/friendship/remove', { friendId: character.userId });
+      await axios.post('/api/friendship/remove', { friendId: character.userId }, { 
+        headers: { Authorization: `Bearer ${customToken}` } 
+      });
       setIsFriend(false);
       setPendingStatus(null);
       toast.success('تم إزالة الصديق بنجاح');
@@ -580,13 +582,18 @@ export default function Profile() {
   };
 
   const handleAcceptFriend = async () => {
+    if (!customToken) return;
     setFriendLoading(true);
     try {
       // Find the pending request from this user
-      const res = await axios.get('/api/friendship/pending');
+      const res = await axios.get('/api/friendship/pending', { 
+        headers: { Authorization: `Bearer ${customToken}` } 
+      });
       const request = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
       if (request) {
-        await axios.post('/api/friendship/accept', { friendshipId: request.id });
+        await axios.post('/api/friendship/accept', { friendshipId: request.id }, { 
+          headers: { Authorization: `Bearer ${customToken}` } 
+        });
         setIsFriend(true);
         setPendingStatus(null);
         toast.success('تم قبول طلب الصداقة بنجاح');

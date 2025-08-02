@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
+import { useFirebaseAuth } from './useFirebaseAuth';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 export const useFriendRequests = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const { socket } = useSocket();
+  const { customToken } = useFirebaseAuth();
 
   const fetchPendingCount = useCallback(async () => {
     try {
-      const token = localStorage.getItem('jwt');
-      if (!token) return;
+      if (!customToken) return;
       
       const response = await axios.get('/api/friendship/pending', {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${customToken}`
         }
       });
       
@@ -22,7 +23,7 @@ export const useFriendRequests = () => {
       const receivedRequests = response.data.filter(request => 
         request.addresseeId === (() => {
           try {
-            const decoded = jwtDecode(token);
+            const decoded = jwtDecode(customToken);
             return decoded.id;
           } catch {
             return null;
@@ -35,7 +36,7 @@ export const useFriendRequests = () => {
       console.error('Error fetching pending friend requests:', error);
       setPendingCount(0);
     }
-  }, []);
+  }, [customToken]);
 
   // Listen for socket events
   useEffect(() => {
@@ -66,20 +67,21 @@ export const useFriendRequests = () => {
 
   // Initial fetch
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
-    if (token) {
+    if (customToken) {
       fetchPendingCount();
     }
-  }, [fetchPendingCount]);
+  }, [fetchPendingCount, customToken]);
 
   // Poll for updates every 30 seconds
   useEffect(() => {
+    if (!customToken) return;
+    
     const interval = setInterval(() => {
       fetchPendingCount();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [fetchPendingCount]);
+  }, [fetchPendingCount, customToken]);
 
   return {
     pendingCount,
