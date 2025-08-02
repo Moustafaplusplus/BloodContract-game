@@ -190,7 +190,8 @@ export function initSocket(server) {
       /* helper to push task updates */
       const pushTaskUpdate = async (targetUserId = userId) => {
         try {
-          const tasks = await Task.findAll({ where: { userId: targetUserId } });
+          // Tasks are global catalog items, not user-specific
+          const tasks = await Task.findAll({ where: { isActive: true } });
           io.to(`user:${targetUserId}`).emit('tasks:update', tasks);
         } catch (error) {
           console.error(`[Socket] Error pushing task update for user ${targetUserId}:`, error.message);
@@ -294,7 +295,8 @@ export function initSocket(server) {
       /* helper to push ministry mission updates */
       const pushMinistryMissionUpdate = async (targetUserId = userId) => {
         try {
-          const missions = await MinistryMission.findAll({ where: { userId: targetUserId } });
+          // Ministry missions are global catalog items, not user-specific
+          const missions = await MinistryMission.findAll({ where: { isActive: true } });
           io.to(`user:${targetUserId}`).emit('ministryMission:update', missions);
         } catch (error) {
           console.error(`[Socket] Error pushing ministry mission update for user ${targetUserId}:`, error.message);
@@ -304,7 +306,8 @@ export function initSocket(server) {
       /* helper to push car updates */
       const pushCarUpdate = async (targetUserId = userId) => {
         try {
-          const cars = await Car.findAll({ where: { userId: targetUserId } });
+          // Cars are global catalog items, not user-specific
+          const cars = await Car.findAll();
           io.to(`user:${targetUserId}`).emit('cars:update', cars);
         } catch (error) {
           console.error(`[Socket] Error pushing car update for user ${targetUserId}:`, error.message);
@@ -314,7 +317,8 @@ export function initSocket(server) {
       /* helper to push dog updates */
       const pushDogUpdate = async (targetUserId = userId) => {
         try {
-          const dogs = await Dog.findAll({ where: { userId: targetUserId } });
+          // Dogs are global catalog items, not user-specific
+          const dogs = await Dog.findAll();
           io.to(`user:${targetUserId}`).emit('dogs:update', dogs);
         } catch (error) {
           console.error(`[Socket] Error pushing dog update for user ${targetUserId}:`, error.message);
@@ -324,7 +328,8 @@ export function initSocket(server) {
       /* helper to push house updates */
       const pushHouseUpdate = async (targetUserId = userId) => {
         try {
-          const houses = await House.findAll({ where: { userId: targetUserId } });
+          // Houses are global catalog items, not user-specific
+          const houses = await House.findAll();
           io.to(`user:${targetUserId}`).emit('houses:update', houses);
         } catch (error) {
           console.error(`[Socket] Error pushing house update for user ${targetUserId}:`, error.message);
@@ -366,7 +371,8 @@ export function initSocket(server) {
       /* helper to push login gift updates */
       const pushLoginGiftUpdate = async (targetUserId = userId) => {
         try {
-          const gifts = await LoginGift.findAll({ where: { isEnabled: true } });
+          // Login gifts are global catalog items, not user-specific
+          const gifts = await LoginGift.findAll({ where: { isActive: true } });
           io.to(`user:${targetUserId}`).emit('loginGift:update', gifts);
         } catch (error) {
           console.error(`[Socket] Error pushing login gift update for user ${targetUserId}:`, error.message);
