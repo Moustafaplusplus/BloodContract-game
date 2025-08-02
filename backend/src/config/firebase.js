@@ -14,6 +14,7 @@ try {
 } catch (error) {
   // Initialize new app if none exists
   console.log('🔄 Initializing Firebase Admin SDK...');
+  console.log('🔄 Error getting existing app:', error.message);
   
   // Check if required environment variables are present
   const requiredEnvVars = [
@@ -62,6 +63,8 @@ try {
   });
   
   console.log('✅ Firebase Admin SDK initialized successfully');
+  console.log('✅ Firebase project ID:', serviceAccount.project_id);
+  console.log('✅ Firebase client email:', serviceAccount.client_email);
 }
 
 const bucket = getStorage(app).bucket();

@@ -44,17 +44,26 @@ export function FirebaseAuthProvider({ children }) {
       setLoading(true);
       
       if (firebaseUser) {
+        console.log('🔍 Firebase user authenticated:', {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          isAnonymous: firebaseUser.isAnonymous,
+          displayName: firebaseUser.displayName
+        });
         setUser(firebaseUser);
         setIsGuest(firebaseUser.isAnonymous);
         
         // Get custom token from backend for API calls
         try {
+          console.log('🔍 Getting Firebase ID token for user:', firebaseUser.uid);
           const idToken = await firebaseUser.getIdToken();
+          console.log('🔍 Firebase ID token obtained, length:', idToken.length);
           const response = await axios.post('/api/auth/firebase-token', {
             idToken
           });
           
           if (response.data.token) {
+            console.log('✅ Custom token obtained from backend');
             setCustomToken(response.data.token);
             // Save token to localStorage for AuthProvider compatibility
             localStorage.setItem('jwt', response.data.token);
@@ -65,6 +74,11 @@ export function FirebaseAuthProvider({ children }) {
           }
         } catch (error) {
           console.error('Failed to get custom token:', error);
+          console.error('Error details:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data
+          });
         }
       } else {
         setUser(null);

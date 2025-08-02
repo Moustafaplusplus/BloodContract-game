@@ -88,6 +88,8 @@ import tasksRouter from './routes/tasks.js';
 import authRouter from './routes/auth.js';
 import notificationRouter from './routes/notifications.js';
 
+// Import Firebase configuration to ensure it's initialized
+import './config/firebase.js';
 
 import gameNewsRouter from './routes/gameNews.js';
 import loginGiftRouter from './routes/loginGift.js';

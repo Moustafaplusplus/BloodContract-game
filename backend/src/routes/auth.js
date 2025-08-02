@@ -3,6 +3,9 @@ import { UserController } from '../controllers/UserController.js';
 import { auth } from '../middleware/auth.js';
 import admin from 'firebase-admin';
 
+// Import Firebase configuration to ensure it's initialized
+import '../config/firebase.js';
+
 const router = express.Router();
 
 // Firebase token verification endpoint
@@ -16,6 +19,18 @@ router.post('/firebase-token', async (req, res) => {
     }
 
     console.log('🔍 Verifying Firebase ID token...');
+    console.log('🔍 Token length:', idToken.length);
+    console.log('🔍 Token preview:', idToken.substring(0, 50) + '...');
+    
+    // Check if Firebase Admin is available
+    console.log('🔍 Firebase Admin available:', !!admin.auth);
+    console.log('🔍 Firebase Admin apps:', admin.apps?.length || 0);
+    
+    // Check if Firebase Admin is properly initialized
+    if (!admin.apps || admin.apps.length === 0) {
+      console.error('❌ Firebase Admin SDK not initialized');
+      return res.status(500).json({ message: 'Firebase Admin SDK not initialized' });
+    }
     
     // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -141,8 +156,10 @@ router.post('/firebase-token', async (req, res) => {
       stack: error.stack
     });
     
-    // Provide more specific error messages
-    if (error.code === 'auth/id-token-expired') {
+    // Check if it's a Firebase Admin initialization error
+    if (error.message?.includes('Firebase Admin SDK not initialized')) {
+      res.status(500).json({ message: 'Firebase Admin SDK not initialized' });
+    } else if (error.code === 'auth/id-token-expired') {
       res.status(401).json({ message: 'Token expired. Please sign in again.' });
     } else if (error.code === 'auth/id-token-revoked') {
       res.status(401).json({ message: 'Token revoked. Please sign in again.' });

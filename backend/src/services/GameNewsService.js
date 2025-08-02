@@ -97,6 +97,27 @@ export class GameNewsService {
     }
   }
 
+  // Get recent game news (for socket updates)
+  static async getRecentNews() {
+    try {
+      const news = await GameNews.findAll({
+        where: { isActive: true },
+        include: [
+          {
+            model: User,
+            as: 'admin',
+            attributes: ['username']
+          }
+        ],
+        order: [['createdAt', 'DESC']],
+        limit: 5
+      });
+      return news;
+    } catch (error) {
+      throw new Error(`Failed to fetch recent game news: ${error.message}`);
+    }
+  }
+
   // Notify all players about new game news
   static async notifyAllPlayers(news) {
     try {
