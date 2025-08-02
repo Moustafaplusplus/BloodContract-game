@@ -19,12 +19,14 @@ import {
 import { auth, googleProvider } from "@/config/firebase";
 import axios from "axios";
 
-// Set axios base URL - use VITE_API_URL if provided, otherwise use localhost:5000 in development
+// Set axios base URL - use VITE_API_URL if provided, otherwise use Railway URL in production
 const API = import.meta.env.VITE_API_URL;
 if (API) {
   axios.defaults.baseURL = API;
 } else if (import.meta.env.MODE === 'development') {
-  axios.defaults.baseURL = 'http://localhost:5000';
+  axios.defaults.baseURL = 'http://localhost:3001';
+} else {
+  axios.defaults.baseURL = 'https://bloodcontract-game-production.up.railway.app';
 }
 
 const FirebaseAuthCtx = createContext(null);

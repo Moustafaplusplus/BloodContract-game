@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { 
   isFeatureUnlocked, 
   getUnlockedFeatures, 
@@ -19,18 +20,14 @@ export const useFeatureUnlock = () => {
         throw new Error('No authentication token');
       }
       
-      const response = await fetch('/api/features/info', {
+      const response = await axios.get('/api/features/info', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return response.json();
+      return response.data;
     },
     staleTime: 60000, // 1 minute - increased to reduce requests
     retry: (failureCount, error) => {

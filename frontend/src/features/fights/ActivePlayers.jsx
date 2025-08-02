@@ -10,7 +10,7 @@ import { handleConfinementError } from '@/utils/errorHandler';
 import { toast } from 'react-toastify';
 
 const API = import.meta.env.VITE_API_URL;
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://bloodcontract-game-production.up.railway.app';
 
 // Improved avatar URL handling with better fallback
 const getAvatarUrl = (url) => {

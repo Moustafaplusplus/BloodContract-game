@@ -24,7 +24,7 @@ export default function PlayerSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://bloodcontract-game-production.up.railway.app";
   const getAvatarUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;

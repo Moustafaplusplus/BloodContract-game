@@ -8,7 +8,7 @@ import VipName from '../profile/VipName.jsx';
 import '../profile/vipSparkle.css';
 
 // Utility to get avatar URL
-const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://bloodcontract-game-production.up.railway.app";
 const getAvatarUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;

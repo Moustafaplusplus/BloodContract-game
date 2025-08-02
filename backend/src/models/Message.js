@@ -1,6 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
-import { Character } from './Character.js';
+import { User } from './User.js';
 
 export class Message extends Model {}
 
@@ -57,5 +57,5 @@ Message.init({
   timestamps: false
 });
 
-Message.belongsTo(Character, { as: 'Sender', foreignKey: 'senderId' });
-Message.belongsTo(Character, { as: 'Receiver', foreignKey: 'receiverId' });
+Message.belongsTo(User, { as: 'Sender', foreignKey: 'senderId' });
+Message.belongsTo(User, { as: 'Receiver', foreignKey: 'receiverId' });

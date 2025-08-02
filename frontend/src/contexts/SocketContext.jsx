@@ -7,7 +7,7 @@ const SocketContext = createContext(null);
 function createSocket({ token }) {
   const API_URL =
     import.meta.env.VITE_API_URL ||
-    'http://localhost:3001';
+    'https://bloodcontract-game-production.up.railway.app';
   return io(API_URL, {
     path: '/ws',
     auth: { token },
