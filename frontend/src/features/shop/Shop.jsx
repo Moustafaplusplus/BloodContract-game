@@ -36,7 +36,7 @@ const API = import.meta.env.VITE_API_URL || 'https://bloodcontract-game-producti
 // Enhanced Item Card Component with visual elements
 function ItemCard({ item, onBuy, type, userMoney, userBlackcoins }) {
   const [buying, setBuying] = useState(false);
-  const currency = item.currency === 'blackcoins' ? 'blackcoins' : 'money';
+  const currency = item.currency === 'blackcoin' ? 'blackcoins' : 'money';
   const IconComponent = currency === 'blackcoins' ? BlackcoinIcon : MoneyIcon;
   const userCurrency = currency === 'blackcoins' ? userBlackcoins : userMoney;
   const canAfford = userCurrency >= item.price;
@@ -244,7 +244,7 @@ export default function Shop() {
         for (const category of categories) {
           let endpoint;
           if (category === 'special-items') {
-            endpoint = `${API}/api/special-items`;
+            endpoint = `${API}/api/special-items?currency=money`;
           } else {
             endpoint = `${API}/api/shop/${category}`;
           }

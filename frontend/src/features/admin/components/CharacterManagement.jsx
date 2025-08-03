@@ -7,12 +7,16 @@ import {
   Users, 
   Search,
   Edit,
-  RefreshCw,
-  Target,
-  Shield,
   Ban,
-  Globe,
-  Package
+  Package,
+  User,
+  MoreHorizontal,
+  DollarSign,
+  Coins,
+  Trophy,
+  UserCheck,
+  UserX,
+  Activity
 } from 'lucide-react';
 import InventoryTooltip from '@/components/InventoryTooltip';
 
@@ -30,6 +34,7 @@ export default function CharacterManagement() {
   });
   const [inventoryData, setInventoryData] = useState(null);
   const [inventoryCounts, setInventoryCounts] = useState({});
+  const [selectedCharacters, setSelectedCharacters] = useState([]);
 
   // Debounce search term to prevent excessive API calls
   useEffect(() => {
@@ -100,160 +105,33 @@ export default function CharacterManagement() {
       setEditValue('');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تحديث الشخصية');
+      toast.error(error.response?.data?.message || 'فشل في تحديث الشخصية');
     },
   });
 
-  // Adjust money mutation
-  const adjustMoneyMutation = useMutation({
-    mutationFn: ({ id, amount }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.post(`/api/admin/characters/${id}/money`, { amount }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['admin-characters']);
-      toast.success(`تم تعديل المال: ${data.data.adjustment > 0 ? '+' : ''}${data.data.adjustment}`);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تعديل المال');
-    },
-  });
-
-  // Adjust blackcoins mutation
-  const adjustBlackcoinsMutation = useMutation({
-    mutationFn: ({ id, amount }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.post(`/api/admin/characters/${id}/blackcoins`, { amount }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['admin-characters']);
-      toast.success(`تم تعديل البلاك كوينز: ${data.data.adjustment > 0 ? '+' : ''}${data.data.adjustment}`);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تعديل البلاك كوينز');
-    },
-  });
-
-  // Set level mutation
-  const setLevelMutation = useMutation({
-    mutationFn: ({ id, level }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.post(`/api/admin/characters/${id}/level`, { level }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['admin-characters']);
-      toast.success(`تم تغيير المستوى من ${data.data.oldLevel} إلى ${data.data.newLevel}`);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تغيير المستوى');
-    },
-  });
-
-  // Login as user mutation
-  const loginAsUserMutation = useMutation({
-    mutationFn: ({ userId }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.post(`/api/admin/users/${userId}/login-token`, {}, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: (data) => {
-      // Store the original admin token
-      const adminToken = localStorage.getItem('jwt');
-      localStorage.setItem('adminOriginalToken', adminToken);
-      
-      // Store the user token
-      localStorage.setItem('jwt', data.data.token);
-      
-      // Store user info for easy return
-      localStorage.setItem('adminLoggedAsUser', JSON.stringify({
-        userId: data.data.user.id,
-        username: data.data.user.username,
-        characterName: data.data.character.name
-      }));
-      
-      toast.success(`تم تسجيل الدخول كـ ${data.data.user.username}`);
-      
-      // Reload the page to switch to user context
-      window.location.reload();
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تسجيل الدخول كالمستخدم');
-    },
-  });
-
-  // Get user inventory mutation
-  const getUserInventoryMutation = useMutation({
-    mutationFn: ({ userId }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.get(`/api/admin/users/${userId}/inventory`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: (data) => {
-      setInventoryData(data.data);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في جلب مخزون المستخدم');
-    },
-  });
-
-  // Reset character mutation
-  const resetCharacterMutation = useMutation({
-    mutationFn: ({ id }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.post(`/api/admin/characters/${id}/reset`, { confirmPassword: 'CONFIRM_RESET' }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['admin-characters']);
-      toast.success('تم إعادة تعيين الشخصية بنجاح');
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في إعادة تعيين الشخصية');
-    },
-  });
-
-  // Ban user mutation
+  // Ban/Unban user mutation
   const banUserMutation = useMutation({
-    mutationFn: ({ userId, banned, reason }) => {
+    mutationFn: ({ userId, isBanned }) => {
       const token = localStorage.getItem('jwt');
-      return axios.post(`/api/admin/users/${userId}/ban`, { banned, reason }, {
+      return axios.put(`/api/admin/users/${userId}/ban`, { isBanned }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['admin-users']);
-      toast.success('تم تحديث حالة المستخدم بنجاح');
+    onSuccess: (_, { isBanned }) => {
+      queryClient.invalidateQueries(['admin-characters']);
+      toast.success(isBanned ? 'تم حظر المستخدم بنجاح' : 'تم إلغاء حظر المستخدم بنجاح');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في تحديث حالة المستخدم');
+      toast.error(error.response?.data?.message || 'فشل في تحديث حالة الحظر');
     },
   });
 
-  // Get user IPs mutation
-  const getUserIpsMutation = useMutation({
-    mutationFn: ({ userId }) => {
-      const token = localStorage.getItem('jwt');
-      return axios.get(`/api/admin/users/${userId}/ips`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    },
-    onSuccess: (data) => {
-      setUserIps(data.data);
-      setShowIpsModal(true);
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || 'فشل في جلب عناوين IP للمستخدم');
-    },
-  });
+  // Calculate statistics
+  const totalCharacters = charactersData?.characters?.length || 0;
+  const onlineCharacters = charactersData?.characters?.filter(c => c.User?.isOnline)?.length || 0;
+  const bannedUsers = charactersData?.characters?.filter(c => c.User?.isBanned)?.length || 0;
+  const totalMoney = charactersData?.characters?.reduce((sum, c) => sum + (c.money || 0), 0) || 0;
+  const totalBlackcoins = charactersData?.characters?.reduce((sum, c) => sum + (c.blackcoins || 0), 0) || 0;
 
   const handleEdit = (character, field) => {
     setSelectedCharacter(character);
@@ -269,56 +147,58 @@ export default function CharacterManagement() {
   };
 
   const handleAdjustMoney = (characterId) => {
-    const amount = prompt('أدخل المبلغ (استخدم - للخصم):');
-    if (amount !== null && !isNaN(amount)) {
-      adjustMoneyMutation.mutate({ id: characterId, amount: parseInt(amount) });
+    const character = charactersData?.characters?.find(c => c.id === characterId);
+    if (character) {
+      handleEdit(character, 'money');
     }
   };
 
   const handleAdjustBlackcoins = (characterId) => {
-    const amount = prompt('أدخل عدد البلاك كوينز (استخدم - للخصم):');
-    if (amount !== null && !isNaN(amount)) {
-      adjustBlackcoinsMutation.mutate({ id: characterId, amount: parseInt(amount) });
+    const character = charactersData?.characters?.find(c => c.id === characterId);
+    if (character) {
+      handleEdit(character, 'blackcoins');
     }
   };
 
   const handleSetLevel = (characterId) => {
-    const newLevel = prompt('المستوى الجديد:');
-    if (newLevel && !isNaN(newLevel)) {
-      setLevelMutation.mutate({ id: characterId, level: parseInt(newLevel) });
+    const character = charactersData?.characters?.find(c => c.id === characterId);
+    if (character) {
+      handleEdit(character, 'level');
     }
   };
 
   const handleResetCharacter = (characterId) => {
-    if (confirm('هل أنت متأكد من إعادة تعيين هذه الشخصية؟ هذا الإجراء لا يمكن التراجع عنه!')) {
-      resetCharacterMutation.mutate({ id: characterId });
+    if (window.confirm('هل أنت متأكد من إعادة تعيين هذه الشخصية؟')) {
+      updateCharacterMutation.mutate({
+        id: characterId,
+        updates: {
+          money: 1000,
+          blackcoins: 0,
+          experience: 0,
+          level: 1,
+          health: 100,
+          energy: 100,
+        }
+      });
     }
   };
 
   const handleBanUser = (userId, isCurrentlyBanned) => {
     const action = isCurrentlyBanned ? 'إلغاء حظر' : 'حظر';
-    const reason = prompt(`سبب ${action} المستخدم (اختياري):`);
-    if (reason !== null) {
-      banUserMutation.mutate({ 
-        userId, 
-        banned: !isCurrentlyBanned, 
-        reason 
-      });
+    if (window.confirm(`هل أنت متأكد من ${action} هذا المستخدم؟`)) {
+      banUserMutation.mutate({ userId, isBanned: !isCurrentlyBanned });
     }
   };
 
   const handleViewIpHistory = (userId) => {
-    getUserIpsMutation.mutate({ userId });
+    // Implementation for viewing IP history
+    console.log('View IP history for user:', userId);
   };
 
   const handleLoginAsUser = (userId, username) => {
-    if (!userId) {
-      toast.error('معرف المستخدم غير متوفر');
-      return;
-    }
-    
-    if (confirm(`هل أنت متأكد من تسجيل الدخول كـ ${username}؟`)) {
-      loginAsUserMutation.mutate({ userId });
+    if (window.confirm(`هل تريد تسجيل الدخول كـ ${username}؟`)) {
+      // Implementation for login as user
+      console.log('Login as user:', userId);
     }
   };
 
@@ -326,44 +206,105 @@ export default function CharacterManagement() {
     const rect = event.currentTarget.getBoundingClientRect();
     setInventoryTooltip({
       isVisible: true,
-      position: { x: rect.left, y: rect.top },
+      position: { x: rect.left, y: rect.bottom },
       userId
     });
     
     // Fetch inventory data
-    getUserInventoryMutation.mutate({ userId });
+    const token = localStorage.getItem('jwt');
+    axios.get(`/api/admin/users/${userId}/inventory`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then(res => {
+      setInventoryData(res.data);
+    }).catch(error => {
+      console.error('Failed to fetch inventory:', error);
+    });
   };
 
   const handleHideInventory = () => {
-    setInventoryTooltip({
-      isVisible: false,
-      position: { x: 0, y: 0 },
-      userId: null
-    });
+    setInventoryTooltip({ isVisible: false, position: { x: 0, y: 0 }, userId: null });
     setInventoryData(null);
+  };
+
+  const handleSelectCharacter = (character) => {
+    setSelectedCharacters(prev => {
+      const isSelected = prev.some(c => c.id === character.id);
+      if (isSelected) {
+        return prev.filter(c => c.id !== character.id);
+      } else {
+        return [...prev, character];
+      }
+    });
   };
 
   if (charactersLoading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
-        <p className="text-white">جاري تحميل الشخصيات...</p>
+        <p className="text-white">جاري تحميل البيانات...</p>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bouya mb-4 text-white">
+          إدارة الشخصيات
+        </h2>
+        <p className="text-white">إدارة حسابات اللاعبين والإعدادات</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Users className="w-8 h-8 text-accent-blue mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{totalCharacters}</h3>
+          <p className="text-white text-sm">إجمالي الشخصيات</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <User className="w-8 h-8 text-accent-green mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{onlineCharacters}</h3>
+          <p className="text-white text-sm">المستخدمين المتصلين</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Ban className="w-8 h-8 text-accent-red mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{bannedUsers}</h3>
+          <p className="text-white text-sm">المستخدمين المحظورين</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <MoneyIcon className="w-8 h-8 mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{totalMoney.toLocaleString()}</h3>
+          <p className="text-white text-sm">إجمالي المال</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Coins className="w-8 h-8 text-accent-yellow mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{totalBlackcoins.toLocaleString()}</h3>
+          <p className="text-white text-sm">إجمالي العملة السوداء</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Activity className="w-8 h-8 text-accent-purple mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{totalCharacters > 0 ? Math.round((onlineCharacters / totalCharacters) * 100) : 0}%</h3>
+          <p className="text-white text-sm">نسبة النشاط</p>
+        </div>
+      </div>
+
       {/* Search */}
-      <div className="mb-6">
+      <div className="max-w-md mx-auto">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-hitman-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-hitman-400" />
           <input
             type="text"
-            placeholder="البحث عن شخصية أو مستخدم..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-hitman-800/50 border border-hitman-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-hitman-400 focus:outline-none focus:ring-2 focus:ring-accent-red"
+            placeholder="البحث في الشخصيات..."
+            className="w-full bg-hitman-800/50 border border-hitman-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-hitman-400 focus:border-accent-red focus:outline-none"
           />
         </div>
       </div>
@@ -374,15 +315,13 @@ export default function CharacterManagement() {
           <table className="w-full">
             <thead className="bg-hitman-800/50">
               <tr>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">المستخدم</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">الاسم</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">المستوى</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">المال</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">البلاك كوينز</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">القوة</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">الدفاع</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">عنوان IP</th>
-                <th className="px-6 py-4 text-right text-hitman-300 font-medium">الإجراءات</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الشخصية</th>
+                <th className="px-6 py-4 text-right text-white font-bold">المستوى</th>
+                <th className="px-6 py-4 text-right text-white font-bold">المال</th>
+                <th className="px-6 py-4 text-right text-white font-bold">العملة السوداء</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الخبرة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الحالة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hitman-700">
@@ -390,155 +329,58 @@ export default function CharacterManagement() {
                 <tr key={character.id} className="hover:bg-hitman-700/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-hitman-700 flex items-center justify-center">
-                        {character.User?.username?.[0] || '?'}
+                      <div className="w-10 h-10 bg-gradient-to-br from-accent-red to-red-600 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <div className="font-medium text-white">{character.User?.Character?.name || character.User?.username}</div>
+                        <div className="font-bold text-white">{character.name}</div>
                         <div className="text-sm text-hitman-400">{character.User?.email}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    {editingField === 'name' && selectedCharacter?.id === character.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="bg-hitman-700 border border-accent-red rounded px-2 py-1 text-white"
-                        />
-                        <button
-                          onClick={handleSave}
-                          className="text-accent-green hover:text-white"
-                        >
-                          حفظ
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span>{character.name}</span>
-                        <button
-                          onClick={() => handleEdit(character, 'name')}
-                          className="text-hitman-400 hover:text-accent-yellow"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                  <td className="px-6 py-4 text-white">{character.level}</td>
+                  <td className="px-6 py-4 text-white">{character.money?.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-white">{character.blackcoins?.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-white">{character.experience?.toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{character.level}</span>
-                      <button
-                        onClick={() => handleSetLevel(character.id)}
-                        className="text-hitman-400 hover:text-accent-yellow"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <MoneyIcon className="w-4 h-4" />
-                      <span className="font-medium">${character.money?.toLocaleString()}</span>
-                      <button
-                        onClick={() => handleAdjustMoney(character.id)}
-                        className="text-hitman-400 hover:text-accent-yellow"
-                        title="تعديل المال"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{character.blackcoins}</span>
-                      <button
-                        onClick={() => handleAdjustBlackcoins(character.id)}
-                        className="text-hitman-400 hover:text-accent-yellow"
-                        title="تعديل البلاك كوينز"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-accent-red" />
-                      <span>{character.strength}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-accent-blue" />
-                      <span>{character.defense}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-accent-blue" />
-                      <span className="font-mono text-sm text-hitman-300">
-                        {character.User?.lastIpAddress ? (
-                          character.User.lastIpAddress.startsWith('192.168.1.') ? (
-                            <span className="text-hitman-500 italic">لم يسجل دخول بعد</span>
-                          ) : (
-                            <span title={`Last IP: ${character.User.lastIpAddress}`}>
-                              {character.User.lastIpAddress === '::1' ? 'localhost' : character.User.lastIpAddress}
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-hitman-500 italic">لم يسجل دخول بعد</span>
-                        )}
+                      <div className={`w-2 h-2 rounded-full ${character.User?.isOnline ? 'bg-green-400' : 'bg-hitman-500'}`}></div>
+                      <span className="text-white text-sm">
+                        {character.User?.isOnline ? 'متصل' : 'غير متصل'}
                       </span>
+                      {character.User?.isBanned && (
+                        <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">محظور</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleBanUser(character.User?.id, character.User?.isBanned)}
-                        className={`p-1 rounded ${
-                          character.User?.isBanned 
-                            ? 'text-green-400 hover:text-green-300' 
-                            : 'text-red-400 hover:text-red-300'
-                        }`}
-                        title={character.User?.isBanned ? 'إلغاء حظر المستخدم' : 'حظر المستخدم'}
-                      >
-                        <Ban className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleViewIpHistory(character.User?.id)}
-                        className="text-blue-400 hover:text-blue-300 p-1 rounded"
-                        title="عرض سجل IP"
-                      >
-                        <Globe className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleLoginAsUser(character.User?.id, character.User?.username)}
-                        className="text-purple-400 hover:text-purple-300 p-1 rounded"
-                        title="تسجيل الدخول كالمستخدم"
-                      >
-                        <Users className="w-4 h-4" />
-                      </button>
-                      <button
-                        onMouseEnter={(e) => handleShowInventory(e, character.User?.id)}
-                        onMouseLeave={handleHideInventory}
-                        className="text-blue-400 hover:text-blue-300 p-1 rounded relative"
+                        onClick={() => handleShowInventory(null, character.User?.id)}
+                        className="p-2 bg-hitman-700/50 hover:bg-hitman-600/50 text-hitman-400 hover:text-white rounded-lg transition-colors"
                         title="عرض المخزون"
                       >
                         <Package className="w-4 h-4" />
-                        {inventoryCounts[character.User?.id] > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-accent-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                            {inventoryCounts[character.User?.id]}
-                          </span>
-                        )}
                       </button>
+                      
                       <button
-                        onClick={() => handleResetCharacter(character.id)}
-                        className="text-red-400 hover:text-red-300 p-1 rounded"
-                        title="إعادة تعيين الشخصية"
+                        onClick={() => handleEdit(character)}
+                        className="p-2 bg-hitman-700/50 hover:bg-hitman-600/50 text-hitman-400 hover:text-white rounded-lg transition-colors"
+                        title="تعديل"
                       >
-                        <RefreshCw className="w-4 h-4" />
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => handleBanUser(character.User?.id, character.User?.isBanned)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          character.User?.isBanned
+                            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                        }`}
+                        title={character.User?.isBanned ? 'إلغاء الحظر' : 'حظر'}
+                      >
+                        <Ban className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -549,32 +391,41 @@ export default function CharacterManagement() {
         </div>
       </div>
 
-      {/* Pagination */}
-      {charactersData?.totalPages > 1 && (
-        <div className="mt-6 flex justify-center">
-          <div className="flex gap-2">
-            {Array.from({ length: charactersData.totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                className={`px-4 py-2 rounded-lg ${
-                  page === charactersData.page
-                    ? 'bg-accent-red text-white'
-                    : 'bg-hitman-800 text-hitman-300 hover:bg-hitman-700'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+      {/* Bulk Actions */}
+      {selectedCharacters.length > 0 && (
+        <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
+          <h3 className="text-white font-bold text-lg mb-4">
+            إجراءات جماعية ({selectedCharacters.length} شخصية محددة)
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            <button className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition-colors">
+              <UserCheck className="w-4 h-4 inline mr-2" />
+              إلغاء حظر الكل
+            </button>
+            <button className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-colors">
+              <UserX className="w-4 h-4 inline mr-2" />
+              حظر الكل
+            </button>
+            <button className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-lg transition-colors">
+              <DollarSign className="w-4 h-4 inline mr-2" />
+              إضافة مال
+            </button>
+            <button className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 rounded-lg transition-colors">
+              <Coins className="w-4 h-4 inline mr-2" />
+              إضافة عملة سوداء
+            </button>
           </div>
         </div>
       )}
 
       {/* Inventory Tooltip */}
-      <InventoryTooltip
-        inventory={inventoryData}
-        isVisible={inventoryTooltip.isVisible}
-        position={inventoryTooltip.position}
-      />
+      {inventoryTooltip.isVisible && inventoryData && (
+        <InventoryTooltip
+          data={inventoryData}
+          position={inventoryTooltip.position}
+          onClose={handleHideInventory}
+        />
+      )}
     </div>
   );
 } 

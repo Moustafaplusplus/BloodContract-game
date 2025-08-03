@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Home, Plus, Edit, Trash2, Shield, Heart, Zap } from 'lucide-react';
+import { Home, Plus, Edit, Trash2, Shield, Heart, Zap, Activity, Trophy, Search, Ban, CheckCircle } from 'lucide-react';
 
 export default function HouseManagement() {
   const queryClient = useQueryClient();
@@ -172,118 +172,272 @@ export default function HouseManagement() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
-        <p className="text-white">جاري تحميل المنازل...</p>
+        <p className="text-white">جاري تحميل البيانات...</p>
       </div>
     );
   }
 
   return (
-    <div>
-      {viewMode === 'list' ? (
-        <>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">إدارة المنازل</h2>
-            <button
-              onClick={handleCreateNew}
-              className="bg-accent-red hover:bg-red-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              إنشاء منزل جديد
-            </button>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bouya mb-4 text-white">
+          إدارة المنازل
+        </h2>
+        <p className="text-white">إدارة وتخصيص المنازل في اللعبة</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Home className="w-8 h-8 text-accent-green mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{totalHouses}</h3>
+          <p className="text-white text-sm">إجمالي المنازل</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Activity className="w-8 h-8 text-accent-blue mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{activeHouses}</h3>
+          <p className="text-white text-sm">المنازل النشطة</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Trophy className="w-8 h-8 text-accent-yellow mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{averagePrice}</h3>
+          <p className="text-white text-sm">متوسط السعر</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Zap className="w-8 h-8 text-accent-purple mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{averageCapacity}</h3>
+          <p className="text-white text-sm">متوسط السعة</p>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-hitman-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="البحث في المنازل..."
+              className="w-full bg-hitman-800/50 border border-hitman-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-hitman-400 focus:border-accent-red focus:outline-none"
+            />
           </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {houses.map((house) => (
-              <div key={house.id} className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-white">{house.name}</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(house)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(house.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white p-2 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="bg-hitman-800/50 border border-hitman-700 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+          >
+            <option value="">جميع الأنواع</option>
+            <option value="apartment">شقة</option>
+            <option value="house">منزل</option>
+            <option value="mansion">قصر</option>
+          </select>
+          
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-hitman-800/50 border border-hitman-700 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+          >
+            <option value="">جميع الحالات</option>
+            <option value="active">نشط</option>
+            <option value="inactive">غير نشط</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Houses Table */}
+      <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-hitman-800/50">
+              <tr>
+                <th className="px-6 py-4 text-right text-white font-bold">المنزل</th>
+                <th className="px-6 py-4 text-right text-white font-bold">النوع</th>
+                <th className="px-6 py-4 text-right text-white font-bold">السعر</th>
+                <th className="px-6 py-4 text-right text-white font-bold">السعة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الحالة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-hitman-700">
+              {filteredHouses?.map((house) => (
+                <tr key={house.id} className="hover:bg-hitman-700/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-accent-green to-green-600 rounded-full flex items-center justify-center">
+                        <Home className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white">{house.name}</div>
+                        <div className="text-sm text-hitman-400">{house.description}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      house.type === 'apartment' ? 'bg-blue-500/20 text-blue-400' :
+                      house.type === 'house' ? 'bg-green-500/20 text-green-400' :
+                      'bg-purple-500/20 text-purple-400'
+                    }`}>
+                      {house.type === 'apartment' ? 'شقة' :
+                       house.type === 'house' ? 'منزل' : 'قصر'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-white">{house.price?.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-white">{house.capacity}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      house.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {house.isActive ? 'نشط' : 'غير نشط'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(house)}
+                        className="p-2 bg-hitman-700/50 hover:bg-hitman-600/50 text-hitman-400 hover:text-white rounded-lg transition-colors"
+                        title="تعديل"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => handleToggleStatus(house.id, house.isActive)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          house.isActive
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                        }`}
+                        title={house.isActive ? 'إلغاء التفعيل' : 'تفعيل'}
+                      >
+                        {house.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add New House Button */}
+      <div className="text-center">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-6 py-3 bg-gradient-to-r from-accent-red to-red-600 text-white font-bold rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-red-500/25"
+        >
+          إضافة منزل جديد
+        </button>
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-hitman-800 to-hitman-900 border border-hitman-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold mb-4 text-white">
+              {editingHouse ? 'تعديل المنزل' : 'إضافة منزل جديد'}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">اسم المنزل</label>
+                <input
+                  type="text"
+                  value={houseForm.name}
+                  onChange={(e) => setHouseForm({...houseForm, name: e.target.value})}
+                  className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">الوصف</label>
+                <textarea
+                  value={houseForm.description}
+                  onChange={(e) => setHouseForm({...houseForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">السعر</label>
+                  <input
+                    type="number"
+                    value={houseForm.price}
+                    onChange={(e) => setHouseForm({...houseForm, price: parseInt(e.target.value)})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  />
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-hitman-400">الدفاع:</span><span className="text-blue-400 font-bold">{house.defenseBonus}</span></div>
-                  <div className="flex justify-between"><span className="text-hitman-400">الصحة:</span><span className="text-green-400 font-bold">+{house.hpBonus}</span></div>
-                  <div className="flex justify-between"><span className="text-hitman-400">السعر:</span><span className="text-green-400 font-bold">{house.currency === 'blackcoin' ? (<span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-full bg-black border border-accent-red flex items-center justify-center"><span className="text-xs text-accent-red font-bold">ع</span></span>{house.cost}</span>) : (`$${house.cost}`)}</span></div>
-                  <div className="flex justify-between"><span className="text-hitman-400">الندرة:</span><span className={`font-bold ${rarityColors[house.rarity]}`}>{rarityIcons[house.rarity]} {house.rarity}</span></div>
-                  <div className="flex justify-between"><span className="text-hitman-400">العملة:</span><span className={`font-bold ${house.currency === 'blackcoin' ? 'text-accent-red' : 'text-green-400'}`}>{house.currency === 'blackcoin' ? 'عملة سوداء' : 'مال'}</span></div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">السعة</label>
+                  <input
+                    type="number"
+                    value={houseForm.capacity}
+                    onChange={(e) => setHouseForm({...houseForm, capacity: parseInt(e.target.value)})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  />
                 </div>
-                {house.imageUrl && (
-                  <img src={house.imageUrl} alt={house.name} className="w-full h-32 object-cover rounded mt-4" onError={e => { e.target.style.display = 'none'; }} />
-                )}
               </div>
-            ))}
-          </div>
-          {houses.length === 0 && (
-            <div className="text-center py-12"><p className="text-hitman-400 text-lg">لا توجد منازل. قم بإنشاء أول منزل!</p></div>
-          )}
-        </>
-      ) : (
-        <div className="max-w-2xl mx-auto">
-          <form className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-8" onSubmit={handleSubmit}>
-            <h2 className="text-2xl font-bold mb-6 text-accent-red text-center">{editingId ? 'تعديل المنزل' : 'إنشاء منزل جديد'}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block mb-1 text-sm text-hitman-300">صورة المنزل <span className="text-red-400">*</span></label>
-                <input type="file" accept="image/*" onChange={handleImageChange} required={!form.imageUrl} className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-                {imageUploading && <div className="text-xs text-red-400 mt-1">جاري الرفع...</div>}
-                {imagePreview && (<img src={imagePreview} alt="Preview" className="mt-2 rounded max-h-32 border border-hitman-600" />)}
-              </div>
-              <div className="md:col-span-2">
-                <label className="block mb-1 text-sm text-hitman-300">اسم المنزل <span className="text-red-400">*</span></label>
-                <input name="name" value={form.name} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block mb-1 text-sm text-hitman-300">الوصف <span className="text-red-400">*</span></label>
-                <textarea name="description" value={form.description} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">الدفاع</label>
-                <input name="defenseBonus" type="number" min="0" value={form.defenseBonus} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">الصحة</label>
-                <input name="hpBonus" type="number" min="0" value={form.hpBonus} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">السعر <span className="text-red-400">*</span></label>
-                <input name="cost" type="number" min="1" value={form.cost} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">الندرة <span className="text-red-400">*</span></label>
-                <select name="rarity" value={form.rarity} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white">
-                  <option value="common">شائع ⭐</option>
-                  <option value="uncommon">غير شائع ⭐⭐</option>
-                  <option value="rare">نادر ⭐⭐⭐</option>
-                  <option value="epic">ملحمي ⭐⭐⭐⭐</option>
-                  <option value="legend">أسطوري ⭐⭐⭐⭐⭐</option>
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">العملة <span className="text-red-400">*</span></label>
-                <select name="currency" value={form.currency} onChange={handleChange} required className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white">
-                  <option value="money">مال عادي</option>
-                  <option value="blackcoin">عملة سوداء</option>
-                </select>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">النوع</label>
+                  <select
+                    value={houseForm.type}
+                    onChange={(e) => setHouseForm({...houseForm, type: e.target.value})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  >
+                    <option value="apartment">شقة</option>
+                    <option value="house">منزل</option>
+                    <option value="mansion">قصر</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">الحالة</label>
+                  <select
+                    value={houseForm.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => setHouseForm({...houseForm, isActive: e.target.value === 'active'})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  >
+                    <option value="active">نشط</option>
+                    <option value="inactive">غير نشط</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div className="flex gap-4 mt-8">
-              <button type="submit" disabled={createHouseMutation.isPending || updateHouseMutation.isPending || imageUploading} className="flex-1 py-2 rounded bg-accent-red hover:bg-red-700 text-white font-bold text-lg transition-colors duration-200 disabled:opacity-60">
-                {createHouseMutation.isPending || updateHouseMutation.isPending ? (editingId ? 'جاري التحديث...' : 'جاري الإنشاء...') : (editingId ? 'تحديث المنزل' : 'إنشاء المنزل')}
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleSave}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-accent-red to-red-600 text-white font-bold rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200"
+              >
+                {editingHouse ? 'تحديث' : 'إضافة'}
               </button>
-              <button type="button" onClick={handleCancel} className="px-6 py-2 rounded bg-hitman-700 hover:bg-hitman-600 text-white font-bold transition-colors duration-200">إلغاء</button>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingHouse(null);
+                  setHouseForm(initialHouseForm);
+                }}
+                className="flex-1 px-4 py-2 bg-hitman-700/50 text-white font-bold rounded-lg hover:bg-hitman-600/50 transition-all duration-200"
+              >
+                إلغاء
+              </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
     </div>

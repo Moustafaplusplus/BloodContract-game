@@ -31,10 +31,11 @@ import {
   Flame,
   Sword,
   Bomb,
-  Siren,
+  Mic,
   MapPin,
   Users,
-  RefreshCw
+  RefreshCw,
+  Siren
 } from "lucide-react";
 
 function formatCooldown(sec) {

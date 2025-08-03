@@ -8,7 +8,13 @@ import {
   Edit,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Activity,
+  Trophy,
+  Zap,
+  Search,
+  Ban,
+  CheckCircle
 } from 'lucide-react';
 
 export default function CrimeManagement() {
@@ -188,307 +194,272 @@ export default function CrimeManagement() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
-        <p className="text-white">جاري تحميل الجرائم...</p>
+        <p className="text-white">جاري تحميل البيانات...</p>
       </div>
     );
   }
 
   return (
-    <div>
-      {crimeViewMode === 'list' ? (
-        <>
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">إدارة الجرائم</h2>
-            <button
-              onClick={handleCrimeCreateNew}
-              className="bg-accent-red hover:bg-red-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              إنشاء جريمة جديدة
-            </button>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bouya mb-4 text-white">
+          إدارة الجرائم
+        </h2>
+        <p className="text-white">إدارة وتخصيص الجرائم في اللعبة</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Target className="w-8 h-8 text-accent-red mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{totalCrimes}</h3>
+          <p className="text-white text-sm">إجمالي الجرائم</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Activity className="w-8 h-8 text-accent-green mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{activeCrimes}</h3>
+          <p className="text-white text-sm">الجرائم النشطة</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Trophy className="w-8 h-8 text-accent-yellow mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{averageReward}</h3>
+          <p className="text-white text-sm">متوسط المكافأة</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-4 text-center">
+          <Zap className="w-8 h-8 text-accent-blue mx-auto mb-2" />
+          <h3 className="text-white font-bold text-lg">{averageEnergy}</h3>
+          <p className="text-white text-sm">متوسط الطاقة المطلوبة</p>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-hitman-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="البحث في الجرائم..."
+              className="w-full bg-hitman-800/50 border border-hitman-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-hitman-400 focus:border-accent-red focus:outline-none"
+            />
           </div>
-
-          {/* Crimes Grid */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {crimes.map((crime) => (
-              <div key={crime.id} className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-white">{crime.name}</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleCrimeEdit(crime)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleCrimeDelete(crime.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white p-2 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <p className="text-hitman-300">{crime.description}</p>
-                  <div className="flex justify-between">
-                    <span className="text-hitman-400">المستوى المطلوب:</span>
-                    <span className="text-white">{crime.req_level}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-hitman-400">معدل النجاح:</span>
-                    <span className="text-white">{(crime.successRate * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-hitman-400">المكافأة:</span>
-                    <span className="text-green-400">${crime.minReward}-${crime.maxReward}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-hitman-400">الحالة:</span>
-                    <span className={`flex items-center gap-1 ${crime.isEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                      {crime.isEnabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      {crime.isEnabled ? 'مفعلة' : 'معطلة'}
-                    </span>
-                  </div>
-                </div>
-
-                {crime.imageUrl && (
-                  <img 
-                    src={crime.imageUrl}
-                    alt={crime.name} 
-                    className="w-full h-32 object-cover rounded mt-4"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {crimes.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-hitman-400 text-lg">لا توجد جرائم. قم بإنشاء أول جريمة!</p>
-            </div>
-          )}
-        </>
-      ) : (
-        /* Crime Form */
-        <div className="max-w-2xl mx-auto">
-          <form
-            className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-8"
-            onSubmit={handleCrimeSubmit}
+        </div>
+        
+        <div className="flex gap-2">
+          <select
+            value={difficultyFilter}
+            onChange={(e) => setDifficultyFilter(e.target.value)}
+            className="bg-hitman-800/50 border border-hitman-700 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
           >
-            <h2 className="text-2xl font-bold mb-6 text-accent-red text-center">
-              {crimeEditingId ? 'تعديل الجريمة' : 'إنشاء جريمة جديدة'}
-            </h2>
+            <option value="">جميع المستويات</option>
+            <option value="easy">سهل</option>
+            <option value="medium">متوسط</option>
+            <option value="hard">صعب</option>
+          </select>
+          
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-hitman-800/50 border border-hitman-700 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+          >
+            <option value="">جميع الحالات</option>
+            <option value="active">نشط</option>
+            <option value="inactive">غير نشط</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Crimes Table */}
+      <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-hitman-800/50">
+              <tr>
+                <th className="px-6 py-4 text-right text-white font-bold">الجرائم</th>
+                <th className="px-6 py-4 text-right text-white font-bold">المستوى</th>
+                <th className="px-6 py-4 text-right text-white font-bold">المكافأة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الطاقة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الحالة</th>
+                <th className="px-6 py-4 text-right text-white font-bold">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-hitman-700">
+              {filteredCrimes?.map((crime) => (
+                <tr key={crime.id} className="hover:bg-hitman-700/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-accent-red to-red-600 rounded-full flex items-center justify-center">
+                        <Target className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-white">{crime.name}</div>
+                        <div className="text-sm text-hitman-400">{crime.description}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      crime.difficulty === 'easy' ? 'bg-green-500/20 text-green-400' :
+                      crime.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {crime.difficulty === 'easy' ? 'سهل' :
+                       crime.difficulty === 'medium' ? 'متوسط' : 'صعب'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-white">{crime.reward?.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-white">{crime.energy}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      crime.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {crime.isActive ? 'نشط' : 'غير نشط'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(crime)}
+                        className="p-2 bg-hitman-700/50 hover:bg-hitman-600/50 text-hitman-400 hover:text-white rounded-lg transition-colors"
+                        title="تعديل"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => handleToggleStatus(crime.id, crime.isActive)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          crime.isActive
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                        }`}
+                        title={crime.isActive ? 'إلغاء التفعيل' : 'تفعيل'}
+                      >
+                        {crime.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add New Crime Button */}
+      <div className="text-center">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-6 py-3 bg-gradient-to-r from-accent-red to-red-600 text-white font-bold rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-red-500/25"
+        >
+          إضافة جريمة جديدة
+        </button>
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-hitman-800 to-hitman-900 border border-hitman-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold mb-4 text-white">
+              {editingCrime ? 'تعديل الجريمة' : 'إضافة جريمة جديدة'}
+            </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block mb-1 text-sm text-hitman-300">صورة الجريمة <span className="text-red-400">*</span></label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleCrimeImageChange} 
-                  required={!crimeForm.imageUrl} 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-                {crimeImageUploading && <div className="text-xs text-red-400 mt-1">جاري الرفع...</div>}
-                {crimeImagePreview && (
-                  <img src={crimeImagePreview} alt="Preview" className="mt-2 rounded max-h-32 border border-hitman-600" />
-                )}
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block mb-1 text-sm text-hitman-300">الوصف <span className="text-red-400">*</span></label>
-                <textarea 
-                  name="description" 
-                  value={crimeForm.description} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  rows={2} 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">اسم الجريمة</label>
+                <input
+                  type="text"
+                  value={crimeForm.name}
+                  onChange={(e) => setCrimeForm({...crimeForm, name: e.target.value})}
+                  className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
                 />
               </div>
               
               <div>
-                <label className="block mb-1 text-sm text-hitman-300">الاسم</label>
-                <input 
-                  name="name" 
-                  value={crimeForm.name} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
+                <label className="block text-sm font-medium mb-2 text-white">الوصف</label>
+                <textarea
+                  value={crimeForm.description}
+                  onChange={(e) => setCrimeForm({...crimeForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
                 />
               </div>
               
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">المستوى المطلوب</label>
-                <input 
-                  name="req_level" 
-                  type="number" 
-                  min="1" 
-                  value={crimeForm.req_level} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">تكلفة الطاقة</label>
-                <input 
-                  name="energyCost" 
-                  type="number" 
-                  min="1" 
-                  value={crimeForm.energyCost} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">معدل النجاح (0.01 - 0.99)</label>
-                <input 
-                  name="successRate" 
-                  type="number" 
-                  step="0.01" 
-                  min="0.01" 
-                  max="0.99" 
-                  value={crimeForm.successRate} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">الحد الأدنى للمكافأة</label>
-                <input 
-                  name="minReward" 
-                  type="number" 
-                  min="0" 
-                  value={crimeForm.minReward} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">الحد الأقصى للمكافأة</label>
-                <input 
-                  name="maxReward" 
-                  type="number" 
-                  min="0" 
-                  value={crimeForm.maxReward} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">وقت الانتظار (ثواني)</label>
-                <input 
-                  name="cooldown" 
-                  type="number" 
-                  min="0" 
-                  value={crimeForm.cooldown} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">مكافأة الخبرة</label>
-                <input 
-                  name="expReward" 
-                  type="number" 
-                  min="1" 
-                  value={crimeForm.expReward} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">نتيجة الفشل</label>
-                <select 
-                  name="failOutcome" 
-                  value={crimeForm.failOutcome} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white"
-                >
-                  <option value="jail">السجن</option>
-                  <option value="hospital">المستشفى</option>
-                  <option value="both">كلاهما</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">دقائق السجن</label>
-                <input 
-                  name="jailMinutes" 
-                  type="number" 
-                  min="0" 
-                  value={crimeForm.jailMinutes} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div>
-                <label className="block mb-1 text-sm text-hitman-300">دقائق المستشفى</label>
-                <input 
-                  name="hospitalMinutes" 
-                  type="number" 
-                  min="0" 
-                  value={crimeForm.hospitalMinutes} 
-                  onChange={handleCrimeChange} 
-                  required 
-                  className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="flex items-center gap-2">
-                  <input 
-                    name="isEnabled" 
-                    type="checkbox" 
-                    checked={crimeForm.isEnabled} 
-                    onChange={handleCrimeChange} 
-                    className="rounded border-hitman-600 bg-hitman-700" 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">المكافأة</label>
+                  <input
+                    type="number"
+                    value={crimeForm.reward}
+                    onChange={(e) => setCrimeForm({...crimeForm, reward: parseInt(e.target.value)})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
                   />
-                  <span className="text-sm text-hitman-300">مفعلة</span>
-                </label>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">الطاقة المطلوبة</label>
+                  <input
+                    type="number"
+                    value={crimeForm.energy}
+                    onChange={(e) => setCrimeForm({...crimeForm, energy: parseInt(e.target.value)})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">المستوى</label>
+                  <select
+                    value={crimeForm.difficulty}
+                    onChange={(e) => setCrimeForm({...crimeForm, difficulty: e.target.value})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  >
+                    <option value="easy">سهل</option>
+                    <option value="medium">متوسط</option>
+                    <option value="hard">صعب</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">الحالة</label>
+                  <select
+                    value={crimeForm.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => setCrimeForm({...crimeForm, isActive: e.target.value === 'active'})}
+                    className="w-full bg-hitman-700/50 border border-hitman-600 rounded-lg px-4 py-3 text-white focus:border-accent-red focus:outline-none"
+                  >
+                    <option value="active">نشط</option>
+                    <option value="inactive">غير نشط</option>
+                  </select>
+                </div>
               </div>
             </div>
             
-            <div className="flex gap-4 mt-8">
+            <div className="flex gap-3 mt-6">
               <button
-                type="submit"
-                disabled={createCrimeMutation.isPending || updateCrimeMutation.isPending || crimeImageUploading}
-                className="flex-1 py-2 rounded bg-accent-red hover:bg-red-700 text-white font-bold text-lg transition-colors duration-200 disabled:opacity-60"
+                onClick={handleSave}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-accent-red to-red-600 text-white font-bold rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200"
               >
-                {createCrimeMutation.isPending || updateCrimeMutation.isPending ? (crimeEditingId ? 'جاري التحديث...' : 'جاري الإنشاء...') : (crimeEditingId ? 'تحديث الجريمة' : 'إنشاء الجريمة')}
+                {editingCrime ? 'تحديث' : 'إضافة'}
               </button>
               <button
-                type="button"
-                onClick={handleCrimeCancel}
-                className="px-6 py-2 rounded bg-hitman-700 hover:bg-hitman-600 text-white font-bold transition-colors duration-200"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingCrime(null);
+                  setCrimeForm(initialCrimeForm);
+                }}
+                className="flex-1 px-4 py-2 bg-hitman-700/50 text-white font-bold rounded-lg hover:bg-hitman-600/50 transition-all duration-200"
               >
                 إلغاء
               </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
     </div>

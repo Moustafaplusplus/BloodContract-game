@@ -94,7 +94,7 @@ export default function SpecialItemManagement() {
       description: '',
       type: 'HEALTH_POTION',
       effect: {
-        health: 0,
+        health: 'max',
         energy: 0,
         experience: 0,
         duration: 0
@@ -109,12 +109,39 @@ export default function SpecialItemManagement() {
     setItemEditingId(null);
   };
 
+  const updateEffectsForType = (type) => {
+    let newEffect = { health: 0, energy: 0, experience: 0, duration: 0 };
+    
+    if (type === 'HEALTH_POTION') {
+      newEffect = { health: 'max', energy: 0, experience: 0, duration: 0 };
+    } else if (type === 'ENERGY_POTION') {
+      newEffect = { health: 0, energy: 'max', experience: 0, duration: 0 };
+    } else if (type === 'EXPERIENCE_POTION') {
+      newEffect = { health: 0, energy: 0, experience: 0, duration: 0 };
+    } else if (type === 'NAME_CHANGE') {
+      newEffect = { health: 0, energy: 0, experience: 0, nameChange: true, duration: 0 };
+    } else if (type === 'GANG_BOMB') {
+      newEffect = { health: 0, energy: 0, experience: 0, gangBomb: true, duration: 0 };
+    } else if (type === 'ATTACK_IMMUNITY') {
+      newEffect = { health: 0, energy: 0, experience: 0, attackImmunity: true, duration: 3600 };
+    } else if (type === 'CD_RESET') {
+      newEffect = { health: 0, energy: 0, experience: 0, cdReset: true, duration: 0 };
+    }
+    
+    setItemForm(prev => ({ ...prev, effect: newEffect }));
+  };
+
   const handleItemChange = (e) => {
     const { name, value, type, checked } = e.target;
     setItemForm((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value,
     }));
+    
+    // Update effects when type changes
+    if (name === 'type') {
+      updateEffectsForType(value);
+    }
   };
 
   const handleEffectChange = (e) => {
@@ -505,6 +532,34 @@ export default function SpecialItemManagement() {
               <div className="md:col-span-2">
                 <h3 className="text-lg font-bold text-white mb-4">التأثيرات</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-hitman-800/50 rounded-lg">
+                  {itemForm.type === 'HEALTH_POTION' && (
+                    <div className="md:col-span-2">
+                      <label className="block mb-1 text-sm text-hitman-300">مقدار الصحة</label>
+                      <select 
+                        name="health" 
+                        value={itemForm.effect.health} 
+                        onChange={handleEffectChange} 
+                        className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white"
+                      >
+                        <option value="max">100% (أقصى صحة)</option>
+                        <option value="0">0 (لا تأثير)</option>
+                      </select>
+                    </div>
+                  )}
+                  {itemForm.type === 'ENERGY_POTION' && (
+                    <div className="md:col-span-2">
+                      <label className="block mb-1 text-sm text-hitman-300">مقدار الطاقة</label>
+                      <select 
+                        name="energy" 
+                        value={itemForm.effect.energy} 
+                        onChange={handleEffectChange} 
+                        className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white"
+                      >
+                        <option value="max">100% (أقصى طاقة)</option>
+                        <option value="0">0 (لا تأثير)</option>
+                      </select>
+                    </div>
+                  )}
                   {itemForm.type === 'EXPERIENCE_POTION' && (
                     <div className="md:col-span-2">
                       <label className="block mb-1 text-sm text-hitman-300">الخبرة المضافة</label>
@@ -518,20 +573,22 @@ export default function SpecialItemManagement() {
                       />
                     </div>
                   )}
-                  <div className="md:col-span-2">
-                    <label className="block mb-1 text-sm text-hitman-300">المدة (ثانية)</label>
-                    <input 
-                      name="duration" 
-                      type="number" 
-                      min="0" 
-                      value={itemForm.effect.duration} 
-                      onChange={handleEffectChange} 
-                      className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
-                    />
-                  </div>
+                  {(itemForm.type === 'ATTACK_IMMUNITY') && (
+                    <div className="md:col-span-2">
+                      <label className="block mb-1 text-sm text-hitman-300">مدة الحماية (ثانية)</label>
+                      <input 
+                        name="duration" 
+                        type="number" 
+                        min="0" 
+                        value={itemForm.effect.duration} 
+                        onChange={handleEffectChange} 
+                        className="w-full p-2 rounded bg-hitman-700 border border-hitman-600 text-white" 
+                      />
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <p className="text-sm text-hitman-400">
-                      ملاحظة: سيتم تعيين الصحة والطاقة تلقائياً بناءً على نوع العنصر المختار
+                      ملاحظة: سيتم تعيين التأثيرات تلقائياً بناءً على نوع العنصر المختار
                     </p>
                   </div>
                 </div>

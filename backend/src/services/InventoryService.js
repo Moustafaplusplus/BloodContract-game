@@ -223,7 +223,7 @@ export class InventoryService {
       return result;
     } catch (error) {
       console.error('[InventoryService] Error calling SpecialItemService.useSpecialItem:', error);
-      return { success: false, message: 'Failed to use special item' };
+      throw error; // Re-throw the error so the controller can handle it properly
     }
   }
 } 

@@ -40,7 +40,6 @@ import MoneyPackageManagement from './components/MoneyPackageManagement';
 import VIPPackageManagement from './components/VIPPackageManagement';
 import SpecialItemManagement from './components/SpecialItemManagement';
 import MinistryMissionManagement from './components/MinistryMissionManagement';
-
 import GameNewsManagement from './components/GameNewsManagement';
 import LoginGiftManagement from './components/LoginGiftManagement';
 
@@ -63,7 +62,6 @@ const TABS = [
   { key: 'ips', label: 'إدارة عناوين IP', icon: Shield },
   { key: 'tasks', label: 'إدارة المهام', icon: Activity },
   { key: 'promotions', label: 'إدارة الرتب', icon: Award },
-
   { key: 'game-news', label: 'أخبار اللعبة', icon: MessageSquare },
   { key: 'login-gift', label: 'مكافآت الدخول اليومية', icon: Gift },
 ];
@@ -104,7 +102,7 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bouya mb-4 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red">
+          <h1 className="text-4xl font-bouya mb-4 text-white">
             لوحة الإدارة
           </h1>
           <div className="w-32 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto"></div>
@@ -122,11 +120,11 @@ export default function AdminPanel() {
                     className={`w-full flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 ${
                       activeTab === tab.key
                         ? 'bg-gradient-to-br from-accent-red to-red-600 text-white shadow-lg shadow-red-500/25'
-                        : 'bg-hitman-800/50 text-hitman-300 hover:text-white hover:bg-hitman-700/70 border border-hitman-700 hover:border-hitman-600'
+                        : 'bg-hitman-800/50 text-white hover:text-white hover:bg-hitman-700/70 border border-hitman-700 hover:border-hitman-600'
                     }`}
                   >
-                    <tab.icon className={`w-6 h-6 ${activeTab === tab.key ? 'text-white' : 'text-hitman-400'}`} />
-                    <span className="text-sm font-medium text-center leading-tight">{tab.label}</span>
+                    <tab.icon className={`w-6 h-6 ${activeTab === tab.key ? 'text-white' : 'text-white'}`} />
+                    <span className="text-sm font-medium text-center leading-tight text-white">{tab.label}</span>
                   </button>
                   {hasCalculator && (
                     <button
@@ -162,7 +160,6 @@ export default function AdminPanel() {
         {activeTab === 'ips' && <IpManagement />}
         {activeTab === 'tasks' && <TasksManagement />}
         {activeTab === 'promotions' && <PromotionManagement />}
-
         {activeTab === 'game-news' && <GameNewsManagement />}
         {activeTab === 'login-gift' && <LoginGiftManagement />}
       </div>

@@ -81,14 +81,19 @@ export class InventoryController {
       console.log('useSpecialItem result:', result);
       res.json(result);
     } catch (error) {
-      if (error.message === 'item not owned') {
+      console.error('[Inventory] Use special item failed', error);
+      if (error.message === 'العنصر غير موجود') {
         return res.status(404).json({ message: error.message });
       }
-      if (error.message.includes('cooldown') || error.message.includes('يجب أن تكون المستوى')) {
+      if (error.message === 'لا تملك هذا العنصر') {
+        return res.status(404).json({ message: error.message });
+      }
+      if (error.message.includes('يجب الانتظار') || error.message.includes('يجب أن تكون المستوى') || 
+          error.message.includes('يجب تحديد العصابة') || error.message.includes('لا يمكنك استهداف') ||
+          error.message.includes('جميع أعضاء العصابة المستهدفة محتجزون')) {
         return res.status(400).json({ message: error.message });
       }
-      console.error('[Inventory] Use special item failed', error);
-      res.sendStatus(500);
+      res.status(500).json({ message: 'فشل استخدام العنصر' });
     }
   }
 } 

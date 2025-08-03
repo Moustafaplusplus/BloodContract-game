@@ -535,6 +535,7 @@ export class SpecialItemService {
         const updatedInventory = await InventoryService.getUserInventory(userId);
         io.to(String(userId)).emit("inventory:update", updatedInventory);
       }
+      
       return {
         message: 'تم استخدام العنصر بنجاح',
         item: item,
