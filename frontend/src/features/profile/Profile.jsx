@@ -42,6 +42,15 @@ import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import { getImageUrl } from '@/utils/imageUtils.js';
 import { handleConfinementError } from '@/utils/errorHandler';
 
+// Utility function for formatting time
+function formatTime(seconds) {
+  if (!seconds || seconds <= 0) return "00:00:00";
+  const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+  const s = String(seconds % 60).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
 function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   if (!fightResult) return null;
   const { winner, rounds, log, xpGain, attackerFinalHp, defenderFinalHp, attackerId, defenderId } = fightResult;
@@ -76,7 +85,7 @@ function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
             )}
             {opponentWentToHospital && (
               <div className="card-3d bg-green-950/30 border-green-500/50 p-3 text-center text-green-300 font-bold">
-                خصمك تم نقله إلى المست��فى بعد القتال!
+                خصمك تم نقله إلى المستشفى بعد القتال!
               </div>
             )}
           </div>
@@ -147,24 +156,47 @@ export default function Profile() {
         .get(username ? `/api/profile/username/${username}` : "/api/profile", {
           headers: customToken ? { Authorization: `Bearer ${customToken}` } : {},
         })
-        .then((res) => res.data);
+        .then((res) => res.data)
+        .catch((error) => {
+          console.error('[Profile] Error loading character data:', error);
+          throw error;
+        });
     },
     staleTime: 1 * 60 * 1000,
-    retry: false,
+    retry: 3,
+    retryDelay: 1000,
     enabled: !!customToken,
   });
 
   const isOwnProfile = !username;
   const userId = character?.userId;
   
-  // When constructing displayCharacter, inject fame
+  // When constructing displayCharacter, inject fame and ensure all fields have defaults
   // For own profile, use HUD data which is more up-to-date
   const displayCharacter = isOwnProfile && hudStats ? {
     ...hudStats,
     fame: character?.fame ?? 0,
+    // Ensure all required fields have defaults
+    hp: hudStats.hp ?? 0,
+    maxHp: hudStats.maxHp ?? 1000,
+    money: hudStats.money ?? 0,
+    strength: hudStats.strength ?? 0,
+    defense: hudStats.defense ?? 0,
+    level: hudStats.level ?? 1,
+    username: hudStats.username ?? character?.username ?? 'Unknown',
+    name: hudStats.name ?? character?.name ?? hudStats.username ?? 'Unknown',
   } : {
     ...(character || {}),
     fame: character?.fame ?? 0,
+    // Ensure all required fields have defaults
+    hp: character?.hp ?? 0,
+    maxHp: character?.maxHp ?? 1000,
+    money: character?.money ?? 0,
+    strength: character?.strength ?? 0,
+    defense: character?.defense ?? 0,
+    level: character?.level ?? 1,
+    username: character?.username ?? 'Unknown',
+    name: character?.name ?? character?.username ?? 'Unknown',
   };
   
   // Check if this is the current user (for self-attack prevention)
@@ -407,14 +439,17 @@ export default function Profile() {
   // Refetch profile data on hud:update (for own profile) or profile:update (for others)
   useEffect(() => {
     if (!socket) return;
+    
     const refetchProfile = () => {
       queryClient.invalidateQueries(["character", username]);
     };
+    
     if (isOwnProfile) {
       socket.on('hud:update', refetchProfile);
     } else {
       socket.on('profile:update', refetchProfile);
     }
+    
     return () => {
       if (isOwnProfile) {
         socket.off('hud:update', refetchProfile);
@@ -427,15 +462,26 @@ export default function Profile() {
   // Real-time updates for hospital and jail status
   useEffect(() => {
     if (!socket) return;
-    socket.on('hospital:enter', fetchHospitalStatus);
-    socket.on('hospital:leave', fetchHospitalStatus);
-    socket.on('jail:enter', fetchJailStatus);
-    socket.on('jail:leave', fetchJailStatus);
+    
+    const handleHospitalEnter = () => {
+      fetchHospitalStatus();
+    };
+    
+    const handleHospitalLeave = () => {
+      fetchHospitalStatus();
+    };
+    
+    const handleJailEnter = () => {
+      fetchJailStatus();
+    };
+    
+    const handleJailLeave = () => {
+      fetchJailStatus();
+    };
     
     // Real-time friendship status updates
     const handleFriendshipUpdate = async () => {
       if (!isOwnProfile && character?.userId && customToken) {
-
         try {
           const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
             headers: { Authorization: `Bearer ${customToken}` } 
@@ -460,7 +506,7 @@ export default function Profile() {
             }
           }
         } catch (error) {
-          console.error('Error fetching friendship status:', error);
+          console.error('[Profile] Error fetching friendship status:', error);
         }
       }
     };
@@ -473,11 +519,17 @@ export default function Profile() {
     socket.on('friendship:request-rejected', handleFriendshipUpdate);
     socket.on('friendship:removed', handleFriendshipUpdate);
     
+    // Listen for confinement events
+    socket.on('hospital:enter', handleHospitalEnter);
+    socket.on('hospital:leave', handleHospitalLeave);
+    socket.on('jail:enter', handleJailEnter);
+    socket.on('jail:leave', handleJailLeave);
+    
     return () => {
-      socket.off('hospital:enter', fetchHospitalStatus);
-      socket.off('hospital:leave', fetchHospitalStatus);
-      socket.off('jail:enter', fetchJailStatus);
-      socket.off('jail:leave', fetchJailStatus);
+      socket.off('hospital:enter', handleHospitalEnter);
+      socket.off('hospital:leave', handleHospitalLeave);
+      socket.off('jail:enter', handleJailEnter);
+      socket.off('jail:leave', handleJailLeave);
       socket.off('friendship:updated', handleFriendshipUpdate);
       socket.off('friendship:request-sent', handleFriendshipUpdate);
       socket.off('friendship:request-received', handleFriendshipUpdate);
@@ -485,7 +537,7 @@ export default function Profile() {
       socket.off('friendship:request-rejected', handleFriendshipUpdate);
       socket.off('friendship:removed', handleFriendshipUpdate);
     };
-  }, [socket, fetchHospitalStatus, fetchJailStatus, character?.userId, isOwnProfile, hudStats?.userId]);
+  }, [socket, fetchHospitalStatus, fetchJailStatus, character?.userId, isOwnProfile, hudStats?.userId, customToken]);
 
   useEffect(() => {
     if (character?.userId && customToken) {
@@ -618,14 +670,19 @@ export default function Profile() {
   }
 
   if (error) {
+    console.error('[Profile] Error loading profile:', error);
     return <LoadingOrErrorPlaceholder error errorText="فشل في تحميل الملف الشخصي" />;
+  }
+
+  if (!displayCharacter) {
+    return <LoadingOrErrorPlaceholder error errorText="لم يتم العثور على بيانات اللاعب" />;
   }
 
   const healthPercent = displayCharacter.maxHp
     ? (displayCharacter.hp / displayCharacter.maxHp) * 100
     : 0;
 
-  // Unified stat extraction from backend fields
+  // Unified stat extraction from backend fields with better fallbacks
   const fightsLost = displayCharacter.fightsLost ?? 0;
   const fightsWon = displayCharacter.fightsWon ?? 0;
   const fightsTotal = displayCharacter.fightsTotal ?? (fightsWon + fightsLost);
@@ -666,7 +723,7 @@ export default function Profile() {
       value: fightsTotal,
       color: "orange",
       bgGrad: "from-orange-950/30 to-red-950/20",
-      subtitle: `��وز: ${fightsWon} خسارة: ${fightsLost}`
+      subtitle: `فوز: ${fightsWon} خسارة: ${fightsLost}`
     },
     {
       icon: Calendar,
@@ -984,7 +1041,7 @@ export default function Profile() {
                   {(hudStats?.inHospital || hudStats?.inJail) && (
                     <div className="card-3d bg-red-950/30 border-red-500/50 p-3 text-center mb-3">
                       <span className="text-red-400 font-bold text-sm">
-                        {hudStats?.inHospital ? "لا ��مكنك الهجوم وأنت في المستشفى" : "لا يمكنك الهجوم وأنت في السجن"}
+                        {hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" : "لا يمكنك الهجوم وأنت في السجن"}
                       </span>
                     </div>
                   )}
@@ -1271,11 +1328,4 @@ export default function Profile() {
       )}
     </>
   );
-}
-
-function formatTime(seconds) {
-  const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-  const s = String(seconds % 60).padStart(2, '0');
-  return `${h}:${m}:${s}`;
 }

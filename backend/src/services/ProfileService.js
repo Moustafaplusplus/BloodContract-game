@@ -98,54 +98,19 @@ export class ProfileService {
         if (stat) assassinations = stat.assassinations || 0;
       } catch (statError) {
         console.error('[ProfileService] Error fetching statistics:', statError);
-        assassinations = 0;
       }
       
-      if (!userObj.Character) {
-        return { ...sanitizedUser, fame, fightsLost, assassinations, isVIP: false };
-      }
-      
-      const rest = { ...sanitizedUser };
-      delete rest.Character;
-      
-      // Clean character data - only include the actual character fields, not Sequelize metadata
-      const characterData = {
-        id: userObj.Character.id,
-        userId: userObj.Character.userId,
-        name: userObj.Character.name,
-        level: userObj.Character.level,
-        exp: userObj.Character.exp,
-        money: userObj.Character.money,
-        strength: userObj.Character.strength,
-        defense: userObj.Character.defense,
-        energy: userObj.Character.energy,
-        maxEnergy: userObj.Character.maxEnergy,
-        hp: userObj.Character.hp,
-        maxHp: userObj.Character.maxHp,
-        equippedHouseId: userObj.Character.equippedHouseId,
-        gangId: userObj.Character.gangId,
-        daysInGame: userObj.Character.daysInGame,
-        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl,
-        killCount: userObj.Character.killCount,
-        lastActive: userObj.Character.lastActive,
-        buffs: userObj.Character.buffs,
-        quote: userObj.Character.quote,
-        vipExpiresAt: userObj.Character.vipExpiresAt,
-        attackImmunityExpiresAt: userObj.Character.attackImmunityExpiresAt
-      };
-      
-      return {
-        ...rest,
-        ...characterData,
-        // Prioritize character name over username for display
-        displayName: characterData.name || sanitizedUser.username,
-        isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
-        fame,
+      const result = {
+        ...sanitizedUser,
+        ...userObj.Character,
         fightsLost,
-        assassinations,
+        fame,
+        assassinations
       };
+      
+      return result;
     } catch (error) {
-      console.error('[ProfileService] Error getting user profile:', error);
+      console.error('[ProfileService] Error in getUserProfile:', error);
       throw error;
     }
   }
@@ -155,46 +120,43 @@ export class ProfileService {
     try {
       const user = await User.findOne({
         where: { username },
-        include: [
-          {
-            model: Character,
-            as: 'Character',
-            include: [
-              { model: Statistic, as: 'Statistics' },
-              { model: Gang, as: 'Gang' }
-            ]
-          }
-        ]
+        include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
       });
 
       if (!user) {
-        return { success: false, message: 'User not found' };
+        throw new Error('User not found');
       }
-
+      
       if (!user.Character) {
-        return { success: false, message: 'Character not found' };
+        throw new Error('Character not found');
       }
 
-      // Enrich character data
-      const enrichedCharacter = await this.enrichCharacterData(user.Character);
-
-      return {
-        success: true,
-        data: {
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            isAdmin: user.isAdmin,
-            createdAt: user.createdAt
-          },
-          character: enrichedCharacter
-        }
+      const userObj = user.toJSON();
+      const sanitizedUser = sanitizeUserData(userObj);
+      const { fightsLost, fame } = await enrichCharacter(user.Character);
+      
+      // Fetch assassinations stat
+      let assassinations = 0;
+      try {
+        const stat = await Statistic.findOne({ where: { userId: user.id } });
+        if (stat) assassinations = stat.assassinations || 0;
+      } catch (statError) {
+        console.error('[ProfileService] Error fetching statistics:', statError);
+      }
+      
+      const result = {
+        ...sanitizedUser,
+        ...userObj.Character,
+        fightsLost,
+        fame,
+        assassinations
       };
+      
+      return result;
     } catch (error) {
       console.error('[ProfileService] Error getting user profile by username:', error);
       console.error('[ProfileService] Error stack:', error.stack);
-      return { success: false, message: 'Internal server error' };
+      throw error;
     }
   }
 
