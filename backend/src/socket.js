@@ -794,7 +794,7 @@ export function initSocket(server) {
         try {
           const { GameNewsService } = await import('./services/GameNewsService.js');
           const news = await GameNewsService.getRecentNews();
-          io.to(`user:${userId}`).emit('gameNews:update', news);
+          io.to(`user:${socket.data.userId}`).emit('gameNews:update', news);
         } catch (error) {
           console.error(`[Socket] Error handling game news request:`, error.message);
         }
@@ -804,10 +804,10 @@ export function initSocket(server) {
       socket.on('confinement:request', async () => {
         try {
           const { ConfinementService } = await import('./services/ConfinementService.js');
-          const hospitalStatus = await ConfinementService.getHospitalStatus(userId);
-          const jailStatus = await ConfinementService.getJailStatus(userId);
+          const hospitalStatus = await ConfinementService.getHospitalStatus(socket.data.userId);
+          const jailStatus = await ConfinementService.getJailStatus(socket.data.userId);
           
-          io.to(`user:${userId}`).emit('confinement:update', {
+          io.to(`user:${socket.data.userId}`).emit('confinement:update', {
             hospital: hospitalStatus,
             jail: jailStatus
           });
@@ -821,7 +821,7 @@ export function initSocket(server) {
         try {
           const { CrimeService } = await import('./services/CrimeService.js');
           const crimes = await CrimeService.getAllCrimes();
-          io.to(`user:${userId}`).emit('crimes:update', crimes);
+          io.to(`user:${socket.data.userId}`).emit('crimes:update', crimes);
         } catch (error) {
           console.error(`[Socket] Error handling crimes request:`, error.message);
         }
@@ -833,8 +833,8 @@ export function initSocket(server) {
           const friendships = await Friendship.findAll({
             where: {
               [Op.or]: [
-                { requesterId: userId },
-                { addresseeId: userId }
+                { requesterId: socket.data.userId },
+                { addresseeId: socket.data.userId }
               ],
               status: 'accepted'
             },
@@ -844,7 +844,7 @@ export function initSocket(server) {
             ]
           });
           
-          io.to(`user:${userId}`).emit('friendshipList:update', friendships);
+          io.to(`user:${socket.data.userId}`).emit('friendshipList:update', friendships);
         } catch (error) {
           console.error(`[Socket] Error handling friendship list request:`, error.message);
         }
@@ -855,7 +855,7 @@ export function initSocket(server) {
         try {
           const pendingFriendships = await Friendship.findAll({
             where: {
-              addresseeId: userId,
+              addresseeId: socket.data.userId,
               status: 'pending'
             },
             include: [
@@ -863,7 +863,7 @@ export function initSocket(server) {
             ]
           });
           
-          io.to(`user:${userId}`).emit('pendingFriendships:update', pendingFriendships);
+          io.to(`user:${socket.data.userId}`).emit('pendingFriendships:update', pendingFriendships);
         } catch (error) {
           console.error(`[Socket] Error handling pending friendships request:`, error.message);
         }
@@ -876,14 +876,14 @@ export function initSocket(server) {
           const messages = await Message.findAll({
             where: {
               [Op.or]: [
-                { senderId: userId, receiverId: targetUserId },
-                { senderId: targetUserId, receiverId: userId }
+                { senderId: socket.data.userId, receiverId: targetUserId },
+                { senderId: targetUserId, receiverId: socket.data.userId }
               ]
             },
             order: [['createdAt', 'ASC']]
           });
           
-          io.to(`user:${userId}`).emit('messages:update', messages);
+          io.to(`user:${socket.data.userId}`).emit('messages:update', messages);
         } catch (error) {
           console.error(`[Socket] Error handling messages request:`, error.message);
         }
@@ -900,7 +900,7 @@ export function initSocket(server) {
             ]
           });
           
-          io.to(`user:${userId}`).emit('globalChatMessages:update', messages);
+          io.to(`user:${socket.data.userId}`).emit('globalChatMessages:update', messages);
         } catch (error) {
           console.error(`[Socket] Error handling global chat messages request:`, error.message);
         }
@@ -911,12 +911,12 @@ export function initSocket(server) {
         try {
           const count = await Message.count({
             where: {
-              receiverId: userId,
+              receiverId: socket.data.userId,
               isRead: false
             }
           });
           
-          io.to(`user:${userId}`).emit('unreadMessagesCount:update', count);
+          io.to(`user:${socket.data.userId}`).emit('unreadMessagesCount:update', count);
         } catch (error) {
           console.error(`[Socket] Error handling unread messages count request:`, error.message);
         }
@@ -926,8 +926,8 @@ export function initSocket(server) {
       socket.on('unclaimedTasksCount:request', async () => {
         try {
           const { TaskService } = await import('./services/TaskService.js');
-          const count = await TaskService.getUnclaimedTasksCount(userId);
-          io.to(`user:${userId}`).emit('unclaimedTasksCount:update', count);
+          const count = await TaskService.getUnclaimedTasksCount(socket.data.userId);
+          io.to(`user:${socket.data.userId}`).emit('unclaimedTasksCount:update', count);
         } catch (error) {
           console.error(`[Socket] Error handling unclaimed tasks count request:`, error.message);
         }
@@ -938,12 +938,12 @@ export function initSocket(server) {
         try {
           const count = await Friendship.count({
             where: {
-              addresseeId: userId,
+              addresseeId: socket.data.userId,
               status: 'pending'
             }
           });
           
-          io.to(`user:${userId}`).emit('friendRequestsCount:update', count);
+          io.to(`user:${socket.data.userId}`).emit('friendRequestsCount:update', count);
         } catch (error) {
           console.error(`[Socket] Error handling friend requests count request:`, error.message);
         }
@@ -953,8 +953,8 @@ export function initSocket(server) {
       socket.on('notificationsCount:request', async () => {
         try {
           const { NotificationService } = await import('./services/NotificationService.js');
-          const count = await NotificationService.getUnreadCount(userId);
-          io.to(`user:${userId}`).emit('notificationsCount:update', count);
+          const count = await NotificationService.getUnreadCount(socket.data.userId);
+          io.to(`user:${socket.data.userId}`).emit('notificationsCount:update', count);
         } catch (error) {
           console.error(`[Socket] Error handling notifications count request:`, error.message);
         }
@@ -963,13 +963,13 @@ export function initSocket(server) {
       // --- Intro Status Updates (HTTP replacement) ---
       socket.on('introStatus:request', async () => {
         try {
-          const user = await User.findByPk(userId);
+          const user = await User.findByPk(socket.data.userId);
           const introStatus = {
             hasCompletedIntro: user?.hasCompletedIntro || false,
             introStep: user?.introStep || 0
           };
           
-          io.to(`user:${userId}`).emit('introStatus:update', introStatus);
+          io.to(`user:${socket.data.userId}`).emit('introStatus:update', introStatus);
         } catch (error) {
           console.error(`[Socket] Error handling intro status request:`, error.message);
         }
@@ -980,13 +980,13 @@ export function initSocket(server) {
         try {
           const { targetUserId } = data;
           const char = await Character.findOne({ 
-            where: { userId: targetUserId || userId },
+            where: { userId: targetUserId || socket.data.userId },
             include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
           });
           
           if (char) {
             const profileData = await char.toSafeJSON();
-            io.to(`user:${userId}`).emit('profile:update', profileData);
+            io.to(`user:${socket.data.userId}`).emit('profile:update', profileData);
           }
         } catch (error) {
           console.error(`[Socket] Error handling profile request:`, error.message);
