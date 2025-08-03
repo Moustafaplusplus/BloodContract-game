@@ -3,6 +3,7 @@ import { Character } from '../models/Character.js';
 import { Weapon, Armor } from '../models/Shop.js';
 import { SpecialItem } from '../models/SpecialItem.js';
 import { CharacterService } from './CharacterService.js';
+import { SpecialItemService } from './SpecialItemService.js';
 import { io, emitNotification } from '../socket.js';
 import { NotificationService } from './NotificationService.js';
 
@@ -85,9 +86,9 @@ export class InventoryService {
     }
     await char.save();
     if (io) {
-      io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+      io.to(`user:${userId}`).emit("hud:update", await char.toSafeJSON());
       const updatedInventory = await this.getUserInventory(userId);
-      io.to(String(userId)).emit("inventory:update", updatedInventory);
+      io.to(`user:${userId}`).emit("inventory:update", updatedInventory);
     }
     return { message: "equipped", slot, itemId };
   }
@@ -126,9 +127,9 @@ export class InventoryService {
     }
     await char.save();
     if (io) {
-      io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+      io.to(`user:${userId}`).emit("hud:update", await char.toSafeJSON());
       const updatedInventory = await this.getUserInventory(userId);
-      io.to(String(userId)).emit("inventory:update", updatedInventory);
+      io.to(`user:${userId}`).emit("inventory:update", updatedInventory);
     }
     return { message: "unequipped", itemType, slot };
   }
@@ -154,9 +155,9 @@ export class InventoryService {
       if (row.quantity <= 0) await row.destroy();
       else await row.save();
       if (io) {
-        io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+        io.to(`user:${userId}`).emit("hud:update", await char.toSafeJSON());
         const updatedInventory = await this.getUserInventory(userId);
-        io.to(String(userId)).emit("inventory:update", updatedInventory);
+        io.to(`user:${userId}`).emit("inventory:update", updatedInventory);
       }
       return { message: "sold", sellPrice, method: 'quick' };
     } else if (sellOption === 'blackmarket') {

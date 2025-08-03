@@ -64,10 +64,10 @@ export class SpecialItemService {
 
     // Emit HUD and inventory updates
     if (io) {
-      io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+      io.to(`user:${userId}`).emit("hud:update", await character.toSafeJSON());
       const { InventoryService } = await import('./InventoryService.js');
       const updatedInventory = await InventoryService.getUserInventory(userId);
-      io.to(String(userId)).emit("inventory:update", updatedInventory);
+      io.to(`user:${userId}`).emit("inventory:update", updatedInventory);
     }
 
     return {
@@ -530,10 +530,10 @@ export class SpecialItemService {
 
       // Emit HUD and inventory updates
       if (io) {
-        io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+        io.to(`user:${userId}`).emit("hud:update", await character.toSafeJSON());
         const { InventoryService } = await import('./InventoryService.js');
         const updatedInventory = await InventoryService.getUserInventory(userId);
-        io.to(String(userId)).emit("inventory:update", updatedInventory);
+        io.to(`user:${userId}`).emit("inventory:update", updatedInventory);
       }
       
       return {
@@ -579,10 +579,10 @@ export class SpecialItemService {
 
     // Emit HUD and inventory updates
     if (io) {
-      io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+      io.to(`user:${userId}`).emit("hud:update", await character.toSafeJSON());
       const { InventoryService } = await import('./InventoryService.js');
       const updatedInventory = await InventoryService.getUserInventory(userId);
-      io.to(String(userId)).emit("inventory:update", updatedInventory);
+      io.to(`user:${userId}`).emit("inventory:update", updatedInventory);
     }
 
     return {
