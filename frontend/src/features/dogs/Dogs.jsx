@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../hooks/useAuth';
+import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
 import { toast } from 'react-toastify';
 
 const dogService = {
@@ -74,7 +74,7 @@ const dogService = {
 };
 
 const Dogs = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('owned');
 

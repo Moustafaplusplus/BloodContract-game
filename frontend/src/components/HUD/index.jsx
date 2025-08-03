@@ -201,6 +201,28 @@ export default function HUD({ menuButton }) {
     }
   }, [socket])
 
+  // Debug logging for HUD data - moved before early return
+  useEffect(() => {
+    if (hudData) {
+      const healthPercent = hudData.maxHp > 0 ? (hudData.hp / hudData.maxHp) * 100 : 0
+      const energyPercent = hudData.maxEnergy > 0 ? (hudData.energy / hudData.maxEnergy) * 100 : 0
+      const expPercent = hudData.nextLevelExp > 0 ? (hudData.exp / hudData.nextLevelExp) * 100 : 0
+      
+      console.log('[HUD] Debug data:', {
+        energy: hudData?.energy,
+        maxEnergy: hudData?.maxEnergy,
+        energyPercent,
+        hp: hudData?.hp,
+        maxHp: hudData?.maxHp,
+        healthPercent,
+        level: hudData?.level,
+        exp: hudData?.exp,
+        nextLevelExp: hudData?.nextLevelExp,
+        expPercent
+      });
+    }
+  }, [hudData]);
+
   // Auto-collapse after interaction on mobile
   const handleMobileAction = (action) => {
     if (isMobile) {

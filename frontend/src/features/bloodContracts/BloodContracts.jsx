@@ -11,7 +11,7 @@ const BloodContracts = ({ currentUserId }) => {
   const { 
     socket, 
     bloodContracts, 
-    requestBloodContractUpdate 
+    requestBloodContracts 
   } = useSocket();
   
   const [modalOpen, setModalOpen] = useState(false);
@@ -25,16 +25,15 @@ const BloodContracts = ({ currentUserId }) => {
   // Request initial blood contract data when component mounts
   useEffect(() => {
     if (socket && socket.connected) {
-      requestBloodContractUpdate();
+      requestBloodContracts();
     }
-  }, [socket, requestBloodContractUpdate]);
+  }, [socket, requestBloodContracts]);
 
   // Listen for real-time fight results
   useEffect(() => {
     if (!socket) return;
 
     const handleFightResult = (data) => {
-      console.log('[BloodContracts] Fight result received:', data);
       setFightResult(data);
       setModalOpen(true);
     };
@@ -76,7 +75,7 @@ const BloodContracts = ({ currentUserId }) => {
         
         // Request fresh blood contract data
         if (socket && socket.connected) {
-          requestBloodContractUpdate();
+          requestBloodContracts();
         }
       } else {
         setAttackSuccess(false);
@@ -93,7 +92,7 @@ const BloodContracts = ({ currentUserId }) => {
       setFightResult(null);
     }
     setModalOpen(true);
-  }, [socket, requestBloodContractUpdate]);
+  }, [socket, requestBloodContracts]);
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -103,18 +102,18 @@ const BloodContracts = ({ currentUserId }) => {
   const handleContractCreated = useCallback(() => {
     // Request fresh blood contract data
     if (socket && socket.connected) {
-      requestBloodContractUpdate();
+      requestBloodContracts();
     }
     setRefreshKey(k => k + 1);
-  }, [socket, requestBloodContractUpdate]);
+  }, [socket, requestBloodContracts]);
 
   const handleGhostAssassinSuccess = useCallback(() => {
     // Request fresh blood contract data
     if (socket && socket.connected) {
-      requestBloodContractUpdate();
+      requestBloodContracts();
     }
     setRefreshKey(k => k + 1);
-  }, [socket, requestBloodContractUpdate]);
+  }, [socket, requestBloodContracts]);
 
   const contractCount = bloodContracts?.length || 0;
   const activeContracts = bloodContracts?.filter(c => new Date(c.expiresAt) > new Date()).length || 0;

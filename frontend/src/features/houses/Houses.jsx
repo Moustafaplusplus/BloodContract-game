@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
+import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
 
 const houseService = {
   async getHouses() {
@@ -86,7 +86,7 @@ const houseService = {
 };
 
 const Houses = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('owned');
 

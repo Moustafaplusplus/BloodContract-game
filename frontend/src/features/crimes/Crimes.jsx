@@ -29,12 +29,12 @@ import {
   Skull,
   Crosshair,
   Flame,
-  Knife,
-  Gun,
+  Sword,
   Bomb,
   Siren,
   MapPin,
-  Users
+  Users,
+  RefreshCw
 } from "lucide-react";
 
 function formatCooldown(sec) {
@@ -49,14 +49,28 @@ const CrimeCard = ({ crime, onExecute, isDisabled, reason, userLevel, currentEne
   const levelMet = userLevel >= crime.levelRequirement;
   const isUnlocked = levelMet && canAfford && !isDisabled;
   
+  // Debug logging for this specific crime
+  useEffect(() => {
+    console.log('[CrimeCard] Debug:', {
+      crimeName: crime.name,
+      crimeEnergy: crime.energy,
+      currentEnergy,
+      canAfford,
+      userLevel,
+      levelRequirement: crime.levelRequirement,
+      levelMet,
+      isUnlocked
+    });
+  }, [crime.name, crime.energy, currentEnergy, canAfford, userLevel, crime.levelRequirement, levelMet, isUnlocked]);
+  
   // Crime type icons and colors
   const getCrimeVisuals = (crimeType) => {
     const types = {
       assassination: { icon: Crosshair, color: 'blood', bg: 'from-blood-950/40 to-red-950/20' },
       theft: { icon: Eye, color: 'blue', bg: 'from-blue-950/40 to-cyan-950/20' },
       sabotage: { icon: Bomb, color: 'orange', bg: 'from-orange-950/40 to-yellow-950/20' },
-      street: { icon: Knife, color: 'red', bg: 'from-red-950/40 to-blood-950/20' },
-      heist: { icon: Gun, color: 'purple', bg: 'from-purple-950/40 to-indigo-950/20' },
+      street: { icon: Sword, color: 'red', bg: 'from-red-950/40 to-blood-950/20' },
+      heist: { icon: Zap, color: 'purple', bg: 'from-purple-950/40 to-indigo-950/20' },
       default: { icon: Target, color: 'blood', bg: 'from-blood-950/40 to-black/20' }
     };
     return types[crimeType] || types.default;
@@ -182,7 +196,7 @@ export default function Crimes() {
     socket, 
     crimeData, 
     hudData,
-    requestCrimeUpdate 
+    requestCrime 
   } = useSocket();
   const { showModal } = useModalManager();
   const [cooldownLeft, setCooldownLeft] = useState(0);
@@ -203,9 +217,20 @@ export default function Crimes() {
   // Request initial crime data when component mounts
   useEffect(() => {
     if (socket && socket.connected) {
-      requestCrimeUpdate();
+      requestCrime();
+      // Also request HUD data to ensure we have energy information
+      socket.emit('hud:request');
+      
+      // Retry HUD request after a short delay to ensure data is loaded
+      const retryTimer = setTimeout(() => {
+        if (socket && socket.connected) {
+          socket.emit('hud:request');
+        }
+      }, 1000);
+      
+      return () => clearTimeout(retryTimer);
     }
-  }, [socket, requestCrimeUpdate]);
+  }, [socket, requestCrime]);
 
   // Fetch jail/hospital status
   const fetchStatuses = useCallback(() => {
@@ -238,10 +263,24 @@ export default function Crimes() {
       ? `أنت في المستشفى. الوقت المتبقي: ${formatCooldown(Math.max(0, Math.floor((hospitalStatus.remainingSeconds || 0))))}`
       : "";
 
-  // Use real-time energy data
-  const currentEnergy = crimeData?.energy ?? hudData?.energy ?? 0;
-  const maxEnergy = crimeData?.maxEnergy ?? hudData?.maxEnergy ?? 100;
-  const userLevel = crimeData?.level ?? hudData?.level ?? 1;
+  // Use real-time energy data - prioritize hudData since it contains full character data
+  const currentEnergy = hudData?.energy ?? crimeData?.energy ?? 0;
+  const maxEnergy = hudData?.maxEnergy ?? crimeData?.maxEnergy ?? 100;
+  const userLevel = hudData?.level ?? 1;
+  
+  // Check if we have valid energy data
+  const hasEnergyData = hudData?.energy !== undefined || crimeData?.energy !== undefined;
+
+  // Debug logging to help identify the issue
+  useEffect(() => {
+    console.log('[Crimes] Debug data:', {
+      hudData: hudData ? { energy: hudData.energy, maxEnergy: hudData.maxEnergy, level: hudData.level } : null,
+      crimeData: crimeData ? { energy: crimeData.energy, maxEnergy: crimeData.maxEnergy } : null,
+      currentEnergy,
+      maxEnergy,
+      userLevel
+    });
+  }, [hudData, crimeData, currentEnergy, maxEnergy, userLevel]);
 
   // Update cooldown timer in real-time
   useEffect(() => {
@@ -251,7 +290,7 @@ export default function Crimes() {
       setCooldownLeft(prev => {
         if (prev <= 1) {
           if (socket && socket.connected) {
-            requestCrimeUpdate();
+            requestCrime();
           }
           return 0;
         }
@@ -260,7 +299,7 @@ export default function Crimes() {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [cooldownLeft, socket, requestCrimeUpdate]);
+  }, [cooldownLeft, socket, requestCrime]);
 
   // Listen for HUD updates to sync cooldown
   useEffect(() => {
@@ -327,16 +366,20 @@ export default function Crimes() {
   });
 
   const displayCrimes = crimes.length > 0
-    ? crimes.map(c => ({ ...c, levelRequirement: c.req_level }))
+    ? crimes.map(c => ({ 
+        ...c, 
+        levelRequirement: c.req_level,
+        energy: c.energyCost // Map energyCost to energy for frontend
+      }))
     : [];
 
-  if (isLoading) {
+  if (isLoading || !hasEnergyData) {
     return (
       <div className="min-h-screen blood-gradient flex items-center justify-center">
         <div className="text-center card-3d p-6">
           <div className="loading-shimmer w-12 h-12 rounded-full mx-auto mb-3"></div>
           <p className="text-white text-sm animate-pulse">
-            جاري تحميل عمليات الاغتيال...
+            {isLoading ? "جاري تحميل عمليات الاغتيال..." : "جاري تحميل بيانات الطاقة..."}
           </p>
         </div>
       </div>
@@ -403,7 +446,21 @@ export default function Crimes() {
                 </div>
                 <span className="font-bold text-blue-400 text-sm">الطاقة</span>
               </div>
-              <span className="text-white font-bold text-sm">{currentEnergy}/{maxEnergy}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-bold text-sm">{currentEnergy}/{maxEnergy}</span>
+                <button
+                  onClick={() => {
+                    if (socket && socket.connected) {
+                      socket.emit('hud:request');
+                      toast.success("تم تحديث بيانات الطاقة");
+                    }
+                  }}
+                  className="btn-touch p-1 rounded bg-blue-500/20 border border-blue-500/40 hover:bg-blue-500/30 transition-colors"
+                  title="تحديث الطاقة"
+                >
+                  <RefreshCw className="w-3 h-3 text-blue-400" />
+                </button>
+              </div>
             </div>
             <div className="progress-3d h-2">
               <div 

@@ -7,7 +7,7 @@ import GangBombModal from "./GangBombModal"
 import MoneyIcon from "@/components/MoneyIcon"
 import { 
   Sword, Shield, Zap, Heart, ImageIcon, XCircle, Trash2, Star, Gem, Package, 
-  Play, Bomb, Clock, Crown, Target, Gun, Knife, Award, Users, Eye, TrendingUp,
+  Play, Bomb, Clock, Crown, Target, Award, Users, Eye, TrendingUp,
   Backpack, Sparkles, Flame
 } from "lucide-react"
 import { getImageUrl } from '@/utils/imageUtils'
@@ -40,7 +40,7 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
   // Enhanced item type visuals
   const getItemVisuals = (itemType) => {
     const types = {
-      weapon: { icon: item.subtype === 'gun' ? Gun : item.subtype === 'knife' ? Knife : Sword, color: 'red', bgGrad: 'from-red-950/40 to-blood-950/20' },
+      weapon: { icon: item.subtype === 'gun' ? Zap : item.subtype === 'knife' ? Sword : Sword, color: 'red', bgGrad: 'from-red-950/40 to-blood-950/20' },
       armor: { icon: Shield, color: 'blue', bgGrad: 'from-blue-950/40 to-cyan-950/20' },
       special: { icon: Gem, color: 'purple', bgGrad: 'from-purple-950/40 to-pink-950/20' }
     };

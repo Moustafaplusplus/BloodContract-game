@@ -17,7 +17,7 @@ import { Op } from 'sequelize';
 // Item import removed - using InventoryItem instead
 import { Crime } from './models/Crime.js';
 import { Fight } from './models/Fight.js';
-import BloodContract from './models/BloodContract.js';
+import { BloodContract } from './models/index.js';
 import { Job } from './models/Job.js';
 import { MinistryMission } from './models/MinistryMission.js';
 import { Car } from './models/Car.js';
@@ -266,17 +266,67 @@ export function initSocket(server) {
       /* helper to push blood contract updates */
       const pushBloodContractUpdate = async (targetUserId = userId) => {
         try {
+          const now = new Date();
+          
+          // Get all available contracts that the user can see and potentially fulfill
           const contracts = await BloodContract.findAll({
             where: {
+              status: 'open',
+              expiresAt: { [Op.gt]: now },
               [Op.or]: [
-                { attackerId: targetUserId },
-                { defenderId: targetUserId }
+                { posterId: targetUserId },
+                { posterId: { [Op.ne]: targetUserId }, targetId: { [Op.ne]: targetUserId } },
               ],
-              status: 'active'
-            }
+            },
+            include: [
+              {
+                model: User,
+                as: 'target',
+                attributes: ['id', 'username'],
+                include: [
+                  {
+                    model: Character,
+                    attributes: ['level', 'name', 'userId'],
+                  },
+                ],
+              },
+            ],
+            order: [['createdAt', 'DESC']],
           });
+
+          // Format the contracts with additional information
+          const formattedContracts = await Promise.all(contracts.map(async contract => {
+            let fame = null;
+            let canFulfill = true;
+            
+            if (contract.target && contract.target.Character) {
+              fame = await contract.target.Character.getFame();
+            }
+            
+            if (targetUserId === contract.posterId || targetUserId === contract.targetId) {
+              canFulfill = false;
+            }
+            
+            return {
+              id: contract.id,
+              target: {
+                id: contract.target?.id,
+                username: contract.target?.username,
+                fame,
+                level: contract.target?.Character?.level,
+                name: contract.target?.Character?.name || contract.target?.username,
+              },
+              price: contract.price,
+              status: contract.status,
+              createdAt: contract.createdAt,
+              expiresAt: contract.expiresAt,
+              isPoster: targetUserId === contract.posterId,
+              isTarget: targetUserId === contract.targetId,
+              canFulfill,
+            };
+          }));
           
-          io.to(`user:${targetUserId}`).emit('bloodContract:update', contracts);
+          io.to(`user:${targetUserId}`).emit('bloodContract:update', formattedContracts);
         } catch (error) {
           console.error(`[Socket] Error pushing blood contract update for user ${targetUserId}:`, error.message);
         }

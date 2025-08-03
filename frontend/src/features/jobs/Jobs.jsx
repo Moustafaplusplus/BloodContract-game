@@ -121,7 +121,7 @@ export default function Jobs() {
     socket, 
     jobs, 
     hudData,
-    requestJobsUpdate 
+    requestJobs 
   } = useSocket();
   const [hiringJobId, setHiringJobId] = useState(null);
   const [quittingJob, setQuittingJob] = useState(false);
@@ -130,9 +130,9 @@ export default function Jobs() {
   // Request initial jobs data when component mounts
   useEffect(() => {
     if (socket && socket.connected) {
-      requestJobsUpdate();
+      requestJobs();
     }
-  }, [socket, requestJobsUpdate]);
+  }, [socket, requestJobs]);
 
   // Fetch available jobs
   const {
@@ -178,7 +178,7 @@ export default function Jobs() {
     onSuccess: (data) => {
       setHiringJobId(null);
       if (socket && socket.connected) {
-        requestJobsUpdate();
+        requestJobs();
       }
       queryClient.invalidateQueries(['currentJob']);
       toast.success(data.message || 'تم التوظيف بنجاح!');
@@ -208,7 +208,7 @@ export default function Jobs() {
     onSuccess: (data) => {
       setQuittingJob(false);
       if (socket && socket.connected) {
-        requestJobsUpdate();
+        requestJobs();
       }
       queryClient.invalidateQueries(['currentJob']);
       queryClient.invalidateQueries(['jobHistory']);

@@ -94,7 +94,7 @@ export default function ActivePlayers() {
     socket, 
     fightData, 
     hudData,
-    requestFightUpdate 
+    requestFight 
   } = useSocket();
   const navigate = useNavigate();
   const [attacking, setAttacking] = useState(null);
@@ -102,9 +102,9 @@ export default function ActivePlayers() {
   // Request initial fight data when component mounts
   useEffect(() => {
     if (socket && socket.connected) {
-      requestFightUpdate();
+      requestFight();
     }
-  }, [socket, requestFightUpdate]);
+  }, [socket, requestFight]);
 
   const { data: users = [], isLoading, error, refetch } = useQuery({
     queryKey: ['active-users'],

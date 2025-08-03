@@ -21,8 +21,6 @@ import {
   Flame,
   Skull,
   Target,
-  Gun,
-  Knife,
   Coins,
   TrendingUp,
   Eye,
@@ -61,7 +59,7 @@ function ItemCard({ item, onBuy, type, userMoney, userBlackcoins }) {
   const getItemVisuals = (itemType, rarity) => {
     const types = {
       weapons: {
-        icon: type === 'weapons' ? (item.subtype === 'gun' ? Gun : item.subtype === 'knife' ? Knife : Sword) : Sword,
+        icon: type === 'weapons' ? (item.subtype === 'gun' ? Zap : item.subtype === 'knife' ? Sword : Sword) : Sword,
         color: 'red',
         bgGrad: 'from-red-950/40 to-blood-950/20'
       },
