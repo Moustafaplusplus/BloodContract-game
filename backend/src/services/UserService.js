@@ -9,18 +9,18 @@ export class UserService {
   static SECRET = process.env.JWT_SECRET;
   
   // Generate custom token for Firebase users
-  static generateCustomToken(userId, firebaseUid) {
-    if (!this.SECRET) {
-      console.error('❌ JWT_SECRET is not set');
-      throw new Error('JWT_SECRET environment variable is required');
+  static async generateCustomToken(userId) {
+    try {
+      const token = jwt.sign(
+        { id: userId },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      return token;
+    } catch (error) {
+      console.error('[UserService] Error generating custom token:', error);
+      throw error;
     }
-    
-    console.log('🔑 Generating custom token for user:', userId);
-    return jwt.sign(
-      { id: userId, firebaseUid },
-      this.SECRET,
-      { expiresIn: '7d' }
-    );
   }
   
   static makeCharacterDefaults(user) {

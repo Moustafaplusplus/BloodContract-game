@@ -30,18 +30,18 @@ export class GameNewsController {
   // Create new game news (admin only)
   static async createNews(req, res) {
     try {
-      const { title, content, color } = req.body;
-      const adminId = req.user.id;
-
+      const { title, content, type = 'GENERAL' } = req.body;
+      
       if (!title || !content) {
         return res.status(400).json({ error: 'Title and content are required' });
       }
-
+      
       const news = await GameNewsService.createNews({ title, content, color }, adminId);
-      console.log(`Game news created: ${news.title}, notifications should be sent`);
+      
       res.status(201).json(news);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error('Create news error:', error);
+      res.status(500).json({ error: 'Failed to create news' });
     }
   }
 

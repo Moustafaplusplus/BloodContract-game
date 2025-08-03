@@ -35,11 +35,7 @@ export class ProfileController {
   static async getUserProfileByUsername(req, res) {
     try {
       const { username } = req.params;
-      console.log('[ProfileController] Request for username:', username);
-      console.log('[ProfileController] Request headers:', req.headers);
-      
       const profile = await ProfileService.getUserProfileByUsername(username);
-      console.log('[ProfileController] Successfully retrieved profile for:', username);
       res.json(profile);
     } catch (error) {
       console.error('[ProfileController] Get user profile by username error:', error);

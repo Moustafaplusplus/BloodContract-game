@@ -171,32 +171,88 @@ export default function Profile() {
   const isOwnProfile = !username;
   const userId = character?.userId;
   
-  // When constructing displayCharacter, inject fame and ensure all fields have defaults
-  // For own profile, use HUD data which is more up-to-date
+  // Helper function to extract character data whether it's nested or flattened
+  const extractCharacterData = (data) => {
+    if (!data) return {};
+    
+    // If data has a nested Character object, extract it
+    if (data.Character) {
+      return {
+        ...data,
+        ...data.Character,
+        // Ensure userId is available
+        userId: data.userId || data.Character.userId || data.id
+      };
+    }
+    
+    // If data is already flattened, return as is
+    return data;
+  };
+  
+  // Extract character data from the API response
+  const extractedCharacter = extractCharacterData(character);
+  
+  // When constructing displayCharacter, properly merge character data with HUD data
+  // For own profile, use HUD data which is more up-to-date, but merge with character data for missing fields
   const displayCharacter = isOwnProfile && hudStats ? {
-    ...hudStats,
-    fame: character?.fame ?? 0,
-    // Ensure all required fields have defaults
-    hp: hudStats.hp ?? 0,
-    maxHp: hudStats.maxHp ?? 1000,
-    money: hudStats.money ?? 0,
-    strength: hudStats.strength ?? 0,
-    defense: hudStats.defense ?? 0,
-    level: hudStats.level ?? 1,
-    username: hudStats.username ?? character?.username ?? 'Unknown',
-    name: hudStats.name ?? character?.name ?? hudStats.username ?? 'Unknown',
+    // Start with character data as base
+    ...extractedCharacter,
+    // Override with HUD data for real-time values
+    hp: hudStats.hp ?? extractedCharacter?.hp ?? 0,
+    maxHp: hudStats.maxHp ?? extractedCharacter?.maxHp ?? 1000,
+    money: hudStats.money ?? extractedCharacter?.money ?? 0,
+    energy: hudStats.energy ?? extractedCharacter?.energy ?? 0,
+    maxEnergy: hudStats.maxEnergy ?? extractedCharacter?.maxEnergy ?? 100,
+    strength: hudStats.strength ?? extractedCharacter?.strength ?? 0,
+    defense: hudStats.defense ?? extractedCharacter?.defense ?? 0,
+    level: hudStats.level ?? extractedCharacter?.level ?? 1,
+    exp: hudStats.exp ?? extractedCharacter?.exp ?? 0,
+    // Keep character data for stats that aren't in HUD
+    fame: extractedCharacter?.fame ?? 0,
+    crimesCommitted: extractedCharacter?.crimesCommitted ?? 0,
+    assassinations: extractedCharacter?.assassinations ?? 0,
+    killCount: extractedCharacter?.killCount ?? 0,
+    fightsWon: extractedCharacter?.fightsWon ?? 0,
+    fightsLost: extractedCharacter?.fightsLost ?? 0,
+    fightsTotal: extractedCharacter?.fightsTotal ?? 0,
+    daysInGame: extractedCharacter?.daysInGame ?? 0,
+    // User info
+    username: hudStats.username ?? extractedCharacter?.username ?? 'Unknown',
+    name: extractedCharacter?.name ?? hudStats.username ?? extractedCharacter?.username ?? 'Unknown',
+    userId: hudStats.userId ?? extractedCharacter?.userId,
+    // Other fields
+    avatarUrl: extractedCharacter?.avatarUrl,
+    quote: extractedCharacter?.quote,
+    attackImmunityExpiresAt: extractedCharacter?.attackImmunityExpiresAt,
+    lastActive: extractedCharacter?.lastActive,
   } : {
-    ...(character || {}),
-    fame: character?.fame ?? 0,
+    // For other users' profiles, use character data with defaults
+    ...extractedCharacter,
     // Ensure all required fields have defaults
-    hp: character?.hp ?? 0,
-    maxHp: character?.maxHp ?? 1000,
-    money: character?.money ?? 0,
-    strength: character?.strength ?? 0,
-    defense: character?.defense ?? 0,
-    level: character?.level ?? 1,
-    username: character?.username ?? 'Unknown',
-    name: character?.name ?? character?.username ?? 'Unknown',
+    hp: extractedCharacter?.hp ?? 0,
+    maxHp: extractedCharacter?.maxHp ?? 1000,
+    money: extractedCharacter?.money ?? 0,
+    energy: extractedCharacter?.energy ?? 0,
+    maxEnergy: extractedCharacter?.maxEnergy ?? 100,
+    strength: extractedCharacter?.strength ?? 0,
+    defense: extractedCharacter?.defense ?? 0,
+    level: extractedCharacter?.level ?? 1,
+    exp: extractedCharacter?.exp ?? 0,
+    fame: extractedCharacter?.fame ?? 0,
+    crimesCommitted: extractedCharacter?.crimesCommitted ?? 0,
+    assassinations: extractedCharacter?.assassinations ?? 0,
+    killCount: extractedCharacter?.killCount ?? 0,
+    fightsWon: extractedCharacter?.fightsWon ?? 0,
+    fightsLost: extractedCharacter?.fightsLost ?? 0,
+    fightsTotal: extractedCharacter?.fightsTotal ?? 0,
+    daysInGame: extractedCharacter?.daysInGame ?? 0,
+    username: extractedCharacter?.username ?? 'Unknown',
+    name: extractedCharacter?.name ?? extractedCharacter?.username ?? 'Unknown',
+    userId: extractedCharacter?.userId,
+    avatarUrl: extractedCharacter?.avatarUrl,
+    quote: extractedCharacter?.quote,
+    attackImmunityExpiresAt: extractedCharacter?.attackImmunityExpiresAt,
+    lastActive: extractedCharacter?.lastActive,
   };
   
   // Check if this is the current user (for self-attack prevention)
@@ -335,7 +391,7 @@ export default function Profile() {
 
   // Initial friendship status fetch and real-time updates
   useEffect(() => {
-    if (!isOwnProfile && character?.userId && hudStats?.userId) {
+    if (!isOwnProfile && displayCharacter?.userId && hudStats?.userId) {
       setFriendshipStatusLoading(true);
       
       // Initial fetch function
@@ -343,7 +399,7 @@ export default function Profile() {
         if (!customToken) return;
         try {
           // Check if they are friends
-          const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
+          const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${displayCharacter.userId}`, { 
             headers: { Authorization: `Bearer ${customToken}` } 
           });
           setIsFriend(friendRes.data.isFriend);
@@ -354,12 +410,12 @@ export default function Profile() {
           });
           
           // Check if current user sent a request to this character
-          const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+          const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === displayCharacter.userId);
           if (sentRequest) {
             setPendingStatus('sent');
           } else {
             // Check if current user received a request from this character
-            const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+            const receivedRequest = pendingRes.data.find(r => r.Requester?.id === displayCharacter.userId && r.addresseeId === hudStats?.userId);
             if (receivedRequest) {
               setPendingStatus('received');
             } else {
@@ -379,27 +435,27 @@ export default function Profile() {
       fetchFriendshipStatus();
       
       // Request profile update via socket
-      requestProfileUpdate(character.userId);
+      requestProfileUpdate(displayCharacter.userId);
     } else if (isOwnProfile) {
       // Reset friendship status for own profile
       setIsFriend(null);
       setPendingStatus(null);
       setFriendshipStatusLoading(false);
     }
-  }, [character?.userId, isOwnProfile, hudStats?.userId, requestProfileUpdate]);
+  }, [displayCharacter?.userId, isOwnProfile, hudStats?.userId, requestProfileUpdate]);
 
 
 
   // Refetch friendship status when component mounts or when data changes
   useEffect(() => {
-    if (!isOwnProfile && character?.userId && hudStats?.userId) {
+    if (!isOwnProfile && displayCharacter?.userId && hudStats?.userId) {
       // Add a small delay to ensure all data is loaded
       const timer = setTimeout(() => {
         const fetchFriendshipStatus = async () => {
           if (!customToken) return;
           try {
             // Check if they are friends
-            const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
+            const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${displayCharacter.userId}`, { 
               headers: { Authorization: `Bearer ${customToken}` } 
             });
             setIsFriend(friendRes.data.isFriend);
@@ -410,12 +466,12 @@ export default function Profile() {
             });
             
             // Check if current user sent a request to this character
-            const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+            const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === displayCharacter.userId);
             if (sentRequest) {
               setPendingStatus('sent');
             } else {
               // Check if current user received a request from this character
-              const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+              const receivedRequest = pendingRes.data.find(r => r.Requester?.id === displayCharacter.userId && r.addresseeId === hudStats?.userId);
               if (receivedRequest) {
                 setPendingStatus('received');
               } else {
@@ -434,7 +490,7 @@ export default function Profile() {
       
       return () => clearTimeout(timer);
     }
-  }, [character?.userId, isOwnProfile, hudStats?.userId]);
+  }, [displayCharacter?.userId, isOwnProfile, hudStats?.userId]);
 
   // Refetch profile data on hud:update (for own profile) or profile:update (for others)
   useEffect(() => {
@@ -481,9 +537,9 @@ export default function Profile() {
     
     // Real-time friendship status updates
     const handleFriendshipUpdate = async () => {
-      if (!isOwnProfile && character?.userId && customToken) {
+      if (!isOwnProfile && displayCharacter?.userId && customToken) {
         try {
-          const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
+          const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${displayCharacter.userId}`, { 
             headers: { Authorization: `Bearer ${customToken}` } 
           });
           setIsFriend(friendRes.data.isFriend);
@@ -493,12 +549,12 @@ export default function Profile() {
           });
           
           // Check if current user sent a request to this character
-          const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
+          const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === displayCharacter.userId);
           if (sentRequest) {
             setPendingStatus('sent');
           } else {
             // Check if current user received a request from this character
-            const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+            const receivedRequest = pendingRes.data.find(r => r.Requester?.id === displayCharacter.userId && r.addresseeId === hudStats?.userId);
             if (receivedRequest) {
               setPendingStatus('received');
             } else {
@@ -537,33 +593,33 @@ export default function Profile() {
       socket.off('friendship:request-rejected', handleFriendshipUpdate);
       socket.off('friendship:removed', handleFriendshipUpdate);
     };
-  }, [socket, fetchHospitalStatus, fetchJailStatus, character?.userId, isOwnProfile, hudStats?.userId, customToken]);
+  }, [socket, fetchHospitalStatus, fetchJailStatus, displayCharacter?.userId, isOwnProfile, hudStats?.userId, customToken]);
 
   useEffect(() => {
-    if (character?.userId && customToken) {
+    if (displayCharacter?.userId && customToken) {
       setFriendsLoading(true);
-      axios.get(`/api/friendship/list/${character.userId}`, { headers: { Authorization: `Bearer ${customToken}` } })
+      axios.get(`/api/friendship/list/${displayCharacter.userId}`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => setProfileFriends(res.data))
         .catch(() => setProfileFriends([]))
         .finally(() => setFriendsLoading(false));
     }
-  }, [character?.userId, customToken]);
+  }, [displayCharacter?.userId, customToken]);
 
   // Fetch profile ratings
   useEffect(() => {
-    if (character?.userId && customToken) {
-      axios.get(`/api/profile/${character.userId}/ratings`, { headers: { Authorization: `Bearer ${customToken}` } })
+    if (displayCharacter?.userId && customToken) {
+      axios.get(`/api/profile/${displayCharacter.userId}/ratings`, { headers: { Authorization: `Bearer ${customToken}` } })
         .then(res => setProfileRatings(res.data))
         .catch(() => setProfileRatings({ likes: 0, dislikes: 0, userRating: null }));
     }
-  }, [character?.userId, customToken]);
+  }, [displayCharacter?.userId, customToken]);
 
   // Handle like/dislike
   const handleRate = async (rating) => {
-    if (!character?.userId || !customToken) return;
+    if (!displayCharacter?.userId || !customToken) return;
     setRatingLoading(true);
     try {
-      await axios.post(`/api/profile/${character.userId}/rate`, { rating }, { headers: { Authorization: `Bearer ${customToken}` } });
+      await axios.post(`/api/profile/${displayCharacter.userId}/rate`, { rating }, { headers: { Authorization: `Bearer ${customToken}` } });
       setProfileRatings(prev => ({ ...prev, userRating: rating, likes: rating === 'LIKE' ? prev.likes + (prev.userRating === 'DISLIKE' ? 1 : prev.userRating === 'LIKE' ? 0 : 1) : prev.likes - (prev.userRating === 'LIKE' ? 1 : 0), dislikes: rating === 'DISLIKE' ? prev.dislikes + (prev.userRating === 'LIKE' ? 1 : prev.userRating === 'DISLIKE' ? 0 : 1) : prev.dislikes - (prev.userRating === 'DISLIKE' ? 1 : 0) }));
     } catch (e) {
       toast.error('حدث خطأ أثناء التقييم');
@@ -576,7 +632,7 @@ export default function Profile() {
     if (!customToken) return;
     setFriendLoading(true);
     try {
-      await axios.post('/api/friendship/add', { friendId: character.userId }, { 
+      await axios.post('/api/friendship/add', { friendId: displayCharacter.userId }, { 
         headers: { Authorization: `Bearer ${customToken}` } 
       });
       setPendingStatus('sent');
@@ -594,7 +650,7 @@ export default function Profile() {
     if (!customToken) return;
     setFriendLoading(true);
     try {
-      await axios.post('/api/friendship/remove', { friendId: character.userId }, { 
+      await axios.post('/api/friendship/remove', { friendId: displayCharacter.userId }, { 
         headers: { Authorization: `Bearer ${customToken}` } 
       });
       setIsFriend(false);
@@ -616,7 +672,7 @@ export default function Profile() {
       const res = await axios.get('/api/friendship/pending', { 
         headers: { Authorization: `Bearer ${customToken}` } 
       });
-      const request = res.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
+      const request = res.data.find(r => r.Requester?.id === displayCharacter.userId && r.addresseeId === hudStats?.userId);
       if (request) {
         await axios.post('/api/friendship/accept', { friendshipId: request.id }, { 
           headers: { Authorization: `Bearer ${customToken}` } 
@@ -736,7 +792,7 @@ export default function Profile() {
 
   // Direct attack logic (copied from Fights.jsx)
   const attackPlayer = async () => {
-    if (!character?.userId) {
+    if (!displayCharacter?.userId) {
       toast.error("لا يمكن تحديد هوية اللاعب للهجوم.");
       return;
     }
@@ -771,7 +827,7 @@ export default function Profile() {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const API = import.meta.env.VITE_API_URL;
-        const url = `${API}/api/fight/${character.userId}`;
+        const url = `${API}/api/fight/${displayCharacter.userId}`;
         
         const res = await fetch(url, {
           method: "POST",
@@ -853,9 +909,9 @@ export default function Profile() {
 
   // Add this function for sending a message
   const handleSendMessage = () => {
-    if (userId && displayCharacter?.username) {
+    if (displayCharacter?.userId && displayCharacter?.username) {
       navigate('/dashboard/messages', {
-        state: { userId, username: displayCharacter.username }
+        state: { userId: displayCharacter.userId, username: displayCharacter.username }
       });
     } else {
       navigate('/dashboard/messages');

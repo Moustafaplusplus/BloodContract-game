@@ -78,13 +78,8 @@ export class ProfileService {
         throw new Error('User not found');
       }
       
-      // If user exists but character doesn't, create one
       if (!user.Character) {
-        const character = await Character.create({
-          userId: user.id,
-          name: user.username
-        });
-        user.Character = character;
+        throw new Error('Character not found');
       }
       
       const userObj = user.toJSON();
@@ -100,9 +95,44 @@ export class ProfileService {
         console.error('[ProfileService] Error fetching statistics:', statError);
       }
       
+      // Ensure we flatten the character data properly
+      const characterData = userObj.Character || {};
+      
       const result = {
-        ...sanitizedUser,
-        ...userObj.Character,
+        // User data
+        id: sanitizedUser.id,
+        userId: sanitizedUser.id,
+        username: sanitizedUser.username,
+        avatarUrl: sanitizedUser.avatarUrl,
+        isAdmin: sanitizedUser.isAdmin,
+        isVip: sanitizedUser.isVip,
+        isGuest: sanitizedUser.isGuest,
+        hasSeenIntro: sanitizedUser.hasSeenIntro,
+        firebaseUid: sanitizedUser.firebaseUid,
+        money: sanitizedUser.money,
+        blackcoins: sanitizedUser.blackcoins,
+        createdAt: sanitizedUser.createdAt,
+        updatedAt: sanitizedUser.updatedAt,
+        // Character data (flattened)
+        name: characterData.name,
+        level: characterData.level,
+        exp: characterData.exp,
+        strength: characterData.strength,
+        defense: characterData.defense,
+        energy: characterData.energy,
+        maxEnergy: characterData.maxEnergy,
+        hp: characterData.hp,
+        maxHp: characterData.maxHp,
+        equippedHouseId: characterData.equippedHouseId,
+        gangId: characterData.gangId,
+        daysInGame: characterData.daysInGame,
+        killCount: characterData.killCount,
+        lastActive: characterData.lastActive,
+        buffs: characterData.buffs,
+        quote: characterData.quote,
+        attackImmunityExpiresAt: characterData.attackImmunityExpiresAt,
+        vipExpiresAt: characterData.vipExpiresAt,
+        // Enriched data
         fightsLost,
         fame,
         assassinations
@@ -144,9 +174,44 @@ export class ProfileService {
         console.error('[ProfileService] Error fetching statistics:', statError);
       }
       
+      // Ensure we flatten the character data properly
+      const characterData = userObj.Character || {};
+      
       const result = {
-        ...sanitizedUser,
-        ...userObj.Character,
+        // User data
+        id: sanitizedUser.id,
+        userId: sanitizedUser.id,
+        username: sanitizedUser.username,
+        avatarUrl: sanitizedUser.avatarUrl,
+        isAdmin: sanitizedUser.isAdmin,
+        isVip: sanitizedUser.isVip,
+        isGuest: sanitizedUser.isGuest,
+        hasSeenIntro: sanitizedUser.hasSeenIntro,
+        firebaseUid: sanitizedUser.firebaseUid,
+        money: sanitizedUser.money,
+        blackcoins: sanitizedUser.blackcoins,
+        createdAt: sanitizedUser.createdAt,
+        updatedAt: sanitizedUser.updatedAt,
+        // Character data (flattened)
+        name: characterData.name,
+        level: characterData.level,
+        exp: characterData.exp,
+        strength: characterData.strength,
+        defense: characterData.defense,
+        energy: characterData.energy,
+        maxEnergy: characterData.maxEnergy,
+        hp: characterData.hp,
+        maxHp: characterData.maxHp,
+        equippedHouseId: characterData.equippedHouseId,
+        gangId: characterData.gangId,
+        daysInGame: characterData.daysInGame,
+        killCount: characterData.killCount,
+        lastActive: characterData.lastActive,
+        buffs: characterData.buffs,
+        quote: characterData.quote,
+        attackImmunityExpiresAt: characterData.attackImmunityExpiresAt,
+        vipExpiresAt: characterData.vipExpiresAt,
+        // Enriched data
         fightsLost,
         fame,
         assassinations

@@ -198,17 +198,10 @@ export class BlackMarketController {
 
       // Create notification for listing posted
       try {
-        console.log(`[BlackMarketController] Creating notification for listing posted by user ${userId}`);
-        const notification = await BlackMarketService.createListingPostedNotification(
-          userId,
-          item.name,
-          price
-        );
-        console.log(`[BlackMarketController] Notification created:`, notification);
+        const notification = await BlackMarketService.createListingPostedNotification(userId, item.name, price);
         emitNotification(userId, notification);
-        console.log(`[BlackMarketController] Notification emitted to user ${userId}`);
       } catch (notificationError) {
-        console.error('[BlackMarketController] Listing posted notification error:', notificationError);
+        console.error('[BlackMarketController] Notification error:', notificationError);
       }
 
       res.status(201).json(listing);

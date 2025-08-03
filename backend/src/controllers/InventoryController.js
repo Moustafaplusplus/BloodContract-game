@@ -74,11 +74,8 @@ export class InventoryController {
 
   static async useSpecialItem(req, res) {
     try {
-      console.log('useSpecialItem controller called with body:', req.body);
       const { itemId } = req.body;
-      console.log('itemId from body:', itemId);
       const result = await InventoryService.useSpecialItem(req.user.id, itemId);
-      console.log('useSpecialItem result:', result);
       res.json(result);
     } catch (error) {
       console.error('[Inventory] Use special item failed', error);

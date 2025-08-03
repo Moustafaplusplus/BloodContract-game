@@ -266,72 +266,51 @@ export function initSocket(server) {
       /* helper to push blood contract updates */
       const pushBloodContractUpdate = async (targetUserId = userId) => {
         try {
-          const now = new Date();
-          console.log(`[Socket] Fetching blood contracts for user ${targetUserId}`);
-          
-          // Get all available contracts that the user can see and potentially fulfill
           const contracts = await BloodContract.findAll({
             where: {
-              status: 'open',
-              expiresAt: { [Op.gt]: now },
+              [Op.or]: [
+                { posterId: targetUserId },
+                { targetId: targetUserId }
+              ],
+              status: { [Op.ne]: 'completed' }
             },
             include: [
-              {
-                model: User,
-                as: 'target',
-                attributes: ['id', 'username'],
-                include: [
-                  {
-                    model: Character,
-                    attributes: ['level', 'name', 'userId'],
-                  },
-                ],
-              },
+              { model: User, as: 'Poster', attributes: ['id', 'username', 'avatarUrl'] },
+              { model: User, as: 'Target', attributes: ['id', 'username', 'avatarUrl'] },
+              { model: User, as: 'Assassin', attributes: ['id', 'username', 'avatarUrl'] }
             ],
-            order: [['createdAt', 'DESC']],
+            order: [['createdAt', 'DESC']]
           });
-
-          console.log(`[Socket] Found ${contracts.length} blood contracts for user ${targetUserId}`);
-          contracts.forEach(contract => {
-            console.log(`[Socket] Contract ${contract.id}: posterId=${contract.posterId}, targetId=${contract.targetId}, status=${contract.status}`);
-          });
-
-          // Format the contracts with additional information
-          const formattedContracts = await Promise.all(contracts.map(async contract => {
-            let fame = null;
-            let canFulfill = true;
-            
-            if (contract.target && contract.target.Character) {
-              fame = await contract.target.Character.getFame();
-            }
-            
-            if (targetUserId === contract.posterId || targetUserId === contract.targetId) {
-              canFulfill = false;
-            }
-            
-            return {
-              id: contract.id,
-              target: {
-                id: contract.target?.id,
-                username: contract.target?.username,
-                fame,
-                level: contract.target?.Character?.level,
-                name: contract.target?.Character?.name || contract.target?.username,
-              },
-              price: contract.price,
-              status: contract.status,
-              createdAt: contract.createdAt,
-              expiresAt: contract.expiresAt,
-              isPoster: targetUserId === contract.posterId,
-              isTarget: targetUserId === contract.targetId,
-              canFulfill,
-            };
+          
+          const formattedContracts = contracts.map(contract => ({
+            id: contract.id,
+            posterId: contract.posterId,
+            targetId: contract.targetId,
+            assassinId: contract.assassinId,
+            amount: contract.amount,
+            status: contract.status,
+            expiresAt: contract.expiresAt,
+            createdAt: contract.createdAt,
+            poster: contract.Poster ? {
+              id: contract.Poster.id,
+              username: contract.Poster.username,
+              avatarUrl: contract.Poster.avatarUrl
+            } : null,
+            target: contract.Target ? {
+              id: contract.Target.id,
+              username: contract.Target.username,
+              avatarUrl: contract.Target.avatarUrl
+            } : null,
+            assassin: contract.Assassin ? {
+              id: contract.Assassin.id,
+              username: contract.Assassin.username,
+              avatarUrl: contract.Assassin.avatarUrl
+            } : null
           }));
           
-          console.log(`[Socket] Formatted ${formattedContracts.length} contracts for user ${targetUserId}:`, formattedContracts);
           io.to(`user:${targetUserId}`).emit('bloodContract:update', formattedContracts);
         } catch (error) {
-          console.error(`[Socket] Error pushing blood contract update for user ${targetUserId}:`, error.message);
+          console.error('[Socket] Error pushing blood contract update:', error);
         }
       };
 
@@ -447,8 +426,7 @@ export function initSocket(server) {
 
       // Test event handler for debugging
       socket.on('test', (data) => {
-        console.log(`[Socket] Test event received from user ${userId}:`, data);
-        socket.emit('test_response', { message: 'Test response from server', timestamp: Date.now() });
+        io.to(`user:${userId}`).emit('test_response', { message: 'Test response received', data });
       });
 
       // --- Messaging system ---
@@ -713,9 +691,7 @@ export function initSocket(server) {
       // --- Blood Contract Updates ---
       socket.on('bloodContract:request', async () => {
         try {
-          console.log(`[Socket] Blood contract request from user ${userId}`);
           await pushBloodContractUpdate();
-          console.log(`[Socket] Blood contract update sent to user ${userId}`);
         } catch (error) {
           console.error(`[Socket] Error handling blood contract request:`, error.message);
         }
@@ -1044,7 +1020,6 @@ export function initSocket(server) {
           target.chatMutedUntil = until;
           await target.save();
           io.to(`user:${targetUserId}`).emit('muted', { until });
-          console.log(`[Global Chat] Emitted muted to user ${targetUserId}`);
           callback && callback({ success: true });
         } catch (err) {
           callback && callback({ error: err.message });
@@ -1060,7 +1035,6 @@ export function initSocket(server) {
           for (const [id, s] of io.of('/').sockets) {
             if (s.data.userId === targetUserId) {
               s.emit('kicked');
-              console.log(`[Global Chat] Emitted kicked to user ${targetUserId} (socket ${id})`);
               s.disconnect();
             }
           }
@@ -1081,7 +1055,6 @@ export function initSocket(server) {
           target.chatBannedUntil = until;
           await target.save();
           io.to(`user:${targetUserId}`).emit('banned', { until });
-          console.log(`[Global Chat] Emitted banned to user ${targetUserId}`);
           // Optionally disconnect user
           for (const [id, s] of io.of('/').sockets) {
             if (s.data.userId === targetUserId) {
@@ -1103,7 +1076,6 @@ export function initSocket(server) {
           if (!message) return callback && callback({ error: 'Message not found' });
           await message.destroy();
           io.to('global_chat').emit('global_message_deleted', { messageId });
-          console.log(`[Global Chat] Emitted global_message_deleted for message ${messageId}`);
           callback && callback({ success: true });
         } catch (err) {
           callback && callback({ error: err.message });
@@ -1117,7 +1089,6 @@ export function initSocket(server) {
           if (!admin || !admin.isAdmin) return callback && callback({ error: 'Unauthorized' });
           await GlobalMessage.destroy({ where: {} });
           io.to('global_chat').emit('global_chat_cleared');
-          console.log('[Global Chat] All messages cleared by admin:', userId);
           callback && callback({ success: true });
         } catch (err) {
           callback && callback({ error: err.message });
@@ -1218,7 +1189,6 @@ export function initSocket(server) {
             editedAt: message.editedAt
           };
           io.to('global_chat').emit('global_message', messageData);
-          console.log(`[Global Chat] Emitted global_message (edit) for message ${message.id}`);
           callback && callback({ success: true });
         } catch (error) {
           console.error('[Socket] Error editing global message:', error);

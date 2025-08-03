@@ -135,52 +135,45 @@ export class UserController {
 
   static async uploadAvatar(req, res) {
     try {
-      if (!req.file) return res.status(400).json({ message: 'لم يتم رفع أي صورة.' });
-      const user = await User.findByPk(req.user.id);
-      if (!user) return res.status(404).json({ message: 'المستخدم غير موجود.' });
-      
-      console.log('📁 File upload details:', {
-        originalname: req.file.originalname,
-        size: req.file.size,
-        mimetype: req.file.mimetype,
-        userId: req.user.id
-      });
-      
-      // Generate filename with timestamp
-      const ext = req.file.originalname.split('.').pop();
-      const filename = `user_${req.user.id}_${Date.now()}.${ext}`;
-      
-      // Upload to Firebase Storage - NO FALLBACKS
-      console.log('📤 Uploading avatar to Firebase:', { filename, userId: req.user.id });
-      const result = await uploadToFirebase(req.file.buffer, 'avatars', filename);
-      
-      if (!result || !result.publicUrl) {
-        throw new Error('Firebase upload failed - no public URL returned');
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      console.log('✅ Avatar uploaded successfully:', result.publicUrl);
-      console.log('🔍 URL validation:');
-      console.log('- Is Firebase URL?', result.publicUrl.startsWith('https://storage.googleapis.com/'));
-      console.log('- URL length:', result.publicUrl.length);
-      console.log('- Full URL:', result.publicUrl);
+      const file = req.file;
+      const userId = req.user.id;
       
-      // Update user with Firebase URL - ONLY Firebase URLs allowed
-      if (!result.publicUrl.startsWith('https://storage.googleapis.com/')) {
-        throw new Error('Invalid Firebase URL returned');
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        return res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' });
       }
       
-      console.log('💾 Saving to database...');
-      console.log('- Before save avatarUrl:', user.avatarUrl);
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+      }
+      
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Upload to Firebase Storage
+      const result = await uploadToFirebase(file, userId);
+      
+      // Update user's avatar URL
       user.avatarUrl = result.publicUrl;
       await user.save();
-      console.log('- After save avatarUrl:', user.avatarUrl);
       
-      console.log('📤 Sending response...');
-      console.log('- Response avatarUrl:', result.publicUrl);
-      res.json({ avatarUrl: result.publicUrl });
+      res.json({
+        success: true,
+        avatarUrl: result.publicUrl,
+        message: 'Avatar uploaded successfully'
+      });
     } catch (error) {
-      console.error('❌ Avatar upload error:', error);
-      res.status(500).json({ message: 'فشل رفع الصورة', error: error.message });
+      console.error('Avatar upload error:', error);
+      res.status(500).json({ error: 'Failed to upload avatar' });
     }
   }
 } 

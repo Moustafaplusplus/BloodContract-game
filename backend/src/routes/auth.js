@@ -14,37 +14,11 @@ router.post('/firebase-token', async (req, res) => {
     const { idToken } = req.body;
     
     if (!idToken) {
-      console.error('❌ No Firebase ID token provided');
       return res.status(400).json({ message: 'No Firebase ID token provided' });
     }
-
-    console.log('🔍 Verifying Firebase ID token...');
-    console.log('🔍 Token length:', idToken.length);
-    console.log('🔍 Token preview:', idToken.substring(0, 50) + '...');
     
-    // Check if Firebase Admin is available
-    console.log('🔍 Firebase Admin available:', !!admin.auth);
-    console.log('🔍 Firebase Admin apps:', admin.apps?.length || 0);
-    
-    // Check if Firebase Admin is properly initialized
-    if (!admin.apps || admin.apps.length === 0) {
-      console.error('❌ Firebase Admin SDK not initialized');
-      return res.status(500).json({ message: 'Firebase Admin SDK not initialized' });
-    }
-    
-    // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const firebaseUid = decodedToken.uid;
-    
-    console.log('✅ Firebase token verified for UID:', firebaseUid);
-    console.log('🔍 Token details:', {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      provider_id: decodedToken.provider_id,
-      isAnonymous: !decodedToken.email,
-      name: decodedToken.name,
-      picture: decodedToken.picture
-    });
     
     // Check if user exists in our database
     const { User } = await import('../models/User.js');
@@ -93,13 +67,6 @@ router.post('/firebase-token', async (req, res) => {
         counter++;
       }
       
-      console.log('🔍 Generated username:', {
-        original: username,
-        final: finalUsername,
-        length: finalUsername.length,
-        isAnonymous
-      });
-
       // Check if email already exists (for email/password users)
       const existingUserByEmail = await User.findOne({ where: { email } });
       if (existingUserByEmail) {
@@ -135,7 +102,6 @@ router.post('/firebase-token', async (req, res) => {
     const { UserService } = await import('../services/UserService.js');
     const token = UserService.generateCustomToken(user.id, user.firebaseUid);
 
-    console.log('✅ Custom token generated for user:', user.id);
     res.json({
       token,
       user: {

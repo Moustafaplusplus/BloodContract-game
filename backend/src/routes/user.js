@@ -5,6 +5,7 @@ import { validate } from '../middleware/validation.js';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { uploadToFirebase } from '../config/firebase.js';
+import { User } from '../models/User.js'; // Added missing import for User model
 
 // Rate limiters
 const signupLimiter = rateLimit({
@@ -22,19 +23,12 @@ const loginLimiter = rateLimit({
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    console.log('📁 File filter check:', { 
-      originalname: file.originalname, 
-      mimetype: file.mimetype, 
-      size: file.size 
-    });
     
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowed.includes(file.mimetype)) {
-      console.log('❌ File type rejected:', file.mimetype);
       return cb(new Error('يُسمح فقط برفع صور من نوع jpeg, png, gif, webp'));
     }
     
-    console.log('✅ File type accepted:', file.mimetype);
     cb(null, true);
   },
   limits: { 
@@ -60,23 +54,48 @@ router.get('/users/active', UserController.getActiveUsers);
 router.get('/users/:id', UserController.getUserById);
 
 // POST /api/avatar - Upload user avatar
-router.post('/avatar', auth, (req, res, next) => {
-  console.log('🎯 Avatar upload endpoint hit!');
-  console.log('🎯 Request headers:', req.headers);
-  console.log('🎯 Request body keys:', Object.keys(req.body || {}));
-  next();
-}, upload.single('avatar'), (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ 
-        message: 'حجم الملف كبير جداً. الحد الأقصى هو 1 ميجابايت.' 
-      });
+router.post('/avatar', upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
     }
-    return res.status(400).json({ message: err.message });
-  } else if (err) {
-    return res.status(400).json({ message: err.message });
+    
+    const file = req.file;
+    const userId = req.user.id;
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.' });
+    }
+    
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+    }
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Upload to Firebase Storage
+    const result = await uploadToFirebase(file, userId);
+    
+    // Update user's avatar URL
+    user.avatarUrl = result.publicUrl;
+    await user.save();
+    
+    res.json({
+      success: true,
+      avatarUrl: result.publicUrl,
+      message: 'Avatar uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    res.status(500).json({ error: 'Failed to upload avatar' });
   }
-  next();
-}, UserController.uploadAvatar);
+});
 
 export default router; 

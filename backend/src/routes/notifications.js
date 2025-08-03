@@ -28,30 +28,21 @@ router.delete('/', auth, NotificationController.deleteAllNotifications);
 router.post('/test', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log('[Notification Test] Creating test notification for user:', userId);
     
     const notification = await NotificationService.createNotification(
       userId,
-      'SYSTEM',
+      'TEST',
       'إشعار تجريبي',
       'هذا إشعار تجريبي لاختبار النظام',
       { test: true }
     );
     
-    console.log('[Notification Test] Notification created:', notification.id);
     emitNotification(userId, notification);
-    console.log('[Notification Test] Notification emitted via socket');
     
-    res.json({
-      success: true,
-      data: notification
-    });
+    res.json({ success: true, notification });
   } catch (error) {
-    console.error('Error creating test notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'فشل في إنشاء الإشعار التجريبي'
-    });
+    console.error('Test notification error:', error);
+    res.status(500).json({ error: 'Failed to create test notification' });
   }
 });
 

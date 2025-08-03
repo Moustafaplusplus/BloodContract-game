@@ -280,7 +280,6 @@ export class FightService {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         let t = null;
         try {
-          console.log(`[FightService] Attempt ${attempt} for fight: ${attackerId} vs ${defenderId}`);
           
           // Create a fresh transaction for each attempt
           t = await sequelize.transaction();
@@ -310,12 +309,10 @@ export class FightService {
           // --- DEADLOCK PREVENTION: Always lock in ascending userId order ---
           let atkChar, defChar, atkUser, defUser, atkFame, defFame;
           
-          console.log('[FightService] Starting transaction for fight:', attackerId, 'vs', defenderId);
           
           let firstId = attackerId < defenderId ? attackerId : defenderId;
           let secondId = attackerId < defenderId ? defenderId : attackerId;
           
-          console.log('[FightService] Locking characters in order:', firstId, secondId);
           
           // Lock both characters in order to prevent deadlocks
           const [firstChar, secondChar] = await Promise.all([
@@ -331,7 +328,7 @@ export class FightService {
             }),
           ]);
           
-          console.log('[FightService] Characters locked successfully');
+          
           // Assign atkChar/defChar based on input
           if (attackerId < defenderId) {
             atkChar = firstChar;
@@ -353,7 +350,6 @@ export class FightService {
             try {
               const protectionNotification = await NotificationService.createAttackImmunityProtectedNotification(defChar.userId, 'direct_attack', attackerName);
               emitNotification(defChar.userId, protectionNotification);
-              console.log('[FightService] Protection notification sent to defender:', defChar.userId);
             } catch (notificationError) {
               console.error('[FightService] Protection notification error:', notificationError);
             }
@@ -398,7 +394,7 @@ export class FightService {
             winnerChar = defChar;
             loserChar = atkChar;
           }
-          console.log('[FightService] Winner:', winnerChar.userId, 'Loser:', loserChar.userId);
+          
           const stealPercent = 0.3 + Math.random() * 0.1; // 30-40%
           const amountStolen = Math.floor(loserChar.money * stealPercent);
           if (amountStolen > 0) {
@@ -431,7 +427,7 @@ export class FightService {
           if (result.winner.userId === atkChar.userId) {
             atkChar.exp = Math.floor(atkChar.exp + xpGain);
             atkChar.killCount = Math.floor((atkChar.killCount || 0) + 1); // Winner gets kill
-            console.log('[FightService] Attacker won - killCount updated to:', atkChar.killCount);
+            
             // Handle level up separately to avoid transaction issues
             try {
               await CharacterService.maybeLevelUp(atkChar);
@@ -443,7 +439,7 @@ export class FightService {
           } else {
             defChar.exp = Math.floor(defChar.exp + xpGain);
             defChar.killCount = Math.floor((defChar.killCount || 0) + 1); // Winner gets kill
-            console.log('[FightService] Defender won - killCount updated to:', defChar.killCount);
+            
             // Handle level up separately to avoid transaction issues
             try {
               await CharacterService.maybeLevelUp(defChar);
@@ -473,10 +469,9 @@ export class FightService {
           // Hospital logic: send to hospital if final HP is 0 or negative (fixed 20 minutes)
           const hospitalTime = new Date();
           try {
-            console.log('[FightService] Hospital check - Attacker final HP:', result.attackerFinalHp, 'Defender final HP:', result.defenderFinalHp);
             
             if (result.attackerFinalHp <= 0) {
-              console.log('[FightService] Sending attacker to hospital');
+              
               // Fixed hospital stay: 20 minutes
               const hospitalStay = 20;
               const hpLoss = 100; // Fixed HP loss
@@ -497,7 +492,7 @@ export class FightService {
               }
             }
             if (result.defenderFinalHp <= 0) {
-              console.log('[FightService] Sending defender to hospital');
+              
               // Fixed hospital stay: 20 minutes
               const hospitalStay = 20;
               const hpLoss = 100; // Fixed HP loss
@@ -530,13 +525,6 @@ export class FightService {
           atkChar.hp = Math.floor(atkChar.hp);
           defChar.hp = Math.floor(defChar.hp);
           
-          // Debug logging for HP values
-          console.log('[FightService] Final HP values:', {
-            attackerId: atkChar.userId,
-            attackerHp: atkChar.hp,
-            defenderId: defChar.userId,
-            defenderHp: defChar.hp
-          });
           
           await Promise.all([
             atkChar.save({ transaction: t }), 
@@ -553,10 +541,9 @@ export class FightService {
             defender_damage: Math.floor(result.defenderDamage),
             xp_gained: Math.floor(xpGain),
             narrative: narrative,
-            log: result.log,
+            log: result.log
           }, { transaction: t });
 
-          console.log('[FightService] Starting task updates...');
           
           // --- TASKS: Update progress for fights, damage, etc. ---
           try {
@@ -581,9 +568,7 @@ export class FightService {
             // Continue with the fight even if task updates fail
           }
           
-          console.log('[FightService] Task updates completed');
-          // --- END TASKS ---
-
+          
           try {
             await CharacterService.addStat(attackerId, "fights", 1, t);
 
@@ -597,22 +582,8 @@ export class FightService {
             // Continue with the fight even if statistics updates fail
           }
 
-          console.log('[FightService] About to save fight record...');
-          console.log('[FightService] Fight data:', {
-            attacker_id: attackerId,
-            defender_id: defenderId,
-            winner_id: result.winner.userId,
-            total_damage: Math.floor(result.totalDamage),
-            attacker_damage: Math.floor(result.attackerDamage),
-            defender_damage: Math.floor(result.defenderDamage),
-            xp_gained: Math.floor(xpGain),
-            narrative: narrative,
-            log: result.log
-          });
           
-          console.log('[FightService] Committing transaction...');
           await t.commit();
-          console.log('[FightService] Transaction committed successfully');
 
           // Live update via Socket.IO
           if (io) {
@@ -740,7 +711,6 @@ export class FightService {
           if (t) {
             try {
               await t.rollback();
-              console.log(`[FightService] Transaction rolled back for attempt ${attempt}`);
             } catch (rollbackError) {
               console.error(`[FightService] Rollback error for attempt ${attempt}:`, rollbackError);
             }
@@ -773,7 +743,6 @@ export class FightService {
           
           // Wait before retrying (exponential backoff)
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-          console.log(`[FightService] Waiting ${delay}ms before retry attempt ${attempt + 1}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }

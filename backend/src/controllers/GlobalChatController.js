@@ -4,54 +4,36 @@ import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 
 const GlobalChatController = {
-  async getRecentMessages(req, res) {
+  static async getRecentMessages(req, res) {
     try {
-      console.log('[Global Chat] Fetching recent messages');
-      const limit = parseInt(req.query.limit) || 50;
-      
-      // Test if GlobalMessage model is available
-      if (!GlobalMessage) {
-        console.error('[Global Chat] GlobalMessage model not found');
-        return res.status(500).json({ error: 'GlobalMessage model not available' });
-      }
-      
       const messages = await GlobalMessage.findAll({
         order: [['createdAt', 'DESC']],
-        limit,
+        limit: 50,
         include: [
           {
             model: User,
-            attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'],
-            include: [{ model: Character, attributes: ['name', 'vipExpiresAt'] }]
+            attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip']
           }
         ]
       });
       
-      // Map messages to include avatarUrl, isAdmin, isVip, and current character name
-      const mapped = messages.reverse().map(msg => {
-        const user = msg.User || {};
-        const character = user.Character || {};
-        return {
-          id: msg.id,
-          userId: msg.userId,
-          username: msg.username, // Keep original username for reference
-          displayName: character.name || msg.username, // Use character name if available, fallback to username
-          avatarUrl: user.avatarUrl,
-          isAdmin: user.isAdmin || false,
-          isVip: user.isVip || false,
-          vipExpiresAt: character.vipExpiresAt,
-          content: msg.content,
-          messageType: msg.messageType,
-          createdAt: msg.createdAt
-        };
-      });
-      console.log('[Global Chat] Found messages:', messages.length);
+      const formattedMessages = messages.reverse().map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        createdAt: msg.createdAt,
+        user: {
+          id: msg.User.id,
+          username: msg.User.username,
+          avatarUrl: msg.User.avatarUrl,
+          isAdmin: msg.User.isAdmin,
+          isVip: msg.User.isVip
+        }
+      }));
       
-      // Return in chronological order (oldest first)
-      res.json(mapped);
-    } catch (err) {
-      console.error('[Global Chat] Error fetching messages:', err);
-      res.status(500).json({ error: err.message });
+      res.json(formattedMessages);
+    } catch (error) {
+      console.error('Get recent messages error:', error);
+      res.status(500).json({ error: 'Failed to get recent messages' });
     }
   },
 

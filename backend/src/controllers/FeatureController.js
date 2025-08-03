@@ -9,46 +9,46 @@ export class FeatureController {
   // Get feature unlock information for the current player
   static async getFeatureInfo(req, res) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        console.error('Feature info error: No user ID in request');
-        return res.status(401).json({ message: 'غير مصرح' });
-      }
-
-      console.log('Fetching character for userId:', userId);
+      const userId = req.user.id;
       const character = await Character.findOne({ where: { userId } });
-      if (!character) {
-        console.error('Feature info error: Character not found for userId:', userId);
-        return res.status(404).json({ message: 'الشخصية غير موجودة' });
-      }
-
-      const playerLevel = character.level || 1;
-      console.log('Player level:', playerLevel);
       
-      const unlockedFeatures = getUnlockedFeatures(playerLevel);
-      const lockedFeatures = getLockedFeatures(playerLevel);
-
-      // Get next feature to unlock
-      const nextFeature = lockedFeatures.length > 0 
-        ? lockedFeatures.sort((a, b) => a.requiredLevel - b.requiredLevel)[0]
-        : null;
-
+      if (!character) {
+        return res.status(404).json({ error: 'Character not found' });
+      }
+      
+      const playerLevel = character.level;
+      
+      // Define features based on level
+      const features = {
+        bank: { unlocked: playerLevel >= 1, level: 1 },
+        shop: { unlocked: playerLevel >= 1, level: 1 },
+        crimes: { unlocked: playerLevel >= 1, level: 1 },
+        fights: { unlocked: playerLevel >= 1, level: 1 },
+        gym: { unlocked: playerLevel >= 2, level: 2 },
+        jobs: { unlocked: playerLevel >= 3, level: 3 },
+        gangs: { unlocked: playerLevel >= 5, level: 5 },
+        houses: { unlocked: playerLevel >= 7, level: 7 },
+        cars: { unlocked: playerLevel >= 8, level: 8 },
+        dogs: { unlocked: playerLevel >= 9, level: 9 },
+        bloodContracts: { unlocked: playerLevel >= 10, level: 10 },
+        ministryMissions: { unlocked: playerLevel >= 12, level: 12 },
+        blackMarket: { unlocked: playerLevel >= 15, level: 15 },
+        specialShop: { unlocked: playerLevel >= 18, level: 18 },
+        tasks: { unlocked: playerLevel >= 20, level: 20 }
+      };
+      
       const response = {
         playerLevel,
-        unlockedFeatures,
-        lockedFeatures,
-        nextFeature,
-        totalFeatures: unlockedFeatures.length + lockedFeatures.length,
-        unlockedCount: unlockedFeatures.length,
-        lockedCount: lockedFeatures.length
+        features,
+        nextLevel: playerLevel + 1,
+        featuresUnlocked: Object.values(features).filter(f => f.unlocked).length,
+        totalFeatures: Object.keys(features).length
       };
-
-      console.log('Feature info response:', response);
+      
       res.json(response);
     } catch (error) {
-      console.error('Feature info error:', error);
-      console.error('Error stack:', error.stack);
-      res.status(500).json({ message: 'خطأ في جلب معلومات الميزات' });
+      console.error('Get feature info error:', error);
+      res.status(500).json({ error: 'Failed to get feature info' });
     }
   }
 

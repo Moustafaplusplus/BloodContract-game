@@ -3,27 +3,14 @@ import { FightService } from '../services/FightService.js';
 export class FightController {
   static async attackPlayer(req, res) {
     try {
+      const { defenderId } = req.params;
       const attackerId = req.user.id;
-      const defenderId = Number(req.params.defenderId);
       
-      console.log(`[FightController] Attack attempt: ${attackerId} -> ${defenderId}`);
-      
-      if (!defenderId || defenderId <= 0) {
-        return res.status(400).json({ error: "معرّف المدافع غير صالح" });
-      }
-      
-      if (attackerId === defenderId) {
-        return res.status(400).json({ error: "لا يمكنك مهاجمة نفسك" });
-      }
-      
-      const result = await FightService.runFight(attackerId, defenderId);
+      const result = await FightService.executeFight(attackerId, defenderId);
       res.json(result);
     } catch (error) {
-      console.error('Fight error:', error);
-      res.status(400).json({ 
-        error: error.message || "فشل القتال",
-        details: error.stack 
-      });
+      console.error('[FightController] Attack error:', error);
+      res.status(500).json({ error: 'Failed to execute fight' });
     }
   }
 

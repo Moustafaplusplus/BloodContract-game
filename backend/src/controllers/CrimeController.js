@@ -43,21 +43,14 @@ export class CrimeController {
 
   static async executeCrime(req, res) {
     try {
-      const crimeId = parseInt(req.params.crimeId ?? req.body.crimeId, 10);
-      if (!crimeId) {
-        return res.status(400).json({ error: "crimeId required" });
-      }
-
-      console.log(`[CrimeController] Executing crime ${crimeId} for user ${req.user.id}`);
-      const result = await CrimeService.executeCrime(req.user.id, crimeId);
+      const { crimeId } = req.params;
+      const userId = req.user.id;
+      
+      const result = await CrimeService.executeCrime(userId, crimeId);
       res.json(result);
     } catch (error) {
-      console.error(`[CrimeController] Error executing crime:`, error);
-      const status = error.status || 500;
-      res.status(status).json({ 
-        error: error.msg || "Server error", 
-        ...(error.meta || {}) 
-      });
+      console.error('[CrimeController] Execute crime error:', error);
+      res.status(500).json({ error: 'Failed to execute crime' });
     }
   }
 

@@ -413,7 +413,6 @@ export class SpecialItemService {
                 try {
                   const protectionNotification = await NotificationService.createGangBombImmunityProtectedNotification(member.userId, targetGang.name, bomberName);
                   emitNotification(member.userId, protectionNotification);
-                  console.log('[SpecialItemService] Gang bomb protection notification sent to member:', member.userId);
                 } catch (notificationError) {
                   console.error('[SpecialItemService] Gang bomb protection notification error:', notificationError);
                 }

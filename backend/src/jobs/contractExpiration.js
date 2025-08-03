@@ -41,14 +41,10 @@ export function startContractExpirationJob() {
           try {
             const targetCharacter = await Character.findOne({ where: { userId: contract.targetId } });
             const targetName = targetCharacter?.name || targetCharacter?.username || 'Unknown';
-            const expirationNotification = await NotificationService.createContractExpiredNotification(
-              contract.posterId, 
-              targetName
-            );
-            emitNotification(contract.posterId, expirationNotification);
-            console.log(`[Contract Expiration Job] Notification sent for contract ${contract.id}`);
+            const notification = await NotificationService.createContractExpiredNotification(contract.posterId);
+            emitNotification(contract.posterId, notification);
           } catch (notificationError) {
-            console.error('❌ Contract expiration notification error:', notificationError);
+            console.error('[Contract Expiration Job] Notification error:', notificationError);
           }
         }
       }

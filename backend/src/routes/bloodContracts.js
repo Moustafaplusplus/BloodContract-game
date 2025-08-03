@@ -130,7 +130,6 @@ router.post('/ghost-assassin', auth, async (req, res) => {
     try {
       const ghostNotification = await NotificationService.createGhostAssassinatedNotification(targetId);
       emitNotification(targetId, ghostNotification);
-      console.log('[Ghost Assassin] Notification sent to target:', targetId);
     } catch (notificationError) {
       console.error('[Ghost Assassin] Notification error:', notificationError);
     }
@@ -175,7 +174,6 @@ router.post('/', auth, async (req, res) => {
       try {
         const protectionNotification = await NotificationService.createAttackImmunityProtectedNotification(targetId, 'blood_contract', posterName);
         emitNotification(targetId, protectionNotification);
-        console.log('[Blood Contract] Protection notification sent to target:', targetId);
       } catch (notificationError) {
         console.error('[Blood Contract] Protection notification error:', notificationError);
       }
@@ -243,7 +241,6 @@ router.get('/available', auth, async (req, res) => {
             targetName
           );
           emitNotification(contract.posterId, expirationNotification);
-          console.log('[Contract Expiration] Notification sent to poster:', contract.posterId);
         } catch (notificationError) {
           console.error('[Contract Listing] Expiration notification error:', notificationError);
         }
@@ -348,7 +345,6 @@ router.post('/:id/accept', auth, async (req, res) => {
       try {
         const protectionNotification = await NotificationService.createAttackImmunityProtectedNotification(contract.targetId, 'blood_contract', assassinName);
         emitNotification(contract.targetId, protectionNotification);
-        console.log('[Blood Contract] Protection notification sent to target:', contract.targetId);
       } catch (notificationError) {
         console.error('[Blood Contract] Protection notification error:', notificationError);
       }
@@ -400,19 +396,16 @@ router.post('/:id/accept', auth, async (req, res) => {
         // Notify poster about successful contract execution
         const posterNotification = await NotificationService.createContractAttemptedNotification(contract.posterId, targetName, true);
         emitNotification(contract.posterId, posterNotification);
-        console.log('[Contract Success] Poster notification sent:', contract.posterId);
         
         // Notify target about being assassinated (without mentioning assassin name)
         const targetNotification = await NotificationService.createContractTargetAssassinatedNotification(contract.targetId);
         emitNotification(contract.targetId, targetNotification);
-        console.log('[Contract Success] Target notification sent:', contract.targetId);
         
         // Notify assassin about successful contract execution
         const assassinCharacter = await Character.findOne({ where: { userId } });
         const assassinName = assassinCharacter?.name || 'Unknown';
         const assassinNotification = await NotificationService.createContractExecutedNotification(userId, targetName, contract.price);
         emitNotification(userId, assassinNotification);
-        console.log('[Contract Success] Assassin notification sent:', userId);
       } catch (notificationError) {
         console.error('[Contract Success] Notification error:', notificationError);
       }
@@ -433,12 +426,10 @@ router.post('/:id/accept', auth, async (req, res) => {
         // Notify poster about failed contract attempt
         const posterNotification = await NotificationService.createContractAttemptedNotification(contract.posterId, targetName, false);
         emitNotification(contract.posterId, posterNotification);
-        console.log('[Contract Failure] Poster notification sent:', contract.posterId);
         
         // Notify target about failed assassination attempt
         const targetNotification = await NotificationService.createAttackNotification(contract.targetId, 'Unknown Assassin', 0);
         emitNotification(contract.targetId, targetNotification);
-        console.log('[Contract Failure] Target notification sent:', contract.targetId);
       } catch (notificationError) {
         console.error('[Contract Failure] Notification error:', notificationError);
       }

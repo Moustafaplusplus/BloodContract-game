@@ -61,7 +61,7 @@ export class CrimeService {
       description: crime.description,
       isEnabled:  crime.isEnabled,
       req_level:  crime.req_level,
-      energyCost: crime.energyCost,
+      energyCost: c.energyCost,
       successRate: crime.successRate,
       minReward:  crime.minReward,
       maxReward:  crime.maxReward,
@@ -117,215 +117,90 @@ export class CrimeService {
   }
 
   static async executeCrime(userId, crimeId) {
-    const tx = await sequelize.transaction();
     try {
-      console.log(`[CrimeService] Executing crime ${crimeId} for user ${userId}`);
-      const crime = await Crime.findByPk(crimeId, { transaction: tx });
-      if (!crime || !crime.isEnabled) {
-        console.log(`[CrimeService] Crime not found or disabled:`, { crimeId, crime: crime ? crime.toJSON() : null });
-        throw { status: 404, msg: "Crime not found" };
-      }
-
-      const character = await Character.findOne({ 
-        where: { userId }, 
-        transaction: tx, 
-        lock: tx.LOCK.UPDATE 
-      });
-      if (!character) {
-        console.log(`[CrimeService] Character not found for user ${userId}`);
-        throw { status: 404, msg: "Character not found" };
-      }
-
-      // Validation checks
-      if (character.level < crime.req_level) {
-        throw { status: 400, msg: "Level too low" };
-      }
-      if (character.energy < crime.energyCost) {
-        throw { status: 400, msg: "Not enough energy" };
-      }
-
-      const nowMs = Date.now();
-      if (character.crimeCooldown && character.crimeCooldown > nowMs) {
-        const secLeft = Math.floor((character.crimeCooldown - nowMs) / 1000);
-        throw { status: 429, msg: "Crime on cooldown", meta: { cooldownLeft: secLeft } };
-      }
-
-      const success = Math.random() < Number(crime.successRate);
-      let payout = success ? this.randInt(crime.minReward, crime.maxReward) : 0;
-      let expGain = success ? crime.expReward : Math.round(crime.expReward * 0.3);
-      if (character && character.vipExpiresAt && new Date(character.vipExpiresAt) > new Date()) {
-        payout = Math.round(payout * 1.5);
-        expGain = Math.round(expGain * 1.5);
-      }
-
-      // Apply rewards
-      if (payout) character.money += payout;
-      character.exp += expGain;
-      const levelUpRewards = await CharacterService.maybeLevelUp(character);
-
-      let redirect = null;
-      let confinementDetails = null;
-      if (!success) {
-        let possibleOutcomes = [];
-        if (crime.failOutcome === "jail" || crime.failOutcome === "both") possibleOutcomes.push("jail");
-        if (crime.failOutcome === "hospital" || crime.failOutcome === "both") possibleOutcomes.push("hospital");
-        let chosenOutcome = possibleOutcomes.length === 2 ? (Math.random() < 0.5 ? "jail" : "hospital") : possibleOutcomes[0];
-        if (chosenOutcome === "jail") {
-          const jailMinutes = crime.jailMinutes || 30;
-          const jailRecord = await Jail.create({
-            userId: userId,
-            minutes: jailMinutes,
-            bailRate: 200,
-            releasedAt: new Date(nowMs + jailMinutes * 60_000),
-          }, { transaction: tx });
-          if (io) {
-            io.to(`user:${userId}`).emit('jail:enter', {
-              releaseAt: jailRecord.releasedAt,
-              reason: 'crime',
-            });
-          }
-          redirect = "/dashboard/jail";
-          confinementDetails = {
-            type: "jail",
-            minutes: jailMinutes,
-            releaseAt: jailRecord.releasedAt
-          };
-        } else if (chosenOutcome === "hospital") {
-          const hospitalMinutes = crime.hospitalMinutes || 30;
-          const hpLoss = crime.hpLoss || 50;
-          const hospitalRecord = await Hospital.create({
-            userId: userId,
-            minutes: hospitalMinutes,
-            hpLoss: hpLoss,
-            healRate: 200,
-            releasedAt: new Date(nowMs + hospitalMinutes * 60_000),
-          }, { transaction: tx });
-          if (io) {
-            io.to(`user:${userId}`).emit('hospital:enter', {
-              releaseAt: hospitalRecord.releasedAt,
-              reason: 'crime',
-            });
-          }
-          redirect = "/dashboard/hospital";
-          confinementDetails = {
-            type: "hospital",
-            minutes: hospitalMinutes,
-            hpLoss: hpLoss,
-            releaseAt: hospitalRecord.releasedAt
-          };
-        }
-      }
-
-      character.energy -= crime.energyCost;
-      character.crimeCooldown = nowMs + crime.cooldown * 1000;
-      await character.save({ transaction: tx });
-
-      await CharacterService.addStat(userId, "crimes", 1, tx);
-
-      await CrimeLog.create({
-        userId: userId,
-        crimeId: crime.id,
-        success,
-        payout,
-      }, { transaction: tx });
-
-      await tx.commit();
+      const crime = await Crime.findByPk(crimeId);
       
-      // After successful commit, handle non-critical operations
-      try {
-        const narrative = this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect);
+      if (!crime || !crime.isEnabled) {
+        throw new Error('Crime not found or disabled');
+      }
+      
+      const character = await Character.findOne({ where: { userId } });
+      if (!character) {
+        throw new Error('Character not found');
+      }
+      
+      // Check cooldown
+      const now = Date.now();
+      if (character.crimeCooldown && character.crimeCooldown > now) {
+        const remainingSeconds = Math.ceil((character.crimeCooldown - now) / 1000);
+        throw new Error(`يجب الانتظار ${remainingSeconds} ثانية قبل ارتكاب جريمة أخرى`);
+      }
+      
+      // Calculate success chance based on level difference
+      const levelDiff = crime.req_level - character.level;
+      let successChance = 0.8; // Base 80% chance
+      
+      if (levelDiff > 0) {
+        successChance = Math.max(0.1, successChance - (levelDiff * 0.1));
+      } else if (levelDiff < 0) {
+        successChance = Math.min(0.95, successChance + (Math.abs(levelDiff) * 0.05));
+      }
+      
+      const isSuccess = Math.random() < successChance;
+      
+      if (isSuccess) {
+        // Success: gain money and experience
+        const moneyGain = crime.minReward; // Assuming minReward is the base reward
+        const expGain = crime.expReward;
         
-        // Emit real-time updates
-        if (io) {
-          // Update HUD
-          const hudData = await character.toSafeJSON();
-          io.to(String(userId)).emit('hud:update', hudData);
-          
-          // Update crime-specific data
-          const now = Date.now();
-          const crimeCooldown = character.crimeCooldown && character.crimeCooldown > now 
-            ? Math.floor((character.crimeCooldown - now) / 1000) 
-            : 0;
-          
-          io.to(String(userId)).emit('crime:update', {
-            crimeCooldown,
-            energy: character.energy,
-            maxEnergy: character.maxEnergy
-          });
-          
-          // Update inventory if items were gained
-          if (success && payout > 0) {
-            const { InventoryService } = await import('./InventoryService.js');
-            const inventory = await InventoryService.getUserInventory(userId);
-            io.to(String(userId)).emit('inventory:update', inventory);
-          }
-          
-          // Update bank if money was gained
-          if (success && payout > 0) {
-            const bank = await Bank.findOne({ where: { userId } });
-            if (bank) {
-              io.to(String(userId)).emit('bank:update', bank);
-            }
-          }
-          
-          // Update tasks
-          if (success) {
-            const tasks = await Task.findAll({ where: { isActive: true } });
-            io.to(String(userId)).emit('tasks:update', tasks);
-          }
-        }
+        character.money += moneyGain;
+        character.exp += expGain;
         
-        if (success) {
-          await TaskService.updateProgress(userId, 'crimes_committed', 1);
-        }
-
+        // Update statistics
+        await CharacterService.addStat(userId, "crimes", 1);
+        await CharacterService.addStat(userId, "crimesCommitted", 1);
+        
+        // Set cooldown
+        character.crimeCooldown = now + (crime.cooldown * 1000);
+        await character.save();
+        
         return {
-            success,
-            payout,
-            expGain,
-            energyLeft: character.energy,
-            cooldownLeft: crime.cooldown,
-            currentExp: character.exp,
-            currentLevel: character.level,
-            nextLevelExp: character.expNeeded(),
-            levelUpRewards: levelUpRewards.length > 0 ? levelUpRewards : null,
-            levelsGained: levelUpRewards.length,
-            crimeName: crime.name,
-            crimeDescription: crime.description,
-            narrative,
-            redirect,
-            confinementDetails
+          success: true,
+          message: `تم ارتكاب الجريمة بنجاح! حصلت على ${moneyGain} مال و ${expGain} خبرة`,
+          moneyGain,
+          expGain,
+          cooldownMinutes: crime.cooldown
         };
-      } catch (postCommitError) {
-        // Log post-commit errors but don't rollback (transaction already committed)
-        console.error(`[CrimeService] Post-commit error for crime ${crimeId} user ${userId}:`, postCommitError);
+      } else {
+        // Failure: lose money and go to jail
+        const moneyLoss = Math.floor(character.money * 0.1);
+        character.money = Math.max(0, character.money - moneyLoss);
         
-        // Return basic success response even if post-commit operations failed
+        // Set cooldown even on failure
+        character.crimeCooldown = now + (crime.cooldown * 1000);
+        await character.save();
+        
+        // Send to jail
+        const jailTime = crime.jailMinutes || 30; // 30 minutes
+        const { Jail } = await import('../models/Confinement.js');
+        await Jail.create({
+          userId,
+          minutes: jailTime,
+          reason: `فشل في ارتكاب جريمة: ${crime.name}`,
+          startedAt: new Date(),
+          releasedAt: new Date(Date.now() + jailTime * 60 * 1000)
+        });
+        
         return {
-            success,
-            payout,
-            expGain,
-            energyLeft: character.energy,
-            cooldownLeft: crime.cooldown,
-            currentExp: character.exp,
-            currentLevel: character.level,
-            nextLevelExp: character.expNeeded(),
-            levelUpRewards: levelUpRewards.length > 0 ? levelUpRewards : null,
-            levelsGained: levelUpRewards.length,
-            crimeName: crime.name,
-            crimeDescription: crime.description,
-            narrative: this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect),
-            redirect,
-            confinementDetails
+          success: false,
+          message: `فشلت في ارتكاب الجريمة! خسرت ${moneyLoss} مال وتم إرسالك إلى السجن لمدة ${jailTime} دقيقة`,
+          moneyLoss,
+          jailTime
         };
       }
-    } catch (err) {
-      // Only rollback if transaction hasn't been committed yet
-      if (tx && !tx.finished) {
-        await tx.rollback();
-      }
-      console.error(`[CrimeService] Error executing crime ${crimeId} for user ${userId}:`, err);
-      throw err;
+    } catch (error) {
+      console.error('[CrimeService] Execute crime error:', error);
+      throw error;
     }
   }
 
