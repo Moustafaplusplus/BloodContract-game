@@ -89,8 +89,8 @@ export function initSocket(server) {
               // Get hospital and jail status with timeout
               const { ConfinementService } = await import('./services/ConfinementService.js');
               const [hospitalStatus, jailStatus] = await Promise.all([
-                ConfinementService.getHospitalStatus(userId),
-                ConfinementService.getJailStatus(userId)
+                ConfinementService.getHospitalStatus(socket.data.userId),
+                ConfinementService.getJailStatus(socket.data.userId)
               ]);
               
               // Calculate cooldowns
@@ -144,8 +144,8 @@ export function initSocket(server) {
           const friendship = await Friendship.findOne({
             where: {
               [Op.or]: [
-                { requesterId: userId, addresseeId: targetUserId },
-                { requesterId: targetUserId, addresseeId: userId }
+                { requesterId: socket.data.userId, addresseeId: targetUserId },
+                { requesterId: targetUserId, addresseeId: socket.data.userId }
               ],
               status: 'accepted'
             }
@@ -153,11 +153,11 @@ export function initSocket(server) {
           
           // Check for pending requests
           const pendingSent = await Friendship.findOne({
-            where: { requesterId: userId, addresseeId: targetUserId, status: 'pending' }
+            where: { requesterId: socket.data.userId, addresseeId: targetUserId, status: 'pending' }
           });
           
           const pendingReceived = await Friendship.findOne({
-            where: { requesterId: targetUserId, addresseeId: userId, status: 'pending' }
+            where: { requesterId: targetUserId, addresseeId: socket.data.userId, status: 'pending' }
           });
           
           const friendshipStatus = {
@@ -166,8 +166,8 @@ export function initSocket(server) {
           };
           
           // Emit to both users
-          io.to(`user:${userId}`).emit('friendship:update', { targetUserId, ...friendshipStatus });
-          io.to(`user:${targetUserId}`).emit('friendship:update', { targetUserId: userId, ...friendshipStatus });
+          io.to(`user:${socket.data.userId}`).emit('friendship:update', { targetUserId, ...friendshipStatus });
+          io.to(`user:${targetUserId}`).emit('friendship:update', { targetUserId: socket.data.userId, ...friendshipStatus });
         } catch (error) {
           console.error(`[Socket] Error pushing friendship update:`, error.message);
         }
