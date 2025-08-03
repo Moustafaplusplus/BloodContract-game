@@ -84,7 +84,11 @@ export class InventoryService {
       char.equippedArmorId = itemId;
     }
     await char.save();
-    if (io) io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+    if (io) {
+      io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+      const updatedInventory = await this.getUserInventory(userId);
+      io.to(String(userId)).emit("inventory:update", updatedInventory);
+    }
     return { message: "equipped", slot, itemId };
   }
 
@@ -121,7 +125,11 @@ export class InventoryService {
       char.equippedArmorId = null;
     }
     await char.save();
-    if (io) io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+    if (io) {
+      io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+      const updatedInventory = await this.getUserInventory(userId);
+      io.to(String(userId)).emit("inventory:update", updatedInventory);
+    }
     return { message: "unequipped", itemType, slot };
   }
 
@@ -145,7 +153,11 @@ export class InventoryService {
       row.quantity -= 1;
       if (row.quantity <= 0) await row.destroy();
       else await row.save();
-      if (io) io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+      if (io) {
+        io.to(String(userId)).emit("hud:update", await char.toSafeJSON());
+        const updatedInventory = await this.getUserInventory(userId);
+        io.to(String(userId)).emit("inventory:update", updatedInventory);
+      }
       return { message: "sold", sellPrice, method: 'quick' };
     } else if (sellOption === 'blackmarket') {
       // Direct to blackmarket - create a listing automatically

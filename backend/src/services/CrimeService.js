@@ -231,73 +231,99 @@ export class CrimeService {
 
       await tx.commit();
       
-      const narrative = this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect);
-      
-      // Emit real-time updates
-      if (io) {
-        // Update HUD
-        const hudData = await character.toSafeJSON();
-        io.to(String(userId)).emit('hud:update', hudData);
+      // After successful commit, handle non-critical operations
+      try {
+        const narrative = this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect);
         
-        // Update crime-specific data
-        const now = Date.now();
-        const crimeCooldown = character.crimeCooldown && character.crimeCooldown > now 
-          ? Math.floor((character.crimeCooldown - now) / 1000) 
-          : 0;
-        
-        io.to(String(userId)).emit('crime:update', {
-          crimeCooldown,
-          energy: character.energy,
-          maxEnergy: character.maxEnergy
-        });
-        
-        // Update inventory if items were gained
-        if (success && payout > 0) {
-          const { InventoryService } = await import('./InventoryService.js');
-          const inventory = await InventoryService.getUserInventory(userId);
-          io.to(String(userId)).emit('inventory:update', inventory);
-        }
-        
-        // Update bank if money was gained
-        if (success && payout > 0) {
-          const bank = await Bank.findOne({ where: { userId } });
-          if (bank) {
-            io.to(String(userId)).emit('bank:update', bank);
+        // Emit real-time updates
+        if (io) {
+          // Update HUD
+          const hudData = await character.toSafeJSON();
+          io.to(String(userId)).emit('hud:update', hudData);
+          
+          // Update crime-specific data
+          const now = Date.now();
+          const crimeCooldown = character.crimeCooldown && character.crimeCooldown > now 
+            ? Math.floor((character.crimeCooldown - now) / 1000) 
+            : 0;
+          
+          io.to(String(userId)).emit('crime:update', {
+            crimeCooldown,
+            energy: character.energy,
+            maxEnergy: character.maxEnergy
+          });
+          
+          // Update inventory if items were gained
+          if (success && payout > 0) {
+            const { InventoryService } = await import('./InventoryService.js');
+            const inventory = await InventoryService.getUserInventory(userId);
+            io.to(String(userId)).emit('inventory:update', inventory);
+          }
+          
+          // Update bank if money was gained
+          if (success && payout > 0) {
+            const bank = await Bank.findOne({ where: { userId } });
+            if (bank) {
+              io.to(String(userId)).emit('bank:update', bank);
+            }
+          }
+          
+          // Update tasks
+          if (success) {
+            const tasks = await Task.findAll({ where: { isActive: true } });
+            io.to(String(userId)).emit('tasks:update', tasks);
           }
         }
         
-        // Update tasks
         if (success) {
-          const tasks = await Task.findAll({ where: { isActive: true } });
-          io.to(String(userId)).emit('tasks:update', tasks);
+          await TaskService.updateProgress(userId, 'crimes_committed', 1);
         }
+
+        return {
+            success,
+            payout,
+            expGain,
+            energyLeft: character.energy,
+            cooldownLeft: crime.cooldown,
+            currentExp: character.exp,
+            currentLevel: character.level,
+            nextLevelExp: character.expNeeded(),
+            levelUpRewards: levelUpRewards.length > 0 ? levelUpRewards : null,
+            levelsGained: levelUpRewards.length,
+            crimeName: crime.name,
+            crimeDescription: crime.description,
+            narrative,
+            redirect,
+            confinementDetails
+        };
+      } catch (postCommitError) {
+        // Log post-commit errors but don't rollback (transaction already committed)
+        console.error(`[CrimeService] Post-commit error for crime ${crimeId} user ${userId}:`, postCommitError);
+        
+        // Return basic success response even if post-commit operations failed
+        return {
+            success,
+            payout,
+            expGain,
+            energyLeft: character.energy,
+            cooldownLeft: crime.cooldown,
+            currentExp: character.exp,
+            currentLevel: character.level,
+            nextLevelExp: character.expNeeded(),
+            levelUpRewards: levelUpRewards.length > 0 ? levelUpRewards : null,
+            levelsGained: levelUpRewards.length,
+            crimeName: crime.name,
+            crimeDescription: crime.description,
+            narrative: this.generateCrimeNarrative(character, crime, success, payout, expGain, redirect),
+            redirect,
+            confinementDetails
+        };
       }
-      
-      if (success) {
-        await TaskService.updateProgress(userId, 'crimes_committed', 1);
-      }
-
-
-
-      return {
-          success,
-          payout,
-          expGain,
-          energyLeft: character.energy,
-          cooldownLeft: crime.cooldown,
-          currentExp: character.exp,
-          currentLevel: character.level,
-          nextLevelExp: character.expNeeded(),
-          levelUpRewards: levelUpRewards.length > 0 ? levelUpRewards : null,
-          levelsGained: levelUpRewards.length,
-          crimeName: crime.name,
-          crimeDescription: crime.description,
-          narrative,
-          redirect,
-          confinementDetails
-      };
     } catch (err) {
-      await tx.rollback();
+      // Only rollback if transaction hasn't been committed yet
+      if (tx && !tx.finished) {
+        await tx.rollback();
+      }
       console.error(`[CrimeService] Error executing crime ${crimeId} for user ${userId}:`, err);
       throw err;
     }

@@ -208,7 +208,7 @@ export default function Gym() {
 
   const mutation = useMutation({
     mutationFn: async (energyAmount) => {
-      const response = await fetch('/api/jobs/gym/train', {
+      const response = await fetch('/api/jobs/gym', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

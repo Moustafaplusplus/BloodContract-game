@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
 import { useHud } from "@/hooks/useHud"
+import { useSocket } from "@/hooks/useSocket"
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'react-toastify'
 import Modal from "@/components/Modal"
 import GangBombModal from "./GangBombModal"
 import MoneyIcon from "@/components/MoneyIcon"
@@ -309,6 +311,7 @@ function SectionHeader({ icon: Icon, title, color = "text-blood-500", accentColo
 export default function Inventory() {
   const { customToken } = useFirebaseAuth()
   const { invalidateHud } = useHud()
+  const { socket } = useSocket()
   const queryClient = useQueryClient()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -335,6 +338,27 @@ export default function Inventory() {
     }
     fetchInventory()
   }, [customToken])
+
+  // Socket listeners for real-time inventory updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleInventoryUpdate = (data) => {
+      setItems(data.items || []);
+    };
+
+    const handleHudUpdate = () => {
+      invalidateHud?.();
+    };
+
+    socket.on('inventory:update', handleInventoryUpdate);
+    socket.on('hud:update', handleHudUpdate);
+
+    return () => {
+      socket.off('inventory:update', handleInventoryUpdate);
+      socket.off('hud:update', handleHudUpdate);
+    };
+  }, [socket, invalidateHud]);
 
   const groupItems = () => {
     const weapons = items.filter((i) => weaponTypes.includes(i.type))
@@ -363,7 +387,6 @@ export default function Inventory() {
 
   const handleEquip = async (item, slot) => {
     if (!slot) return
-    setModal({ open: true, type: "loading", title: "جاري التجهيز...", message: "" })
     try {
       const res = await fetch(`${API}/api/inventory/equip`, {
         method: "POST",
@@ -372,17 +395,14 @@ export default function Inventory() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || "فشل في التجهيز")
-      setModal({ open: true, type: "success", title: "تم التجهيز", message: "تم تجهيز العنصر بنجاح!" })
-      setTimeout(() => setModal({ open: false }), 1200)
+      toast.success("تم تجهيز العنصر بنجاح!")
       invalidateHud?.()
-      setTimeout(() => window.location.reload(), 800)
     } catch (err) {
-      setModal({ open: true, type: "error", title: "خطأ", message: err.message })
+      toast.error(err.message)
     }
   }
 
   const handleUnequip = async (item) => {
-    setModal({ open: true, type: "loading", title: "جاري الفك...", message: "" })
     try {
       const res = await fetch(`${API}/api/inventory/unequip`, {
         method: "POST",
@@ -391,50 +411,30 @@ export default function Inventory() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || "فشل في الفك")
-      setModal({ open: true, type: "success", title: "تم الفك", message: "تم فك تجهيز ��لعنصر!" })
-      setTimeout(() => setModal({ open: false }), 1200)
+      toast.success("تم فك تجهيز العنصر!")
       invalidateHud?.()
-      setTimeout(() => window.location.reload(), 800)
     } catch (err) {
-      setModal({ open: true, type: "error", title: "خطأ", message: err.message })
+      toast.error(err.message)
     }
   }
 
   const handleSell = async (item) => {
-    setModal({
-      open: true,
-      type: "warning",
-      title: "خيارات البيع",
-      message: `اختر طريقة بيع (${item.name}):\n\nبيع سريع: 100 مال فوراً\n🏪 السوق السوداء: الانتقال إلى صفحة السوق السوداء لإنشاء إعلان`,
-      showCancel: true,
-      confirmText: "بيع سريع (100 مال)",
-      cancelText: "إلغاء",
-      extraButton: {
-        text: "الانتقال للسوق السوداء",
-        action: async () => {
-          window.location.href = '/dashboard/black-market';
-        }
-      },
-      onConfirm: async () => {
-        setModal({ open: true, type: "loading", title: "جاري البيع...", message: "" })
-        try {
-          const res = await fetch(`${API}/api/inventory/sell`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ type: item.type, itemId: item.itemId, sellOption: 'quick' }),
-          })
-          const data = await res.json()
-          if (!res.ok) throw new Error(data.error || "فشل في البيع")
-          setModal({ open: true, type: "success", title: "تم البيع", message: `تم بيع (${item.name}) بنجاح! حصلت على 100 مال.` })
-          setTimeout(() => setModal({ open: false }), 1200)
-          invalidateHud?.()
-          setTimeout(() => window.location.reload(), 800)
-        } catch (err) {
-          setModal({ open: true, type: "error", title: "خطأ", message: err.message })
-        }
-      },
-    })
+    try {
+      const res = await fetch(`${API}/api/inventory/sell`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${customToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ type: item.type, itemId: item.itemId, sellOption: 'quick' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "فشل في البيع")
+      toast.success(`تم بيع (${item.name}) بنجاح! حصلت على 100 مال.`)
+      invalidateHud?.()
+    } catch (err) {
+      toast.error(err.message)
+    }
   }
+
+
 
   const handleUse = async (item) => {
     // Check if it's a gang bomb item
@@ -499,13 +499,11 @@ export default function Inventory() {
             const nameData = await nameRes.json();
             if (!nameRes.ok) throw new Error(nameData.error || "فشل في تغيير الاسم");
             
-            setModal({ open: true, type: "success", title: "تم تغيير الاسم", message: `تم تغيير الاسم إلى "${newName.trim()}" بنجاح!` });
-            setTimeout(() => setModal({ open: false }), 2000);
+            toast.success(`تم تغيير الاسم إلى "${newName.trim()}" بنجاح!`);
             invalidateHud?.();
             queryClient.invalidateQueries(['character']);
-            setTimeout(() => window.location.reload(), 1500);
           } catch (err) {
-            setModal({ open: true, type: "error", title: "خطأ", message: err.message });
+            toast.error(err.message);
           }
         },
       });
@@ -541,13 +539,11 @@ export default function Inventory() {
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.message || "فشل في الاستخدام")
-          setModal({ open: true, type: "success", title: "تم الاستخدام", message: `تم استخدام (${item.name}) بنجاح!` })
-          setTimeout(() => setModal({ open: false }), 1200)
+          toast.success(`تم استخدام (${item.name}) بنجاح!`)
           invalidateHud?.()
           queryClient.invalidateQueries(['character']);
-          setTimeout(() => window.location.reload(), 800)
         } catch (err) {
-          setModal({ open: true, type: "error", title: "خطأ", message: err.message })
+          toast.error(err.message)
         }
       },
     })
@@ -736,6 +732,8 @@ export default function Inventory() {
             )}
           </div>
         </section>
+
+
 
         {/* Enhanced Inventory Tips */}
         <div className="card-3d p-4 bg-gradient-to-r from-blood-950/20 to-black/40 border-blood-500/20">

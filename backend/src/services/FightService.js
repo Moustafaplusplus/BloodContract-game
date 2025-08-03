@@ -1014,15 +1014,27 @@ export class FightService {
 
           await t.commit();
 
-          // Live update via Socket.IO
-          if (io) {
-            io.to(`user:${attackerId}`).emit("fightResult", result);
-            io.to(`user:${defenderId}`).emit("fightResult", result);
-          }
+          // After successful commit, handle non-critical operations
+          try {
+            // Live update via Socket.IO
+            if (io) {
+              io.to(`user:${attackerId}`).emit("fightResult", result);
+              io.to(`user:${defenderId}`).emit("fightResult", result);
+            }
 
-          return { ...result, xpGain };
+            return { ...result, xpGain };
+          } catch (postCommitError) {
+            // Log post-commit errors but don't rollback (transaction already committed)
+            console.error(`[FightService] Post-commit error for contract fight ${attackerId} vs ${defenderId}:`, postCommitError);
+            
+            // Return basic success response even if post-commit operations failed
+            return { ...result, xpGain };
+          }
         } catch (err) {
-          await t.rollback();
+          // Only rollback if transaction hasn't been committed yet
+          if (t && !t.finished) {
+            await t.rollback();
+          }
           throw err;
         }
       } catch (error) {

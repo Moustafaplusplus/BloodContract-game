@@ -62,9 +62,12 @@ export class SpecialItemService {
     // Add to inventory
     await this.addItemToInventory(userId, itemId, quantity);
 
-    // Emit HUD update
+    // Emit HUD and inventory updates
     if (io) {
       io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+      const { InventoryService } = await import('./InventoryService.js');
+      const updatedInventory = await InventoryService.getUserInventory(userId);
+      io.to(String(userId)).emit("inventory:update", updatedInventory);
     }
 
     return {
@@ -525,9 +528,12 @@ export class SpecialItemService {
         await inventoryItem.save();
       }
 
-      // Emit HUD update
+      // Emit HUD and inventory updates
       if (io) {
         io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+        const { InventoryService } = await import('./InventoryService.js');
+        const updatedInventory = await InventoryService.getUserInventory(userId);
+        io.to(String(userId)).emit("inventory:update", updatedInventory);
       }
       return {
         message: 'تم استخدام العنصر بنجاح',
@@ -570,9 +576,12 @@ export class SpecialItemService {
       await inventoryItem.save();
     }
 
-    // Emit HUD update
+    // Emit HUD and inventory updates
     if (io) {
       io.to(String(userId)).emit("hud:update", await character.toSafeJSON());
+      const { InventoryService } = await import('./InventoryService.js');
+      const updatedInventory = await InventoryService.getUserInventory(userId);
+      io.to(String(userId)).emit("inventory:update", updatedInventory);
     }
 
     return {

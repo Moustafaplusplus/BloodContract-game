@@ -67,6 +67,11 @@ function ItemCard({ item, onBuy, type, userMoney, userBlackcoins }) {
         icon: Shield,
         color: 'blue',
         bgGrad: 'from-blue-950/40 to-cyan-950/20'
+      },
+      'special-items': {
+        icon: Gem,
+        color: 'purple',
+        bgGrad: 'from-purple-950/40 to-pink-950/20'
       }
     };
     return types[itemType] || types.weapons;
@@ -222,7 +227,7 @@ export default function Shop() {
   const { stats, invalidateHud } = useHud();
   const { socket } = useSocket();
   
-  const [categories, setCategories] = useState(['weapons', 'armors']);
+  const [categories, setCategories] = useState(['weapons', 'armors', 'special-items']);
   const [activeCategory, setActiveCategory] = useState('weapons');
   const [items, setItems] = useState({});
   const [loading, setLoading] = useState(true);
@@ -237,7 +242,14 @@ export default function Shop() {
         const shopData = {};
         
         for (const category of categories) {
-          const response = await fetch(`${API}/api/${category}`, {
+          let endpoint;
+          if (category === 'special-items') {
+            endpoint = `${API}/api/special-items`;
+          } else {
+            endpoint = `${API}/api/shop/${category}`;
+          }
+          
+          const response = await fetch(endpoint, {
             headers: { Authorization: `Bearer ${customToken}` },
           });
           
@@ -285,7 +297,18 @@ export default function Shop() {
     if (!customToken) return;
     
     try {
-      const response = await fetch(`${API}/api/${category}/buy/${item.id}`, {
+      let endpoint;
+      if (category === 'weapons') {
+        endpoint = `${API}/api/shop/buy/weapon/${item.id}`;
+      } else if (category === 'armors') {
+        endpoint = `${API}/api/shop/buy/armor/${item.id}`;
+      } else if (category === 'special-items') {
+        endpoint = `${API}/api/special-items/buy/${item.id}`;
+      } else {
+        throw new Error('فئة غير معروفة');
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -385,7 +408,7 @@ export default function Shop() {
         </div>
 
         {/* Enhanced Category Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2">
           <CategoryTab
             icon={Sword}
             label="الأسلحة"
@@ -400,13 +423,22 @@ export default function Shop() {
             onClick={() => setActiveCategory('armors')}
             count={items.armors?.length || 0}
           />
+          <CategoryTab
+            icon={Gem}
+            label="العناصر الخاصة"
+            active={activeCategory === 'special-items'}
+            onClick={() => setActiveCategory('special-items')}
+            count={items['special-items']?.length || 0}
+          />
         </div>
 
         {/* Enhanced Items Grid */}
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-purple-400 flex items-center gap-2">
             <Package className="w-4 h-4" />
-            {activeCategory === 'weapons' ? 'الأسلحة المتاحة' : 'الدروع المتاحة'}
+            {activeCategory === 'weapons' ? 'الأسلحة المتاحة' : 
+             activeCategory === 'armors' ? 'الدروع المتاحة' : 
+             'العناصر الخاصة المتاحة'}
             <span className="text-white/60 text-xs">({currentItems.length})</span>
           </h2>
           
