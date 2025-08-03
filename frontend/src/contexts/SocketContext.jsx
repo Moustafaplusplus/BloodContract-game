@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 
 
 const SocketContext = createContext(null);
@@ -31,8 +32,8 @@ export function SocketProvider({ children }) {
   const [firebaseToken, setFirebaseToken] = useState(null);
   const [userId, setUserId] = useState(null);
   
-  // Get Firebase token from FirebaseAuthProvider
-  const { customToken } = useFirebaseAuth();
+  // Get Firebase token and user from FirebaseAuthProvider
+  const { customToken, user } = useFirebaseAuth();
   
   // Real-time game state
   const [hudData, setHudData] = useState(null);
@@ -70,18 +71,20 @@ export function SocketProvider({ children }) {
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [introStatus, setIntroStatus] = useState(null);
 
-  // Update Firebase token when it changes
+  // Update Firebase token and user ID when they change
   useEffect(() => {
-    if (customToken) {
+    if (customToken && user) {
       setFirebaseToken(customToken);
+      setUserId(user.uid);
     } else {
       setFirebaseToken(null);
+      setUserId(null);
     }
-  }, [customToken]);
+  }, [customToken, user]);
 
   // Socket connection management
   useEffect(() => {
-    if (!firebaseToken) {
+    if (!firebaseToken || !userId) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -266,7 +269,7 @@ export function SocketProvider({ children }) {
     return () => {
       newSocket.disconnect();
     };
-  }, [token, userId]);
+  }, [firebaseToken, userId]);
 
   // Socket methods for making requests (replacing HTTP calls)
   const socketRequest = (event, data = {}) => {

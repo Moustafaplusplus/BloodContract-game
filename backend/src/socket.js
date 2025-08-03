@@ -80,7 +80,7 @@ export function initSocket(server) {
           
           const hudPromise = (async () => {
             const char = await Character.findOne({ 
-              where: { userId },
+              where: { userId: socket.data.userId },
               include: [{ model: User, attributes: ['id', 'username', 'avatarUrl', 'isAdmin', 'isVip'] }]
             });
             if (char) {
@@ -117,12 +117,12 @@ export function initSocket(server) {
           
           await Promise.race([hudPromise, timeoutPromise]);
         } catch (error) {
-          console.error(`[Socket] Error pushing HUD for user ${userId}:`, error.message);
+                        console.error(`[Socket] Error pushing HUD for user ${socket.data.userId}:`, error.message);
         }
       };
 
       /* helper to push profile data updates */
-      const pushProfileUpdate = async (targetUserId = userId) => {
+      const pushProfileUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const char = await Character.findOne({ 
             where: { userId: targetUserId },
@@ -174,7 +174,7 @@ export function initSocket(server) {
       };
 
       /* helper to push inventory updates */
-      const pushInventoryUpdate = async (targetUserId = userId) => {
+      const pushInventoryUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const inventory = await InventoryItem.findAll({
             where: { userId: targetUserId }
@@ -187,7 +187,7 @@ export function initSocket(server) {
       };
 
       /* helper to push bank updates */
-      const pushBankUpdate = async (targetUserId = userId) => {
+      const pushBankUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const bank = await BankAccount.findOne({ where: { userId: targetUserId } });
           if (bank) {
@@ -199,7 +199,7 @@ export function initSocket(server) {
       };
 
       /* helper to push task updates */
-      const pushTaskUpdate = async (targetUserId = userId) => {
+      const pushTaskUpdate = async (targetUserId = socket.data.userId) => {
         try {
           // Tasks are global catalog items, not user-specific
           const tasks = await Task.findAll({ where: { isActive: true } });
@@ -238,7 +238,7 @@ export function initSocket(server) {
       };
 
       /* helper to push crime updates */
-      const pushCrimeUpdate = async (targetUserId = userId) => {
+      const pushCrimeUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const char = await Character.findOne({ where: { userId: targetUserId } });
           if (char) {
@@ -259,7 +259,7 @@ export function initSocket(server) {
       };
 
       /* helper to push fight updates */
-      const pushFightUpdate = async (targetUserId = userId) => {
+      const pushFightUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const char = await Character.findOne({ where: { userId: targetUserId } });
           if (char) {
@@ -275,7 +275,7 @@ export function initSocket(server) {
       };
 
       /* helper to push blood contract updates */
-      const pushBloodContractUpdate = async (targetUserId = userId) => {
+      const pushBloodContractUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const contracts = await BloodContract.findAll({
             where: {
@@ -326,7 +326,7 @@ export function initSocket(server) {
       };
 
       /* helper to push job updates */
-      const pushJobUpdate = async (targetUserId = userId) => {
+      const pushJobUpdate = async (targetUserId = socket.data.userId) => {
         try {
           const jobs = await Job.findAll({ where: { userId: targetUserId } });
           io.to(`user:${targetUserId}`).emit('jobs:update', jobs);
@@ -336,7 +336,7 @@ export function initSocket(server) {
       };
 
       /* helper to push ministry mission updates */
-      const pushMinistryMissionUpdate = async (targetUserId = userId) => {
+      const pushMinistryMissionUpdate = async (targetUserId = socket.data.userId) => {
         try {
           // Ministry missions are global catalog items, not user-specific
           const missions = await MinistryMission.findAll({ where: { isActive: true } });
@@ -347,7 +347,7 @@ export function initSocket(server) {
       };
 
       /* helper to push car updates */
-      const pushCarUpdate = async (targetUserId = userId) => {
+      const pushCarUpdate = async (targetUserId = socket.data.userId) => {
         try {
           // Cars are global catalog items, not user-specific
           const cars = await Car.findAll();
@@ -358,7 +358,7 @@ export function initSocket(server) {
       };
 
       /* helper to push dog updates */
-      const pushDogUpdate = async (targetUserId = userId) => {
+      const pushDogUpdate = async (targetUserId = socket.data.userId) => {
         try {
           // Dogs are global catalog items, not user-specific
           const dogs = await Dog.findAll();
@@ -369,7 +369,7 @@ export function initSocket(server) {
       };
 
       /* helper to push house updates */
-      const pushHouseUpdate = async (targetUserId = userId) => {
+      const pushHouseUpdate = async (targetUserId = socket.data.userId) => {
         try {
           // Houses are global catalog items, not user-specific
           const houses = await House.findAll();
@@ -412,7 +412,7 @@ export function initSocket(server) {
       };
 
       /* helper to push login gift updates */
-      const pushLoginGiftUpdate = async (targetUserId = userId) => {
+      const pushLoginGiftUpdate = async (targetUserId = socket.data.userId) => {
         try {
           // Login gifts are global catalog items, not user-specific
           const gifts = await LoginGift.findAll({ where: { isActive: true } });
