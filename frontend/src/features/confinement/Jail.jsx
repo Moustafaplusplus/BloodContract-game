@@ -46,8 +46,8 @@ export default function Jail() {
         
         // Calculate total time from startedAt and releasedAt for progress bar
         let total = 600; // Default 10 minutes if no backend data
-        if (data.releaseAt && data.startedAt) {
-          const releaseAt = new Date(data.releaseAt).getTime();
+        if (data.releasedAt && data.startedAt) {
+          const releaseAt = new Date(data.releasedAt).getTime();
           const startedAt = new Date(data.startedAt).getTime();
           total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
         }
@@ -108,7 +108,7 @@ export default function Jail() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [jailStatus?.inJail, initialTotalTime]);
+  }, [jailStatus?.inJail, initialTotalTime, remainingTime, fetchJailStatus]);
 
   // Real-time updates for jail status and count
   useEffect(() => {
@@ -126,10 +126,10 @@ export default function Jail() {
       }
     };
     
-    socket.on('jail:update', fetchAll);
+    socket.on('jail:leave', fetchAll);
     
     return () => {
-      socket.off('jail:update', fetchAll);
+      socket.off('jail:leave', fetchAll);
     };
   }, [socket, fetchJailStatus]);
 
@@ -172,7 +172,7 @@ export default function Jail() {
       setRemainingTime(0);
       setInitialTotalTime(null);
       invalidateHud?.();
-              toast.success(`تم الإفراج بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
+      toast.success(`تم الإفراج بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful bailing
       navigate("/dashboard");
     } catch (err) {

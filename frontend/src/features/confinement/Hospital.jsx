@@ -46,15 +46,11 @@ export default function Hospital() {
         
         // Calculate total time from startedAt and releasedAt for progress bar
         let total = 600; // Default 10 minutes if no backend data
-        if (data.releaseAt && data.startedAt) {
-          const releaseAt = new Date(data.releaseAt).getTime();
+        if (data.releasedAt && data.startedAt) {
+          const releaseAt = new Date(data.releasedAt).getTime();
           const startedAt = new Date(data.startedAt).getTime();
           total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
         }
-        
-
-        
-
         
         // Always update the total time from backend data to ensure accuracy
         setInitialTotalTime(total);
@@ -104,7 +100,7 @@ export default function Hospital() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [hospitalStatus?.inHospital, initialTotalTime]);
+  }, [hospitalStatus?.inHospital, initialTotalTime, remainingTime, fetchHospitalStatus]);
 
   // Real-time updates for hospital status and count
   useEffect(() => {
@@ -122,10 +118,10 @@ export default function Hospital() {
       }
     };
     
-    socket.on('hospital:update', fetchAll);
+    socket.on('hospital:leave', fetchAll);
     
     return () => {
-      socket.off('hospital:update', fetchAll);
+      socket.off('hospital:leave', fetchAll);
     };
   }, [socket, fetchHospitalStatus]);
 
@@ -169,7 +165,7 @@ export default function Hospital() {
       setRemainingTime(0);
       setInitialTotalTime(null);
       invalidateHud?.();
-              toast.success(`تم الشفاء بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
+      toast.success(`تم الشفاء بنجاح! المال المتبقي: ${result.newCash?.toLocaleString() || 0}`);
       // Navigate to dashboard after successful healing
       navigate("/dashboard");
     } catch (err) {

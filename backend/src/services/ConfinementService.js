@@ -65,7 +65,7 @@ export class ConfinementService {
         cost: cost, 
         crimeId: rec.crimeId,
         startedAt: rec.startedAt,
-        releaseAt: rec.releasedAt
+        releasedAt: rec.releasedAt
       };
     } catch (error) {
       console.error('[JAIL_SERVICE] Error in getJailStatus:', error.message);
@@ -202,62 +202,69 @@ export class ConfinementService {
   }
 
   static async healOut(userId) {
+    const t = await sequelize.transaction();
     try {
-      const character = await Character.findByPk(userId);
+      // First get the character ID for this user
+      const character = await withTimeout(
+        Character.findOne({ where: { userId }, transaction: t }),
+        3000
+      );
       if (!character) {
-        return { success: false, message: 'Character not found' };
+        await t.rollback();
+        throw new Error("Character not found");
+      }
+      
+      const rec = await withTimeout(
+        Hospital.findOne({ 
+          where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
+          transaction: t, 
+          lock: t.LOCK.UPDATE 
+        }),
+        3000
+      );
+      
+      if (!rec) {
+        await t.rollback();
+        throw new Error("Not in hospital");
       }
 
-      const rec = await Confinement.findOne({
-        where: {
-          userId,
-          type: 'hospital',
-          releaseAt: { [Op.gt]: new Date() }
+      const remainingSeconds = this.secondsLeft(rec.releasedAt);
+      const minutesLeft = Math.ceil(remainingSeconds / 60);
+      // Fixed heal cost: 100 money per minute
+      const cost = minutesLeft * 100;
+      
+      if (character.money < cost) {
+        await t.rollback();
+        throw new Error("Insufficient funds");
+      }
+
+      character.money -= cost;
+      // Restore HP to max if maxHp exists, otherwise to 100
+      character.hp = character.maxHp || 100;
+      await character.save({ transaction: t });
+      await rec.destroy({ transaction: t });
+
+      await t.commit();
+      
+      // Emit hospital leave event
+      if (io) {
+        io.to(`user:${userId}`).emit('hospital:leave');
+      }
+
+      // Create notification for hospital release (non-blocking)
+      setImmediate(async () => {
+        try {
+          const notification = await NotificationService.createOutOfHospitalNotification(userId);
+          emitNotification(userId, notification);
+        } catch (notificationError) {
+          console.error('[ConfinementService] Notification error:', notificationError.message);
         }
       });
-
-      if (!rec) {
-        return { success: false, message: 'No active hospital record found' };
-      }
-
-      const cost = Math.ceil((rec.releaseAt - new Date()) / (1000 * 60 * 60)) * 1000;
-
-      if (character.money < cost) {
-        return { success: false, message: 'Insufficient funds for heal' };
-      }
-
-      const transaction = await sequelize.transaction();
-
-      try {
-        character.money -= cost;
-        character.hp = character.maxHp;
-        await character.save({ transaction });
-
-        await rec.destroy({ transaction });
-
-        await transaction.commit();
-
-        // Create notification
-        try {
-          await Notification.create({
-            userId,
-            type: 'hospital',
-            title: 'تم الشفاء',
-            message: `تم شفاؤك من المستشفى مقابل ${cost.toLocaleString()} دولار`,
-            isRead: false
-          });
-        } catch (notificationError) {
-          // Non-critical error, don't fail the operation
-        }
-
-        return { success: true, message: 'Healed successfully', cost };
-      } catch (err) {
-        await transaction.rollback();
-        throw err;
-      }
+      
+      return { success: true, newCash: character.money };
     } catch (err) {
-      console.error('[ConfinementService] Error in healOut:', err.message);
-      return { success: false, message: 'Internal server error' };
+      await t.rollback();
+      throw err;
     }
   }
 
