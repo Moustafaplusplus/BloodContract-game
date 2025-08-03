@@ -206,19 +206,12 @@ export class InventoryService {
   }
 
   static async useSpecialItem(userId, itemId) {
-    console.log('[InventoryService] useSpecialItem called with userId:', userId, 'itemId:', itemId);
-    
-    // Import and use the SpecialItemService which contains the complete logic including CD reset
-    const { SpecialItemService } = await import('./SpecialItemService.js');
-    
     try {
-      console.log('[InventoryService] Calling SpecialItemService.useSpecialItem...');
       const result = await SpecialItemService.useSpecialItem(userId, itemId);
-      console.log('[InventoryService] SpecialItemService.useSpecialItem result:', result);
       return result;
     } catch (error) {
       console.error('[InventoryService] Error calling SpecialItemService.useSpecialItem:', error);
-      throw error;
+      return { success: false, message: 'Failed to use special item' };
     }
   }
 } 

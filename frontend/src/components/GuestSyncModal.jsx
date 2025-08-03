@@ -98,69 +98,69 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-md w-full p-6 animate-slide-up">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="card-3d max-w-md w-full p-6 animate-slide-up">
         <div className="flex items-center justify-center mb-6">
-          <UserCheck className="w-8 h-8 text-accent-red mr-3" />
+          <UserCheck className="w-8 h-8 text-blood-400 mr-3" />
           <h2 className="text-2xl font-semibold text-white">
             ربط الحساب الضيف
           </h2>
         </div>
 
-        <p className="text-gray-300 text-center mb-6">
+        <p className="text-white/70 text-center mb-6">
           قم بإنشاء حساب دائم لحفظ تقدمك في اللعبة
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username */}
           <div>
-            <label className="form-label">
+            <label className="block text-sm font-medium text-white/80 mb-2 flex items-center">
               <User className="w-4 h-4 ml-2" />
               اسم المستخدم
             </label>
             <input
               type="text"
               name="username"
-              className="form-input"
+              className="input-3d w-full"
               placeholder="أدخل اسم المستخدم"
               value={formData.username}
               onChange={handleInputChange}
             />
             {errors.username && (
-              <p className="text-red-500 text-sm mt-1">{errors.username}</p>
+              <p className="text-blood-400 text-sm mt-1">{errors.username}</p>
             )}
           </div>
 
           {/* Email */}
           <div>
-            <label className="form-label">
+            <label className="block text-sm font-medium text-white/80 mb-2 flex items-center">
               <Mail className="w-4 h-4 ml-2" />
               البريد الإلكتروني
             </label>
             <input
               type="email"
               name="email"
-              className="form-input"
+              className="input-3d w-full"
               placeholder="أدخل البريد الإلكتروني"
               value={formData.email}
               onChange={handleInputChange}
             />
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              <p className="text-blood-400 text-sm mt-1">{errors.email}</p>
             )}
           </div>
 
           {/* Password */}
           <div>
-            <label className="form-label">
+            <label className="block text-sm font-medium text-white/80 mb-2 flex items-center">
               <Lock className="w-4 h-4 ml-2" />
               كلمة المرور
             </label>
-            <div className="input-wrapper">
+            <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
-                className="form-input-with-button"
+                className="input-3d w-full pr-10"
                 placeholder="أدخل كلمة المرور"
                 value={formData.password}
                 onChange={handleInputChange}
@@ -168,7 +168,7 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
               />
               <button
                 type="button"
-                className="password-toggle"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
@@ -177,24 +177,23 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
                   <Eye className="w-4 h-4" />
                 )}
               </button>
-              <div className="input-border"></div>
             </div>
             {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+              <p className="text-blood-400 text-sm mt-1">{errors.password}</p>
             )}
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label className="form-label">
+            <label className="block text-sm font-medium text-white/80 mb-2 flex items-center">
               <Lock className="w-4 h-4 ml-2" />
               تأكيد كلمة المرور
             </label>
-            <div className="input-wrapper">
+            <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
-                className="form-input-with-button"
+                className="input-3d w-full pr-10"
                 placeholder="أعد إدخال كلمة المرور"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
@@ -202,7 +201,7 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
               />
               <button
                 type="button"
-                className="password-toggle"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 {showConfirmPassword ? (
@@ -211,24 +210,23 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
                   <Eye className="w-4 h-4" />
                 )}
               </button>
-              <div className="input-border"></div>
             </div>
             {errors.confirmPassword && (
-              <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+              <p className="text-blood-400 text-sm mt-1">{errors.confirmPassword}</p>
             )}
           </div>
 
           {/* Age and Gender */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="form-label">
+              <label className="block text-sm font-medium text-white/80 mb-2 flex items-center">
                 <Calendar className="w-4 h-4 ml-2" />
                 العمر
               </label>
               <input
                 type="number"
                 name="age"
-                className="form-input"
+                className="input-3d w-full"
                 placeholder="العمر"
                 value={formData.age}
                 onChange={handleInputChange}
@@ -236,17 +234,17 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
                 max="120"
               />
               {errors.age && (
-                <p className="text-red-500 text-sm mt-1">{errors.age}</p>
+                <p className="text-blood-400 text-sm mt-1">{errors.age}</p>
               )}
             </div>
 
             <div>
-              <label className="form-label">
+              <label className="block text-sm font-medium text-white/80 mb-2">
                 الجنس
               </label>
               <select
                 name="gender"
-                className="form-input"
+                className="input-3d w-full"
                 value={formData.gender}
                 onChange={handleInputChange}
               >
@@ -258,7 +256,7 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
 
           {/* General Error */}
           {errors.general && (
-            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+            <div className="bg-blood-950/30 border border-blood-500/50 text-blood-400 px-4 py-3 rounded">
               {errors.general}
             </div>
           )}
@@ -268,19 +266,19 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-white bg-gray-800 hover:bg-gray-700 transition-colors duration-200"
+              className="btn-3d-secondary flex-1 px-4 py-2 font-bold transition-all duration-200"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-accent-red hover:bg-red-600 text-white rounded-lg transition-colors duration-200 disabled:opacity-50"
+              className="btn-3d flex-1 px-4 py-2 font-bold transition-all duration-200 disabled:opacity-50"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
-                  <div className="submit-spinner"></div>
-                  <span className="mr-2">جاري الربط…</span>
+                  <div className="loading-shimmer w-4 h-4 rounded-full mr-2"></div>
+                  <span>جاري الربط…</span>
                 </div>
               ) : (
                 "ربط الحساب"
@@ -291,4 +289,4 @@ export default function GuestSyncModal({ isOpen, onClose, onSuccess }) {
       </div>
     </div>
   );
-} 
+}

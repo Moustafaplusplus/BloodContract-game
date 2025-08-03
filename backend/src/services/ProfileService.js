@@ -3,6 +3,7 @@ import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 import { Fight } from '../models/Fight.js';
 import { Statistic } from '../models/Statistic.js';
+import { Gang } from '../models/Gang.js';
 
 // Centralized character attributes for reuse
 const CHARACTER_ATTRIBUTES = [
@@ -79,7 +80,6 @@ export class ProfileService {
       
       // If user exists but character doesn't, create one
       if (!user.Character) {
-        console.log(`[ProfileService] Character not found for user ${userId}, creating one...`);
         const character = await Character.create({
           userId: user.id,
           name: user.username
@@ -153,96 +153,48 @@ export class ProfileService {
   // Get user profile by username
   static async getUserProfileByUsername(username) {
     try {
-      console.log('[ProfileService] Looking for user with username:', username);
-      
       const user = await User.findOne({
         where: { username },
-        include: [{ model: Character, attributes: CHARACTER_ATTRIBUTES }]
+        include: [
+          {
+            model: Character,
+            as: 'Character',
+            include: [
+              { model: Statistic, as: 'Statistics' },
+              { model: Gang, as: 'Gang' }
+            ]
+          }
+        ]
       });
-      
+
       if (!user) {
-        console.log('[ProfileService] User not found for username:', username);
-        throw new Error('User not found');
+        return { success: false, message: 'User not found' };
       }
-      
+
       if (!user.Character) {
-        console.log('[ProfileService] Character not found for user:', user.id);
-        throw new Error('Character not found');
+        return { success: false, message: 'Character not found' };
       }
-      
-      console.log('[ProfileService] Found user and character:', { userId: user.id, characterId: user.Character.id });
-      
-      const userObj = user.toJSON();
-      const sanitizedUser = sanitizeUserData(userObj);
-      
-      console.log('[ProfileService] Enriching character data...');
-      const { fightsLost, fame } = await enrichCharacter(user.Character);
-      
-      // Fetch assassinations stat (if available)
-      let assassinations = 0;
-      try {
-        const stat = await Statistic.findOne({ where: { userId: user.id } });
-        if (stat) {
-          // Check if assassinations field exists, otherwise use a default
-          // Note: assassinations field might not exist in the Statistic model
-          assassinations = 0; // Default to 0 since assassinations field doesn't exist
+
+      // Enrich character data
+      const enrichedCharacter = await this.enrichCharacterData(user.Character);
+
+      return {
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            createdAt: user.createdAt
+          },
+          character: enrichedCharacter
         }
-      } catch (statError) {
-        console.error('[ProfileService] Error fetching statistics:', statError);
-        assassinations = 0;
-      }
-      
-      if (!userObj.Character) {
-        return { ...sanitizedUser, fame, fightsLost, assassinations, isVIP: false };
-      }
-      
-      const rest = { ...sanitizedUser };
-      delete rest.Character;
-      
-      // Clean character data - only include the actual character fields, not Sequelize metadata
-      const characterData = {
-        id: userObj.Character.id,
-        userId: userObj.Character.userId,
-        name: userObj.Character.name || userObj.username,
-        level: userObj.Character.level || 1,
-        exp: userObj.Character.exp || 0,
-        money: userObj.Character.money || 0,
-        strength: userObj.Character.strength || 10,
-        defense: userObj.Character.defense || 5,
-        energy: userObj.Character.energy || 100,
-        maxEnergy: userObj.Character.maxEnergy || 100,
-        hp: userObj.Character.hp || 1000,
-        maxHp: userObj.Character.maxHp || 1000,
-        equippedHouseId: userObj.Character.equippedHouseId || null,
-        gangId: userObj.Character.gangId || null,
-        daysInGame: userObj.Character.createdAt ? Math.max(1, Math.ceil((Date.now() - new Date(userObj.Character.createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 1,
-        avatarUrl: userObj.avatarUrl || userObj.Character.avatarUrl || null,
-        killCount: userObj.Character.killCount || 0,
-        lastActive: userObj.Character.lastActive || new Date(),
-        buffs: userObj.Character.buffs || {},
-        quote: userObj.Character.quote || '',
-        vipExpiresAt: userObj.Character.vipExpiresAt || null,
-        attackImmunityExpiresAt: userObj.Character.attackImmunityExpiresAt || null
       };
-      
-      const result = {
-        ...rest,
-        ...characterData,
-        // Prioritize character name over username for display
-        displayName: characterData.name || sanitizedUser.username,
-        isVIP: characterData.vipExpiresAt && new Date(characterData.vipExpiresAt) > new Date(),
-        fame,
-        fightsLost,
-        assassinations,
-      };
-      
-      console.log('[ProfileService] Successfully created profile for user:', username);
-      return result;
-      
     } catch (error) {
       console.error('[ProfileService] Error getting user profile by username:', error);
       console.error('[ProfileService] Error stack:', error.stack);
-      throw error;
+      return { success: false, message: 'Internal server error' };
     }
   }
 

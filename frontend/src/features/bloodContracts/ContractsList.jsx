@@ -136,11 +136,7 @@ const ContractsList = ({ onAttack, contracts = [] }) => {
 
   // Debug logging
   useEffect(() => {
-    console.log('[ContractsList] Received contracts:', {
-      contracts,
-      contractsLength: contracts?.length,
-      contractsData: contracts
-    });
+
   }, [contracts]);
 
   // Timer to update countdown every second

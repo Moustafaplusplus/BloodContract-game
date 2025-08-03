@@ -49,19 +49,7 @@ const CrimeCard = ({ crime, onExecute, isDisabled, reason, userLevel, currentEne
   const levelMet = userLevel >= crime.levelRequirement;
   const isUnlocked = levelMet && canAfford && !isDisabled;
   
-  // Debug logging for this specific crime
-  useEffect(() => {
-    console.log('[CrimeCard] Debug:', {
-      crimeName: crime.name,
-      crimeEnergy: crime.energy,
-      currentEnergy,
-      canAfford,
-      userLevel,
-      levelRequirement: crime.levelRequirement,
-      levelMet,
-      isUnlocked
-    });
-  }, [crime.name, crime.energy, currentEnergy, canAfford, userLevel, crime.levelRequirement, levelMet, isUnlocked]);
+
   
   // Crime type icons and colors
   const getCrimeVisuals = (crimeType) => {
@@ -271,16 +259,7 @@ export default function Crimes() {
   // Check if we have valid energy data
   const hasEnergyData = hudData?.energy !== undefined || crimeData?.energy !== undefined;
 
-  // Debug logging to help identify the issue
-  useEffect(() => {
-    console.log('[Crimes] Debug data:', {
-      hudData: hudData ? { energy: hudData.energy, maxEnergy: hudData.maxEnergy, level: hudData.level } : null,
-      crimeData: crimeData ? { energy: crimeData.energy, maxEnergy: crimeData.maxEnergy } : null,
-      currentEnergy,
-      maxEnergy,
-      userLevel
-    });
-  }, [hudData, crimeData, currentEnergy, maxEnergy, userLevel]);
+
 
   // Update cooldown timer in real-time
   useEffect(() => {

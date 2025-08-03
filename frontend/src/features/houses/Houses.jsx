@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
+import { 
+  Home, 
+  Shield, 
+  Heart, 
+  Star, 
+  ShoppingCart, 
+  Trash2, 
+  Crown, 
+  Activity,
+  Building2,
+  Target,
+  Award,
+  Eye,
+  Settings,
+  Check,
+  X
+} from 'lucide-react';
 
 const houseService = {
   async getHouses() {
@@ -118,7 +135,7 @@ const Houses = () => {
       queryClient.invalidateQueries({ queryKey: ['owned-houses'] });
       queryClient.invalidateQueries({ queryKey: ['houses'] });
       queryClient.invalidateQueries({ queryKey: ['character'] });
-      toast.success(data.message || 'House purchased successfully!');
+      toast.success(data.message || 'تم شراء المنزل بنجاح!');
     },
     onError: (error) => {
       toast.error(error.message);
@@ -131,8 +148,8 @@ const Houses = () => {
       queryClient.invalidateQueries({ queryKey: ['owned-houses'] });
       queryClient.invalidateQueries({ queryKey: ['houses'] });
       queryClient.invalidateQueries({ queryKey: ['character'] });
-      const currencyText = data.currency === 'blackcoin' ? 'blackcoins' : 'cash';
-      toast.success(`House sold! You received $${data.refund} ${currencyText}`);
+      const currencyText = data.currency === 'blackcoin' ? 'عملة سوداء' : 'نقود';
+      toast.success(`تم بيع المنزل! حصلت على $${data.refund} ${currencyText}`);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -144,7 +161,7 @@ const Houses = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['owned-houses'] });
       queryClient.invalidateQueries({ queryKey: ['character'] });
-      toast.success(data.message || 'House equipped successfully!');
+      toast.success(data.message || 'تم تجهيز المنزل بنجاح!');
     },
     onError: (error) => {
       toast.error(error.message);
@@ -156,7 +173,7 @@ const Houses = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['owned-houses'] });
       queryClient.invalidateQueries({ queryKey: ['character'] });
-      toast.success(data.message || 'House unequipped successfully!');
+      toast.success(data.message || 'تم إلغاء تجهيز المنزل بنجاح!');
     },
     onError: (error) => {
       toast.error(error.message);
@@ -168,7 +185,7 @@ const Houses = () => {
   };
 
   const handleSellHouse = (houseId) => {
-    if (window.confirm('Are you sure you want to sell this house?')) {
+    if (window.confirm('هل أنت متأكد أنك تريد بيع هذا المنزل؟')) {
       sellHouseMutation.mutate(houseId);
     }
   };
@@ -183,7 +200,7 @@ const Houses = () => {
 
   const getRarityColor = (rarity) => {
     const colors = {
-      common: 'text-gray-400',
+      common: 'text-zinc-400',
       uncommon: 'text-green-400',
       rare: 'text-blue-400',
       epic: 'text-purple-400',
@@ -210,103 +227,112 @@ const Houses = () => {
                      equipHouseMutation.isPending || unequipHouseMutation.isPending;
 
     return (
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 backdrop-blur-md border border-blood-600/30 rounded-lg p-3 shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blood-500/20">
-        <div className="flex flex-col space-y-2">
+      <div className="card-3d p-4 hover:border-yellow-500/50 transition-all duration-300 group hover:scale-[1.02]">
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-950/30 to-amber-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        <div className="relative z-10 space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blood-600 to-blood-700 rounded-full flex items-center justify-center shadow-lg">
-                <span className="text-white text-sm font-bold">🏠</span>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-lg flex items-center justify-center shadow-lg">
+                <Home className="w-4 h-4 text-white" />
               </div>
-              <h3 className="text-white font-semibold text-sm">{house.name}</h3>
+              <h3 className="text-white font-semibold text-sm group-hover:text-yellow-300 transition-colors">{house.name}</h3>
             </div>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center gap-2">
               {isHouseEquipped && (
-                <span className="bg-blood-600 text-white text-xs px-2 py-1 rounded-full">
-                  Equipped
+                <span className="bg-gradient-to-r from-green-600 to-green-700 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                  مجهز
                 </span>
               )}
-              <span className={`text-xs ${getRarityColor(house.rarity)}`}>
+              <span className={`text-xs ${getRarityColor(house.rarity)} bg-black/40 px-2 py-1 rounded-full font-bold border border-current/30`}>
                 {getRarityStars(house.rarity)}
               </span>
             </div>
           </div>
 
-          <div className="w-full h-16 bg-black/30 rounded flex items-center justify-center">
+          <div className="relative w-full h-20 bg-gradient-to-br from-black/60 to-yellow-950/40 rounded-lg border border-yellow-500/20 overflow-hidden">
             {house.imageUrl ? (
               <img 
                 src={house.imageUrl} 
                 alt={house.name}
-                className="w-full h-full object-cover rounded"
+                className="w-full h-full object-cover rounded-lg group-hover:scale-110 transition-transform duration-300"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
             ) : null}
-            <div className="w-full h-full flex items-center justify-center text-2xl">
-              🏠
+            <div className={`absolute inset-0 flex items-center justify-center text-2xl ${house.imageUrl ? 'hidden' : 'flex'}`}>
+              <Home className="w-8 h-8 text-yellow-400/50" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             {house.defenseBonus > 0 && (
-              <div className="bg-black/30 rounded p-1">
-                <span className="text-gray-400">Defense:</span>
-                <span className="text-blue-400 ml-1">+{house.defenseBonus}</span>
+              <div className="card-3d bg-blue-950/20 border-blue-500/30 p-2 text-center">
+                <Shield className="w-3 h-3 text-blue-400 mx-auto mb-1" />
+                <div className="text-blue-400 font-bold">+{house.defenseBonus}</div>
+                <div className="text-white/50">دفاع</div>
               </div>
             )}
             {house.hpBonus > 0 && (
-              <div className="bg-black/30 rounded p-1">
-                <span className="text-gray-400">Health:</span>
-                <span className="text-green-400 ml-1">+{house.hpBonus}</span>
+              <div className="card-3d bg-green-950/20 border-green-500/30 p-2 text-center">
+                <Heart className="w-3 h-3 text-green-400 mx-auto mb-1" />
+                <div className="text-green-400 font-bold">+{house.hpBonus}</div>
+                <div className="text-white/50">صحة</div>
               </div>
             )}
           </div>
 
           {type === 'market' && (
-            <div className="bg-black/30 rounded p-1 text-xs">
-              <span className="text-gray-400">Price:</span>
-              <span className={`ml-1 ${house.currency === 'blackcoin' ? 'text-blood-400' : 'text-green-400'}`}>
-                {house.currency === 'blackcoin' ? '⚫' : '$'}{house.cost?.toLocaleString() || 'N/A'}
-              </span>
+            <div className="card-3d bg-black/40 border-white/10 p-2 text-center">
+              <div className="text-xs text-white/50 mb-1">السعر</div>
+              <div className={`font-bold ${house.currency === 'blackcoin' ? 'text-blood-400' : 'text-green-400'} flex items-center justify-center gap-1`}>
+                <span>{house.currency === 'blackcoin' ? '⚫' : '$'}</span>
+                <span>{house.cost?.toLocaleString() || 'غير محدد'}</span>
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2">
             {type === 'owned' ? (
               <>
                 {isHouseEquipped ? (
                   <button
                     onClick={handleUnequipHouse}
                     disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                    className="btn-3d-secondary flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-yellow-500/50 disabled:opacity-50"
                   >
-                    Unequip
+                    <X className="w-3 h-3" />
+                    إلغاء التجهيز
                   </button>
                 ) : (
                   <button
                     onClick={() => handleEquipHouse(house.id)}
                     disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                    className="btn-3d flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-green-500/50 disabled:opacity-50"
                   >
-                    Equip
+                    <Check className="w-3 h-3" />
+                    تجهيز
                   </button>
                 )}
                 <button
                   onClick={() => handleSellHouse(house.id)}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-blood-600 to-blood-700 hover:from-blood-700 hover:to-blood-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                  className="btn-3d-secondary flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-red-500/50 disabled:opacity-50"
                 >
-                  Sell
+                  <Trash2 className="w-3 h-3" />
+                  بيع
                 </button>
               </>
             ) : (
               <button
                 onClick={() => handleBuyHouse(house.id)}
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs py-1.5 px-2 rounded transition-all duration-200 disabled:opacity-50"
+                className="btn-3d w-full text-xs py-2 flex items-center justify-center gap-1 hover:border-green-500/50 disabled:opacity-50"
               >
-                Buy
+                <ShoppingCart className="w-3 h-3" />
+                شراء
               </button>
             )}
           </div>
@@ -316,58 +342,73 @@ const Houses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900">
-      <div className="relative h-32 overflow-hidden">
-        <div className="absolute inset-0">
-          <svg className="w-full h-full object-cover opacity-20" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="circles" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <circle cx="25" cy="25" r="20" fill="currentColor" className="text-blood-600" opacity="0.3"/>
-                <circle cx="75" cy="25" r="15" fill="currentColor" className="text-blood-500" opacity="0.2"/>
-                <circle cx="50" cy="75" r="18" fill="currentColor" className="text-blood-700" opacity="0.25"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#circles)"/>
-          </svg>
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/80"></div>
-        <div className="relative z-10 flex items-center justify-center h-full">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-white drop-shadow-lg">Houses</h1>
-            <p className="text-blood-300 mt-1">Manage your property portfolio</p>
+    <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom">
+      <div className="container mx-auto max-w-6xl p-3 space-y-6">
+        
+        {/* Enhanced Header */}
+        <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+          <div className="absolute inset-0 bg-gradient-to-r from-yellow-900 via-amber-800 to-yellow-900">
+            <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23f59e0b\" fill-opacity=\"0.1\"%3E%3Crect x=\"20\" y=\"15\" width=\"20\" height=\"25\" rx=\"2\"/%3E%3Crect x=\"25\" y=\"20\" width=\"4\" height=\"6\" rx=\"1\"/%3E%3Crect x=\"31\" y=\"20\" width=\"4\" height=\"6\" rx=\"1\"/%3E%3Crect x=\"28\" y=\"30\" width=\"4\" height=\"8\" rx=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+          </div>
+          <div className="absolute inset-0 bg-black/50"></div>
+          <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">المنازل</h1>
+                <p className="text-xs sm:text-sm text-white/80 drop-shadow">محفظة العقارات</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4 text-white">
+              <div className="hidden sm:flex items-center space-x-2">
+                <Activity className="w-4 h-4 text-white/60" />
+                <Crown className="w-4 h-4 text-yellow-400 animate-pulse" />
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold drop-shadow-lg">{ownedHouses.length}</div>
+                <div className="text-xs text-white/80 drop-shadow">منزل مملوك</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex bg-gray-800/50 backdrop-blur-md rounded-lg p-1 mb-6 border border-blood-600/30">
+        {/* Tab Navigation */}
+        <div className="flex gap-2">
           <button
             onClick={() => setActiveTab('owned')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-              activeTab === 'owned'
-                ? 'bg-blood-600 text-white shadow-md'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+            className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+              activeTab === 'owned' 
+                ? 'btn-3d border-yellow-500/50' 
+                : 'btn-3d-secondary hover:border-yellow-500/30'
             }`}
           >
-            My Houses ({ownedHouses.length})
+            <Crown className="w-4 h-4" />
+            <span>منازلي ({ownedHouses.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('market')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-              activeTab === 'market'
-                ? 'bg-blood-600 text-white shadow-md'
-                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+            className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+              activeTab === 'market' 
+                ? 'btn-3d border-yellow-500/50' 
+                : 'btn-3d-secondary hover:border-yellow-500/30'
             }`}
           >
-            Real Estate Market
+            <ShoppingCart className="w-4 h-4" />
+            <span>سوق العقارات</span>
           </button>
         </div>
 
+        {/* Content */}
         {activeTab === 'owned' ? (
           <div>
             {loadingOwned ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blood-500"></div>
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="loading-shimmer w-12 h-12 rounded-full mx-auto mb-3"></div>
+                  <p className="text-white">جاري تحميل منازلك...</p>
+                </div>
               </div>
             ) : ownedHouses.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -381,18 +422,21 @@ const Houses = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="text-6xl mb-4">🏠</div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Houses Yet</h3>
-                <p className="text-gray-400">Visit the Real Estate Market to buy your first property</p>
+              <div className="card-3d p-8 text-center">
+                <Home className="w-16 h-16 text-yellow-400/50 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">لا توجد منازل</h3>
+                <p className="text-white/60">قم بزيارة سوق العقارات لشراء أول عقار لك</p>
               </div>
             )}
           </div>
         ) : (
           <div>
             {loadingHouses ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blood-500"></div>
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="loading-shimmer w-12 h-12 rounded-full mx-auto mb-3"></div>
+                  <p className="text-white">جاري تحميل السوق...</p>
+                </div>
               </div>
             ) : availableHouses.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -401,14 +445,40 @@ const Houses = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="text-6xl mb-4">🏠</div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Houses Available</h3>
-                <p className="text-gray-400">Check back later for new properties</p>
+              <div className="card-3d p-8 text-center">
+                <Home className="w-16 h-16 text-yellow-400/50 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">لا توجد منازل متاحة</h3>
+                <p className="text-white/60">تحقق مرة أخرى لاحقاً للحصول على عقارات جديدة</p>
               </div>
             )}
           </div>
         )}
+
+        {/* Tips */}
+        <div className="card-3d p-4 bg-gradient-to-r from-yellow-950/20 to-black/40 border-yellow-500/20">
+          <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            نصائح المنازل
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/70">
+            <div className="flex items-center gap-2">
+              <Award className="w-3 h-3 text-yellow-400" />
+              <span>المنازل تزيد من الدفاع والصحة</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Eye className="w-3 h-3 text-green-400" />
+              <span>جهز منزل واحد فقط في كل مرة</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Settings className="w-3 h-3 text-blue-400" />
+              <span>يمكنك تغيير المنزل المجهز في أي وقت</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="w-3 h-3 text-purple-400" />
+              <span>المنازل النادرة لها مكافآت أفضل</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

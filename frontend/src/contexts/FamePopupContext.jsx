@@ -120,14 +120,14 @@ function FamePopupComponent({ popup }) {
   return (
     <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
       <div className={`
-        relative bg-gradient-to-r from-hitman-900 to-black border-2 rounded-xl shadow-2xl px-8 py-6
-        ${isIncrease ? 'border-green-500' : 'border-red-500'}
+        relative card-3d bg-gradient-to-r from-blood-950/90 to-black/80 border-2 px-8 py-6
+        ${isIncrease ? 'border-green-500/60' : 'border-blood-500/60'}
         animate-fame-popup
       `}>
         {/* Background glow effect */}
         <div className={`
           absolute inset-0 rounded-xl opacity-20 blur-sm
-          ${isIncrease ? 'bg-green-500' : 'bg-red-500'}
+          ${isIncrease ? 'bg-green-500' : 'bg-blood-500'}
         `} />
         
         {/* Content */}
@@ -135,7 +135,7 @@ function FamePopupComponent({ popup }) {
           {/* Icon */}
           <div className={`
             w-12 h-12 rounded-full flex items-center justify-center
-            ${isIncrease ? 'bg-green-500' : 'bg-red-500'}
+            ${isIncrease ? 'bg-green-500' : 'bg-blood-500'}
             animate-pulse shadow-lg
           `}>
             <span className="text-white font-bold text-xl">
@@ -153,7 +153,7 @@ function FamePopupComponent({ popup }) {
             </div>
             <div className={`
               text-base font-medium
-              ${isIncrease ? 'text-green-400' : 'text-red-400'}
+              ${isIncrease ? 'text-green-400' : 'text-blood-400'}
             `}>
               {isIncrease ? 'زيادة' : 'نقصان'} بمقدار {displayDifference.toLocaleString()}
             </div>
@@ -163,7 +163,7 @@ function FamePopupComponent({ popup }) {
         {/* Animated border */}
         <div className={`
           absolute inset-0 rounded-xl border-2 border-transparent
-          ${isIncrease ? 'animate-pulse-green' : 'animate-pulse-red'}
+          ${isIncrease ? 'animate-pulse-green' : 'animate-pulse-blood'}
         `} />
         
         {/* Floating particles effect */}
@@ -173,7 +173,7 @@ function FamePopupComponent({ popup }) {
               key={i}
               className={`
                 absolute w-1 h-1 rounded-full
-                ${isIncrease ? 'bg-green-400' : 'bg-red-400'}
+                ${isIncrease ? 'bg-green-400' : 'bg-blood-400'}
                 animate-float
               `}
               style={{
@@ -196,4 +196,4 @@ export function useFamePopup() {
     throw new Error('useFamePopup must be used within a FamePopupProvider');
   }
   return context;
-} 
+}

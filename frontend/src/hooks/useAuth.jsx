@@ -165,7 +165,7 @@ export function AuthProvider({ children }) {
 
   const setToken = useCallback(async (jwt) => {
     if (!jwt) {
-      console.warn('Attempted to set null/undefined token');
+      
       return;
     }
     

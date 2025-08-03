@@ -134,7 +134,7 @@ export function SocketProvider({ children }) {
     const newSocket = createSocket({ token });
     
     newSocket.on('connect', () => {
-      console.log('[Socket] Connected successfully');
+      
       setConnectionAttempts(0);
       
       // Request initial data via Socket.IO instead of HTTP
@@ -158,7 +158,7 @@ export function SocketProvider({ children }) {
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected:', reason);
+      
       if (reason === 'io server disconnect') {
         // Server disconnected, try to reconnect
         newSocket.connect();
@@ -208,7 +208,7 @@ export function SocketProvider({ children }) {
     });
 
     newSocket.on('bloodContract:update', (data) => {
-      console.log('[SocketContext] Blood contract update received:', data);
+      
       setBloodContracts(data);
     });
 

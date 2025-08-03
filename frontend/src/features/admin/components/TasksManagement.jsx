@@ -61,7 +61,7 @@ export default function TasksManagement() {
       });
       setTasks(res.data);
     } catch (error) {
-      console.error('Debug: Error fetching tasks:', error.response?.status, error.response?.data);
+      
       setTasks([]);
     } finally {
       setLoading(false);

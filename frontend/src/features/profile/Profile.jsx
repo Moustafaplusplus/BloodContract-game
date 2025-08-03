@@ -22,6 +22,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   Skull,
+  ImageIcon,
+  User,
+  MessageSquare,
+  Crosshair,
+  Loader
 } from "lucide-react";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useHud } from "@/hooks/useHud";
@@ -55,61 +60,59 @@ function FightResultModal({ showModal, setShowModal, fightResult, hudStats }) {
   return (
     <Dialog open={showModal} onClose={() => setShowModal(false)} className="fixed z-50 inset-0 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
-      <div className="relative bg-gradient-to-br from-hitman-900 to-black border-2 border-accent-red rounded-2xl shadow-2xl max-w-lg w-full mx-auto p-8 text-white animate-fade-in">
-        <button onClick={() => setShowModal(false)} className="absolute top-4 left-4 text-accent-red hover:text-white transition"><X className="w-6 h-6" /></button>
+      <div className="relative card-3d p-8 max-w-lg w-full mx-auto text-white animate-fade-in">
+        <button onClick={() => setShowModal(false)} className="absolute top-4 left-4 text-blood-400 hover:text-white transition"><X className="w-6 h-6" /></button>
         <div className="text-center mb-6">
-          <Sword className="w-12 h-12 mx-auto text-accent-red animate-bounce mb-2" />
-          <h2 className="text-3xl font-bouya mb-2 text-accent-red">نتيجة القتال</h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto mb-2" />
+          <Sword className="w-12 h-12 mx-auto text-blood-400 animate-bounce mb-2" />
+          <h2 className="text-3xl font-bouya mb-2 text-blood-400">نتيجة القتال</h2>
+          <div className="w-24 h-1 bg-gradient-to-r from-transparent via-blood-500 to-transparent mx-auto mb-2" />
         </div>
         {(currentUserWentToHospital || opponentWentToHospital) && (
           <div className="mb-4">
             {currentUserWentToHospital && (
-              <div className="bg-red-900/40 border border-red-500/50 rounded-xl p-3 mb-2 text-center text-red-300 font-bold">
+              <div className="card-3d bg-red-950/30 border-red-500/50 p-3 mb-2 text-center text-red-300 font-bold">
                 تم نقلك إلى المستشفى بعد القتال!
               </div>
             )}
             {opponentWentToHospital && (
-              <div className="bg-green-900/40 border border-green-500/50 rounded-xl p-3 text-center text-green-300 font-bold">
-                خصمك تم نقله إلى المستشفى بعد القتال!
+              <div className="card-3d bg-green-950/30 border-green-500/50 p-3 text-center text-green-300 font-bold">
+                خصمك تم نقله إلى المست��فى بعد القتال!
               </div>
             )}
           </div>
         )}
         <div className="flex items-center justify-between mb-4 gap-4">
           <div className="flex-1 text-center">
-            <div className="text-lg font-bold text-accent-red">الفائز</div>
+            <div className="text-lg font-bold text-blood-400">الفائز</div>
             <div className="text-xl font-bouya">
               <VipName user={winner} />
             </div>
-            <div className="text-hitman-300 text-sm">@{winner?.username}</div>
+            <div className="text-white/60 text-sm">@{winner?.username}</div>
           </div>
           <div className="flex-1 text-center">
-            <div className="text-lg font-bold text-accent-yellow">الجولات</div>
+            <div className="text-lg font-bold text-yellow-400">الجولات</div>
             <div className="text-2xl font-bouya">{rounds}</div>
           </div>
           <div className="flex-1 text-center">
-            <div className="text-lg font-bold text-accent-green">الخبرة</div>
+            <div className="text-lg font-bold text-green-400">الخبرة</div>
             <div className="text-2xl font-bouya">+{xpGain}</div>
           </div>
         </div>
-        <div className="bg-hitman-800/60 border border-accent-red/30 rounded-xl p-4 max-h-48 overflow-y-auto mb-4 text-right rtl">
-          <div className="font-bold text-accent-red mb-2">سجل القتال:</div>
+        <div className="card-3d bg-black/40 border-white/20 p-4 max-h-48 overflow-y-auto mb-4 text-right" dir="rtl">
+          <div className="font-bold text-blood-400 mb-2">سجل القتال:</div>
           {log && log.length > 0 ? (
             log.map((line, i) => (
-              <div key={i} className="text-sm text-hitman-200 mb-1">{line}</div>
+              <div key={i} className="text-sm text-white/80 mb-1">{line}</div>
             ))
           ) : (
-            <div className="text-hitman-400">لا يوجد تفاصيل</div>
+            <div className="text-white/40">لا يوجد تفاصيل</div>
           )}
         </div>
-        <button onClick={() => setShowModal(false)} className="w-full py-3 mt-2 bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white font-bold rounded-lg transition-all duration-300">إغلاق</button>
+        <button onClick={() => setShowModal(false)} className="btn-3d w-full py-3 mt-2">إغلاق</button>
       </div>
     </Dialog>
   );
 }
-
-
 
 export default function Profile() {
   // All hooks at the top level
@@ -150,8 +153,6 @@ export default function Profile() {
     retry: false,
     enabled: !!customToken,
   });
-
-
 
   const isOwnProfile = !username;
   const userId = character?.userId;
@@ -300,8 +301,6 @@ export default function Profile() {
     }
   }, [jailStatus?.inJail, jailInitialTotalTime, jailRemainingTime, fetchJailStatus]);
 
-
-
   // Initial friendship status fetch and real-time updates
   useEffect(() => {
     if (!isOwnProfile && character?.userId && hudStats?.userId) {
@@ -311,34 +310,27 @@ export default function Profile() {
       const fetchFriendshipStatus = async () => {
         if (!customToken) return;
         try {
-          console.log('Fetching friendship status for:', character.userId, 'from user:', hudStats.userId);
-          
           // Check if they are friends
           const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
             headers: { Authorization: `Bearer ${customToken}` } 
           });
-          console.log('Friend response:', friendRes.data);
           setIsFriend(friendRes.data.isFriend);
           
           // Check pending requests
           const pendingRes = await axios.get('/api/friendship/pending', { 
             headers: { Authorization: `Bearer ${customToken}` } 
           });
-          console.log('Pending requests:', pendingRes.data);
           
           // Check if current user sent a request to this character
           const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
           if (sentRequest) {
-            console.log('Found pending request sent by current user');
             setPendingStatus('sent');
           } else {
             // Check if current user received a request from this character
             const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
             if (receivedRequest) {
-              console.log('Found pending request received from target user');
               setPendingStatus('received');
             } else {
-              console.log('No pending requests found');
               setPendingStatus(null);
             }
           }
@@ -364,54 +356,37 @@ export default function Profile() {
     }
   }, [character?.userId, isOwnProfile, hudStats?.userId, requestProfileUpdate]);
 
-  // Debug: Log when dependencies change
-  useEffect(() => {
-    console.log('Profile component dependencies changed:', {
-      isOwnProfile,
-      characterUserId: character?.userId,
-      hudStatsUserId: hudStats?.userId,
-      isFriend,
-      pendingStatus,
-      friendshipStatusLoading
-    });
-  }, [isOwnProfile, character?.userId, hudStats?.userId, isFriend, pendingStatus, friendshipStatusLoading]);
+
 
   // Refetch friendship status when component mounts or when data changes
   useEffect(() => {
     if (!isOwnProfile && character?.userId && hudStats?.userId) {
-      console.log('Triggering friendship status refetch');
       // Add a small delay to ensure all data is loaded
       const timer = setTimeout(() => {
         const fetchFriendshipStatus = async () => {
           if (!customToken) return;
           try {
-            console.log('Refetching friendship status...');
             // Check if they are friends
             const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
               headers: { Authorization: `Bearer ${customToken}` } 
             });
-            console.log('Refetch friend response:', friendRes.data);
             setIsFriend(friendRes.data.isFriend);
             
             // Check pending requests
             const pendingRes = await axios.get('/api/friendship/pending', { 
               headers: { Authorization: `Bearer ${customToken}` } 
             });
-            console.log('Refetch pending requests:', pendingRes.data);
             
             // Check if current user sent a request to this character
             const sentRequest = pendingRes.data.find(r => r.Requester?.id === hudStats?.userId && r.addresseeId === character.userId);
             if (sentRequest) {
-              console.log('Refetch: Found pending request sent by current user');
               setPendingStatus('sent');
             } else {
               // Check if current user received a request from this character
               const receivedRequest = pendingRes.data.find(r => r.Requester?.id === character.userId && r.addresseeId === hudStats?.userId);
               if (receivedRequest) {
-                console.log('Refetch: Found pending request received from target user');
                 setPendingStatus('received');
               } else {
-                console.log('Refetch: No pending requests found');
                 setPendingStatus(null);
               }
             }
@@ -460,7 +435,7 @@ export default function Profile() {
     // Real-time friendship status updates
     const handleFriendshipUpdate = async () => {
       if (!isOwnProfile && character?.userId && customToken) {
-        console.log('Socket: Refetching friendship status due to update');
+
         try {
           const friendRes = await axios.get(`/api/friendship/is-friend?friendId=${character.userId}`, { 
             headers: { Authorization: `Bearer ${customToken}` } 
@@ -498,18 +473,18 @@ export default function Profile() {
     socket.on('friendship:request-rejected', handleFriendshipUpdate);
     socket.on('friendship:removed', handleFriendshipUpdate);
     
-          return () => {
-        socket.off('hospital:enter', fetchHospitalStatus);
-        socket.off('hospital:leave', fetchHospitalStatus);
-        socket.off('jail:enter', fetchJailStatus);
-        socket.off('jail:leave', fetchJailStatus);
-        socket.off('friendship:updated', handleFriendshipUpdate);
-        socket.off('friendship:request-sent', handleFriendshipUpdate);
-        socket.off('friendship:request-received', handleFriendshipUpdate);
-        socket.off('friendship:request-accepted', handleFriendshipUpdate);
-        socket.off('friendship:request-rejected', handleFriendshipUpdate);
-        socket.off('friendship:removed', handleFriendshipUpdate);
-      };
+    return () => {
+      socket.off('hospital:enter', fetchHospitalStatus);
+      socket.off('hospital:leave', fetchHospitalStatus);
+      socket.off('jail:enter', fetchJailStatus);
+      socket.off('jail:leave', fetchJailStatus);
+      socket.off('friendship:updated', handleFriendshipUpdate);
+      socket.off('friendship:request-sent', handleFriendshipUpdate);
+      socket.off('friendship:request-received', handleFriendshipUpdate);
+      socket.off('friendship:request-accepted', handleFriendshipUpdate);
+      socket.off('friendship:request-rejected', handleFriendshipUpdate);
+      socket.off('friendship:removed', handleFriendshipUpdate);
+    };
   }, [socket, fetchHospitalStatus, fetchJailStatus, character?.userId, isOwnProfile, hudStats?.userId]);
 
   useEffect(() => {
@@ -613,8 +588,6 @@ export default function Profile() {
   
   // Calculate progress for jail
   const jailProgress = jailInitialTotalTime && jailInitialTotalTime > 0 ? Math.max(0, Math.min(1, (jailInitialTotalTime - jailRemainingTime) / jailInitialTotalTime)) : 0;
-  
-
 
   // Attack immunity countdown timer
   useEffect(() => {
@@ -652,58 +625,56 @@ export default function Profile() {
     ? (displayCharacter.hp / displayCharacter.maxHp) * 100
     : 0;
 
-
-
   // Unified stat extraction from backend fields
   const fightsLost = displayCharacter.fightsLost ?? 0;
   const fightsWon = displayCharacter.fightsWon ?? 0;
   const fightsTotal = displayCharacter.fightsTotal ?? (fightsWon + fightsLost);
 
-  // Add fame and assassinations to the stats array for display
-  const fameStat = {
-    icon: Trophy,
-    label: "الشهرة",
-    value: displayCharacter.fame ?? 0,
-    color: "text-accent-yellow",
-  };
-  const assassinationsStat = {
-    icon: Skull,
-    label: "مرات الاغتيال",
-    value: displayCharacter.assassinations ?? 0,
-    color: "text-accent-red",
-  };
-  // Insert fame and assassinations as the first stats
-  const stats = [fameStat, assassinationsStat,
+  // Enhanced stats for compact display with visual elements
+  const mainStats = [
+    {
+      icon: Trophy,
+      label: "الشهرة",
+      value: displayCharacter.fame ?? 0,
+      color: "yellow",
+      bgGrad: "from-yellow-950/30 to-amber-950/20"
+    },
+    {
+      icon: Skull,
+      label: "الاغتيالات",
+      value: displayCharacter.assassinations ?? 0,
+      color: "blood",
+      bgGrad: "from-blood-950/30 to-red-950/20"
+    },
+    {
+      icon: Crosshair,
+      label: "الجرائم",
+      value: displayCharacter.crimesCommitted ?? 0,
+      color: "red",
+      bgGrad: "from-red-950/30 to-blood-950/20"
+    },
     {
       icon: Target,
-      label: "الجرائم المرتكبة",
-      value: displayCharacter.crimesCommitted ?? 0,
-      color: "text-accent-red",
+      label: "القتل",
+      value: displayCharacter.killCount ?? 0,
+      color: "purple",
+      bgGrad: "from-purple-950/30 to-indigo-950/20"
     },
     {
-      icon: Shield,
-      label: "عدد الخسائر",
-      value: fightsLost,
-      color: "text-accent-gray",
-    },
-    {
-      icon: Activity,
-      label: "إجمالي المعارك",
+      icon: Sword,
+      label: "المعارك",
       value: fightsTotal,
-      color: "text-accent-purple",
+      color: "orange",
+      bgGrad: "from-orange-950/30 to-red-950/20",
+      subtitle: `��وز: ${fightsWon} خسارة: ${fightsLost}`
     },
     {
       icon: Calendar,
-      label: "الأيام في اللعبة",
+      label: "الأيام",
       value: displayCharacter.daysInGame ?? 0,
-      color: "text-accent-green",
-    },
-    {
-      icon: Activity,
-      label: "عدد القتل",
-      value: displayCharacter.killCount ?? 0,
-      color: "text-accent-orange",
-    },
+      color: "green",
+      bgGrad: "from-green-950/30 to-emerald-950/20"
+    }
   ];
 
   // Direct attack logic (copied from Fights.jsx)
@@ -823,10 +794,6 @@ export default function Profile() {
     setAttacking(false);
   };
 
-
-
-
-
   // Add this function for sending a message
   const handleSendMessage = () => {
     if (userId && displayCharacter?.username) {
@@ -840,53 +807,97 @@ export default function Profile() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-        {/* Hospital status message */}
-        {hospitalStatus?.inHospital && (
-          <div className="bg-black border-2 border-red-600 text-white rounded-lg p-4 mb-4 text-center shadow-md">
-            <span className="font-bold text-red-400">
-              {isOwnProfile ? "أنت في المستشفى" : `${displayCharacter?.displayName || displayCharacter?.name || displayCharacter?.username || "هذا اللاعب"} في المستشفى`}
-            </span>
-            <span className="mx-2">|</span>
-            <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span></span>
-            <div className="w-full bg-hitman-700 rounded-full h-3 mt-2">
-              <div className="bg-accent-red h-3 rounded-full transition-all duration-500" style={{ width: `${Math.round(hospitalProgress * 100)}%` }}></div>
+      <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom" dir="rtl">
+        <div className="container mx-auto max-w-6xl p-4 space-y-6">
+          
+          {/* Enhanced Header with Background Image */}
+          <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+            {/* Background Image Placeholder */}
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+              <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23dc2626\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+            </div>
+
+            {/* Dark Overlay */}
+            <div className="absolute inset-0 bg-black/50"></div>
+
+            {/* Content */}
+            <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                  <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">الملف الشخصي</h1>
+                  <p className="text-xs sm:text-sm text-white/80 drop-shadow">{displayCharacter.name || displayCharacter.username}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4 text-white">
+                <div className="hidden sm:flex items-center space-x-2">
+                  <ImageIcon className="w-4 h-4 text-white/60" />
+                  <Crown className="w-4 h-4 text-yellow-400 animate-pulse" />
+                </div>
+                <div className="text-right">
+                  <div className="text-lg sm:text-xl font-bold drop-shadow-lg">Lv.{displayCharacter.level || 1}</div>
+                  <div className="text-xs text-white/80 drop-shadow">Level</div>
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Jail status message */}
-        {jailStatus?.inJail && (
-          <div className="bg-black border-2 border-orange-600 text-white rounded-lg p-4 mb-4 text-center shadow-md">
-            <span className="font-bold text-orange-400">
-              {isOwnProfile ? "أنت في السجن" : `${displayCharacter?.displayName || displayCharacter?.name || displayCharacter?.username || "هذا اللاعب"} في السجن`}
-            </span>
-            <span className="mx-2">|</span>
-            <span>الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(jailRemainingTime)}</span></span>
-            <div className="w-full bg-hitman-700 rounded-full h-3 mt-2">
-              <div 
-                className="bg-orange-500 h-3 rounded-full transition-all duration-500" 
-                style={{ 
-                  width: `${Math.round(jailProgress * 100)}%` 
-                }}
-              ></div>
+          {/* Hospital status message */}
+          {hospitalStatus?.inHospital && (
+            <div className="card-3d bg-red-950/30 border-red-500/50 p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Shield className="w-4 h-4 text-red-400 animate-pulse" />
+                <span className="font-bold text-red-400">
+                  {isOwnProfile ? "أنت في المستشفى" : `${displayCharacter?.displayName || displayCharacter?.name || displayCharacter?.username || "هذا اللاعب"} في المستشفى`}
+                </span>
+                <span className="mx-2 text-white/50">|</span>
+                <span className="text-white">
+                  الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(remainingTime)}</span>
+                </span>
+              </div>
+              <div className="progress-3d mt-2 h-2">
+                <div className="progress-3d-fill bg-gradient-to-r from-red-600 to-red-400" style={{ width: `${Math.round(hospitalProgress * 100)}%` }}></div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Jail status message */}
+          {jailStatus?.inJail && (
+            <div className="card-3d bg-orange-950/30 border-orange-500/50 p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Shield className="w-4 h-4 text-orange-400 animate-pulse" />
+                <span className="font-bold text-orange-400">
+                  {isOwnProfile ? "أنت في السجن" : `${displayCharacter?.displayName || displayCharacter?.name || displayCharacter?.username || "هذا اللاعب"} في السجن`}
+                </span>
+                <span className="mx-2 text-white/50">|</span>
+                <span className="text-white">
+                  الوقت المتبقي: <span className="font-mono text-orange-400">{formatTime(jailRemainingTime)}</span>
+                </span>
+              </div>
+              <div className="progress-3d mt-2 h-2">
+                <div className="progress-3d-fill bg-gradient-to-r from-orange-600 to-orange-400" style={{ width: `${Math.round(jailProgress * 100)}%` }}></div>
+              </div>
+            </div>
+          )}
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
             {/* Left column: Profile card, action buttons, last seen */}
-            <div className="flex flex-col gap-6">
-              {/* Profile Card */}
-              <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-8 text-center animate-slide-up">
+            <div className="space-y-6">
+              
+              {/* Enhanced Profile Card */}
+              <div className="card-3d p-6 text-center animate-slide-up">
                 {/* Avatar */}
                 <div className="relative mb-6">
                   {displayCharacter?.avatarUrl ? (
                     <img
                       src={getImageUrl(displayCharacter.avatarUrl)}
                       alt="avatar"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-accent-red bg-hitman-800 mx-auto shadow-lg"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-blood-500/50 bg-black/40 mx-auto shadow-lg"
                       onError={(e) => {
                         e.target.style.display = "none";
                         e.target.nextElementSibling.style.display = "flex";
@@ -894,60 +905,58 @@ export default function Profile() {
                     />
                   ) : null}
                   <div
-                    className={`w-32 h-32 rounded-full bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center text-5xl text-accent-red border-4 border-accent-red mx-auto shadow-lg ${displayCharacter?.avatarUrl ? "hidden" : "flex"}`}
+                    className={`w-32 h-32 rounded-full bg-gradient-to-br from-blood-950/60 to-black/40 flex items-center justify-center text-5xl text-blood-400 border-4 border-blood-500/50 mx-auto shadow-lg ${displayCharacter?.avatarUrl ? "hidden" : "flex"}`}
                   >
-                    {
-                      (displayCharacter?.username ||
-                        "?")[0]
-                    }
+                    {(displayCharacter?.username || "?")[0]}
                   </div>
-                  <div className="absolute -bottom-2 -right-2 bg-accent-red rounded-full p-2">
-                    <Crown className="w-6 h-6 text-white" />
+                  <div className="absolute -bottom-2 -right-2 card-3d bg-yellow-500/20 border-yellow-500/40 p-2">
+                    <Crown className="w-6 h-6 text-yellow-400" />
                   </div>
                 </div>
 
                 {/* Basic Info */}
-                <h2 className="text-2xl font-bold flex items-center gap-2">
+                <h2 className="text-2xl font-bold flex items-center justify-center gap-2 mb-3">
                   <VipName user={displayCharacter} className="large" />
                   {character?.userId && (
-                    <span className="text-xs text-accent-red bg-hitman-900 px-2 py-1 rounded font-bold">ID: {character.userId}</span>
+                    <span className="text-xs text-blood-400 card-3d bg-black/40 border-blood-500/20 px-2 py-1 font-bold">ID: {character.userId}</span>
                   )}
                 </h2>
+                
                 {/* Money on hand */}
-                <div className="flex items-center justify-center gap-2 mt-2 mb-1">
-                  <MoneyIcon className="w-8 h-8" />
-                  <span className="text-accent-green font-bold">النقود:</span>
-                  <span className="text-lg font-mono text-accent-green">{displayCharacter.money?.toLocaleString() ?? 0}</span>
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <MoneyIcon className="w-6 h-6" />
+                  <span className="text-green-400 font-bold">النقود:</span>
+                  <span className="text-lg font-mono text-green-400">{displayCharacter.money?.toLocaleString() ?? 0}</span>
                 </div>
-                <p className="text-accent-red font-medium mb-1">
+                
+                <p className="text-blood-400 font-medium mb-3">
                   لاعب جديد
                 </p>
-                {/* Email hidden for privacy */}
 
                 {/* Quote */}
                 {displayCharacter?.quote && (
-                  <div className="bg-hitman-800/50 rounded-lg p-4 mb-6">
-                    <span className="text-hitman-200 italic">{displayCharacter.quote}</span>
+                  <div className="card-3d bg-black/40 border-white/10 p-3 mb-4">
+                    <span className="text-white/70 italic text-sm">{displayCharacter.quote}</span>
                   </div>
                 )}
 
                 {/* Strength & Defense */}
-                <div className="flex justify-center gap-4 mb-4">
-                  <div className="flex items-center gap-1 text-accent-yellow font-bold">
-                    <Shield className="w-5 h-5" />
-                    <span>الدفاع:</span>
-                    <span>{displayCharacter.defense || 0}</span>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="card-3d bg-gradient-to-br from-orange-950/30 to-red-950/20 border-orange-500/30 p-3 text-center">
+                    <Zap className="w-5 h-5 text-orange-400 mx-auto mb-1" />
+                    <div className="text-sm text-white/60">القوة</div>
+                    <div className="text-lg font-bold text-orange-400">{displayCharacter.strength || 0}</div>
                   </div>
-                  <div className="flex items-center gap-1 text-accent-orange font-bold">
-                    <Zap className="w-5 h-5" />
-                    <span>القوة:</span>
-                    <span>{displayCharacter.strength || 0}</span>
+                  <div className="card-3d bg-gradient-to-br from-blue-950/30 to-cyan-950/20 border-blue-500/30 p-3 text-center">
+                    <Shield className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                    <div className="text-sm text-white/60">الدفاع</div>
+                    <div className="text-lg font-bold text-blue-400">{displayCharacter.defense || 0}</div>
                   </div>
                 </div>
 
                 {/* Attack Immunity Status */}
                 {displayCharacter.attackImmunityExpiresAt && new Date(displayCharacter.attackImmunityExpiresAt) > new Date() && (
-                  <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 border border-blue-500/50 rounded-xl p-4 mb-4 text-center">
+                  <div className="card-3d bg-gradient-to-br from-blue-950/30 to-blue-800/30 border-blue-500/50 p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Shield className="w-5 h-5 text-blue-400" />
                       <span className="text-blue-400 font-bold">حماية من الهجمات</span>
@@ -962,239 +971,283 @@ export default function Profile() {
                   </div>
                 )}
               </div>
+              
               {/* Action Buttons (hide if viewing own profile) */}
               {!isCurrentUser && (
-                <div className="flex flex-col gap-3">
+                <div className="card-3d p-4">
+                  <h3 className="text-lg font-bold text-blood-400 mb-3 flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    إجراءات اللاعب
+                  </h3>
+                  
                   {/* Warning message when user is in hospital/jail */}
                   {(hudStats?.inHospital || hudStats?.inJail) && (
-                    <div className="w-full p-3 bg-red-950/50 border border-red-500/50 rounded-lg text-center">
-                      <span className="text-red-400 font-bold">
-                        {hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" : "لا يمكنك الهجوم وأنت في السجن"}
+                    <div className="card-3d bg-red-950/30 border-red-500/50 p-3 text-center mb-3">
+                      <span className="text-red-400 font-bold text-sm">
+                        {hudStats?.inHospital ? "لا ��مكنك الهجوم وأنت في المستشفى" : "لا يمكنك الهجوم وأنت في السجن"}
                       </span>
                     </div>
                   )}
                   
-                  <div className="flex flex-row justify-center gap-3">
-                  <button onClick={handleSendMessage} className="min-w-[120px] h-12 bg-accent-blue/20 text-accent-blue rounded-lg font-bold text-base" disabled={!character?.userId}>
-                    إرسال رسالة
-                  </button>
-                  <button
-                    className={`min-w-[120px] h-12 rounded-lg font-bold text-base transition-all duration-200 ${
-                      attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail
-                        ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed'
-                        : 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30 hover:text-white'
-                    }`}
-                    onClick={attackPlayer}
-                    disabled={attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail}
-                    title={
-                      attacking ? "جاري الهجوم..." :
-                      !hudStats ? "جاري تحميل البيانات..." :
-                      hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم (مطلوب 10 طاقة)" :
-                      hospitalStatus?.inHospital ? "لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً" :
-                      jailStatus?.inJail ? "لا يمكنك مهاجمة هذا اللاعب لأنه في السجن حالياً" :
-                      hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" :
-                      hudStats?.inJail ? "لا يمكنك الهجوم وأنت في السجن" :
-                      "هجوم"
-                    }
-                  >
-                    {attacking ? "جاري الهجوم..." : "هجوم"}
-                  </button>
-                  {/* Friendship Button Logic */}
-                  {friendshipStatusLoading ? (
-                    <button
-                      className="min-w-[120px] h-12 bg-hitman-700/50 text-hitman-400 rounded-lg font-bold text-base flex items-center justify-center gap-2 cursor-not-allowed"
-                      disabled
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button 
+                      onClick={handleSendMessage} 
+                      className="btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2" 
+                      disabled={!character?.userId}
                     >
-                      <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
-                      جاري التحميل...
+                      <MessageSquare className="w-4 h-4" />
+                      إرسال رسالة
                     </button>
-                  ) : isFriend ? (
+                    
                     <button
-                      className={`min-w-[120px] h-12 rounded-lg font-bold text-base flex items-center justify-center gap-2 border transition-all duration-200 ${
-                        friendLoading 
-                          ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed' 
-                          : 'bg-accent-green/20 text-accent-green border-accent-green hover:bg-accent-green/30 hover:text-white'
+                      className={`btn-3d text-sm py-2 flex items-center justify-center gap-2 ${
+                        attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
                       }`}
-                      onClick={handleUnfriend}
-                      disabled={friendLoading}
+                      onClick={attackPlayer}
+                      disabled={attacking || !hudStats || hudStats.energy < 10 || hospitalStatus?.inHospital || jailStatus?.inJail || hudStats?.inHospital || hudStats?.inJail}
+                      title={
+                        attacking ? "جاري الهجوم..." :
+                        !hudStats ? "جاري تحميل البيانات..." :
+                        hudStats.energy < 10 ? "لا تملك طاقة كافية للهجوم (مطلوب 10 طاقة)" :
+                        hospitalStatus?.inHospital ? "لا يمكنك مهاجمة هذا اللاعب لأنه في المستشفى حالياً" :
+                        jailStatus?.inJail ? "لا يمكنك مهاجمة هذا اللاعب لأنه في السجن حالياً" :
+                        hudStats?.inHospital ? "لا يمكنك الهجوم وأنت في المستشفى" :
+                        hudStats?.inJail ? "لا يمكنك الهجوم وأنت في السجن" :
+                        "هجوم"
+                      }
                     >
-                      {friendLoading ? (
+                      {attacking ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
-                          جاري...
+                          <Loader className="w-4 h-4 animate-spin" />
+                          جاري الهجوم...
                         </>
                       ) : (
                         <>
-                          <UserCheck className="w-5 h-5" /> صديقك
-                          <X className="w-4 h-4 ml-2 text-accent-red" />
+                          <Sword className="w-4 h-4" />
+                          هجوم
                         </>
                       )}
                     </button>
-                  ) : pendingStatus === 'sent' ? (
-                    <button
-                      className="min-w-[120px] h-12 bg-accent-yellow/20 text-accent-yellow rounded-lg font-bold text-base flex items-center justify-center gap-2 border border-accent-yellow cursor-not-allowed"
-                      disabled
-                    >
-                      <UserPlus className="w-5 h-5" /> بانتظار القبول
-                    </button>
-                  ) : pendingStatus === 'received' ? (
-                    <button
-                      className={`min-w-[120px] h-12 rounded-lg font-bold text-base flex items-center justify-center gap-2 border transition-all duration-200 ${
-                        friendLoading 
-                          ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed' 
-                          : 'bg-accent-blue/20 text-accent-blue border-accent-blue hover:bg-accent-blue/30 hover:text-white'
-                      }`}
-                      onClick={handleAcceptFriend}
-                      disabled={friendLoading}
-                    >
-                      {friendLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
-                          جاري...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-5 h-5" /> قبول الطلب
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      className={`min-w-[120px] h-12 rounded-lg font-bold text-base flex items-center justify-center gap-2 border transition-all duration-200 ${
-                        friendLoading 
-                          ? 'bg-hitman-700/50 text-hitman-400 cursor-not-allowed' 
-                          : 'bg-accent-yellow/20 text-accent-yellow border-accent-yellow hover:bg-accent-yellow/30 hover:text-white'
-                      }`}
-                      onClick={handleAddFriend}
-                      disabled={friendLoading}
-                    >
-                      {friendLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-hitman-400 border-t-transparent rounded-full animate-spin"></div>
-                          جاري...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-5 h-5" /> إضافة صديق
-                        </>
-                      )}
-                    </button>
-                  )}
+                    
+                    {/* Friendship Button Logic */}
+                    {friendshipStatusLoading ? (
+                      <button
+                        className="btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 cursor-not-allowed sm:col-span-2"
+                        disabled
+                      >
+                        <Loader className="w-4 h-4 animate-spin" />
+                        جاري التحميل...
+                      </button>
+                    ) : isFriend ? (
+                      <button
+                        className={`btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 sm:col-span-2 ${
+                          friendLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        onClick={handleUnfriend}
+                        disabled={friendLoading}
+                      >
+                        {friendLoading ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            جاري...
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck className="w-4 h-4" /> 
+                            صديقك
+                            <X className="w-4 h-4 ml-2 text-red-400" />
+                          </>
+                        )}
+                      </button>
+                    ) : pendingStatus === 'sent' ? (
+                      <button
+                        className="btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 cursor-not-allowed sm:col-span-2"
+                        disabled
+                      >
+                        <UserPlus className="w-4 h-4" /> بانتظار القبول
+                      </button>
+                    ) : pendingStatus === 'received' ? (
+                      <button
+                        className={`btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 sm:col-span-2 ${
+                          friendLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        onClick={handleAcceptFriend}
+                        disabled={friendLoading}
+                      >
+                        {friendLoading ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            جاري...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4" /> قبول الطلب
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        className={`btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 sm:col-span-2 ${
+                          friendLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        onClick={handleAddFriend}
+                        disabled={friendLoading}
+                      >
+                        {friendLoading ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            جاري...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4" /> إضافة صديق
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
+              
               {/* Last Active Card */}
-              <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
-                <div className="flex items-center justify-between w-full mb-2">
-                  <span className="text-lg font-bold text-white">
+              <div className="card-3d p-4">
+                <h3 className="text-lg font-bold text-purple-400 mb-3 flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  آخر نشاط
+                </h3>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-white mb-1">
                     {displayCharacter.lastActive
                       ? new Date(displayCharacter.lastActive).toLocaleDateString("ar")
                       : "---"}
-                  </span>
-                  <Clock className="w-6 h-6 text-accent-purple" />
+                  </div>
+                  <p className="text-sm text-white/60">
+                    {(() => {
+                      if (!displayCharacter.lastActive) return "---";
+                      const last = new Date(displayCharacter.lastActive).getTime();
+                      const now = Date.now();
+                      const diff = now - last;
+                      if (diff < 5 * 60 * 1000) return "متصل حالياً";
+                      // Compute human readable
+                      const mins = Math.floor(diff / 60000);
+                      const hours = Math.floor(diff / 3600000);
+                      const days = Math.floor(diff / 86400000);
+                      if (mins < 60) return `آخر ظهور قبل ${mins} دقيقة`;
+                      if (hours < 24) return `آخر ظهور قبل ${hours} ساعة`;
+                      return `آخر ظهور قبل ${days} يوم`;
+                    })()}
+                  </p>
                 </div>
-                <h3 className="text-hitman-300 text-lg">آخر نشاط</h3>
-                <p className="text-sm text-hitman-400">
-                  {(() => {
-                    if (!displayCharacter.lastActive) return "---";
-                    const last = new Date(displayCharacter.lastActive).getTime();
-                    const now = Date.now();
-                    const diff = now - last;
-                    if (diff < 5 * 60 * 1000) return "متصل حالياً";
-                    // Compute human readable
-                    const mins = Math.floor(diff / 60000);
-                    const hours = Math.floor(diff / 3600000);
-                    const days = Math.floor(diff / 86400000);
-                    if (mins < 60) return `آخر ظهور قبل ${mins} دقيقة`;
-                    if (hours < 24) return `آخر ظهور قبل ${hours} ساعة`;
-                    return `آخر ظهور قبل ${days} يوم`;
-                  })()}
-                </p>
               </div>
             </div>
-            {/* Right column: HP bar, stats, achievements */}
-            <div className="flex flex-col gap-6">
-              {/* Friends List Section */}
-              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-accent-green">
-                  <Users className="w-6 h-6" /> أصدقاء اللاعب
-                </h3>
-                {friendsLoading ? (
-                  <div className="text-center text-accent-green">جاري التحميل...</div>
-                ) : profileFriends.length === 0 ? (
-                  <div className="text-center text-hitman-400">لا يوجد أصدقاء بعد.</div>
-                ) : (
-                  <ul className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {profileFriends.map(friend => (
-                      <li key={friend.id} className="bg-hitman-900/60 border border-accent-green/30 rounded-lg px-3 py-2 text-center text-white font-bold">
-                        {friend.username}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+            
+            {/* Right column: HP bar, stats, friends, ratings */}
+            <div className="space-y-6">
+              
               {/* HP Bar */}
-              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6 flex flex-col items-center">
-                <span className="text-hitman-200 mb-1">الصحة</span>
-                <div className="w-full bg-hitman-700 rounded-full h-4 overflow-hidden">
+              <div className="card-3d p-4">
+                <h3 className="text-lg font-bold text-green-400 mb-3 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  الصحة
+                </h3>
+                <div className="progress-3d h-4">
                   <div
-                    className="bg-accent-green h-4 rounded-full transition-all duration-500"
+                    className="progress-3d-fill bg-gradient-to-r from-green-600 to-green-400"
                     style={{ width: `${healthPercent}%` }}
                   ></div>
                 </div>
-                <span className="text-xs mt-1">
+                <div className="text-center mt-2 text-sm">
                   {displayCharacter.hp} / {displayCharacter.maxHp}
-                </span>
+                </div>
               </div>
-              {/* Stats */}
-              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-xl p-6">
-                <h3 className="text-xl font-bold mb-6 flex items-center">
-                  <Activity className="w-6 h-6 mr-3 text-accent-blue" />
+              
+              {/* Enhanced Stats */}
+              <div className="card-3d p-4">
+                <h3 className="text-lg font-bold text-blood-400 mb-3 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
                   الإحصائيات
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  {stats.map((stat, index) => (
-                    <div key={index} className="text-center">
-                      <div className="bg-hitman-800/50 rounded-lg p-4 mb-2">
-                        <stat.icon className={`w-8 h-8 mx-auto ${stat.color}`} />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {mainStats.map((stat, index) => (
+                    <div key={index} className={`card-3d bg-gradient-to-br ${stat.bgGrad} border-${stat.color}-500/30 p-3 text-center group hover:border-${stat.color}-500/50 transition-colors duration-300`}>
+                      <stat.icon className={`w-5 h-5 mx-auto mb-1 text-${stat.color}-400 group-hover:scale-110 transition-transform duration-300`} />
+                      <div className={`text-lg font-bold text-${stat.color}-400 mb-0.5`}>
+                        {stat.value.toLocaleString()}
                       </div>
-                      <div className={`text-2xl font-bold ${stat.color}`}>{stat.value.toLocaleString()}</div>
-                      <div className="text-sm text-hitman-400">{stat.label}</div>
+                      <div className="text-xs text-white/60">{stat.label}</div>
+                      {stat.subtitle && (
+                        <div className="text-xs text-white/50 mt-0.5">{stat.subtitle}</div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Likes/Dislikes Section */}
-              <div className="bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-accent-yellow rounded-xl p-6 mb-6 flex flex-col items-center">
-                <h3 className="text-lg font-bold mb-2 text-accent-yellow flex items-center gap-2">
-                  <ThumbsUp className="w-5 h-5" /> تقييمات اللاعبين
+              {/* Friends List Section */}
+              <div className="card-3d p-4">
+                <h3 className="text-lg font-bold text-green-400 mb-3 flex items-center gap-2">
+                  <Users className="w-5 h-5" /> 
+                  أصدقاء اللاعب
                 </h3>
-                <div className="flex gap-6 items-center mb-2">
-                  <div className="flex flex-col items-center">
-                    <span className="text-2xl font-bold text-accent-green">{profileRatings.likes}</span>
-                    <span className="text-hitman-300 text-sm flex items-center gap-1"><ThumbsUp className="w-4 h-4" /> إعجاب</span>
+                {friendsLoading ? (
+                  <div className="text-center text-green-400 flex items-center justify-center gap-2">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    جاري التحميل...
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-2xl font-bold text-accent-red">{profileRatings.dislikes}</span>
-                    <span className="text-hitman-300 text-sm flex items-center gap-1"><ThumbsDown className="w-4 h-4" /> عدم إعجاب</span>
+                ) : profileFriends.length === 0 ? (
+                  <div className="text-center text-white/60">لا يوجد أصدقاء بعد.</div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {profileFriends.map(friend => (
+                      <div key={friend.id} className="card-3d bg-black/40 border-green-500/30 p-2 text-center text-white font-bold text-xs">
+                        {friend.username}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Likes/Dislikes Section */}
+              <div className="card-3d p-4">
+                <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                  <ThumbsUp className="w-5 h-5" /> 
+                  تقييمات اللاعبين
+                </h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-400">{profileRatings.likes}</div>
+                    <div className="text-white/60 text-sm flex items-center justify-center gap-1">
+                      <ThumbsUp className="w-4 h-4" /> إعجاب
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-400">{profileRatings.dislikes}</div>
+                    <div className="text-white/60 text-sm flex items-center justify-center gap-1">
+                      <ThumbsDown className="w-4 h-4" /> عدم إعجاب
+                    </div>
                   </div>
                 </div>
                 {!isCurrentUser && (
-                  <div className="flex gap-4 mt-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <button
-                      className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 border transition-all duration-200 ${profileRatings.userRating === 'LIKE' ? 'bg-accent-green/30 border-accent-green text-accent-green' : 'bg-hitman-900/40 border-accent-green text-white hover:bg-accent-green/20'}`}
+                      className={`btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 ${
+                        profileRatings.userRating === 'LIKE' ? 'bg-green-500/20 border-green-500/50 text-green-400' : ''
+                      }`}
                       onClick={() => handleRate('LIKE')}
                       disabled={ratingLoading}
                     >
-                      <ThumbsUp className="w-5 h-5" /> أعجبني
+                      <ThumbsUp className="w-4 h-4" /> أعجبني
                     </button>
                     <button
-                      className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 border transition-all duration-200 ${profileRatings.userRating === 'DISLIKE' ? 'bg-accent-red/30 border-accent-red text-accent-red' : 'bg-hitman-900/40 border-accent-red text-white hover:bg-accent-red/20'}`}
+                      className={`btn-3d-secondary text-sm py-2 flex items-center justify-center gap-2 ${
+                        profileRatings.userRating === 'DISLIKE' ? 'bg-red-500/20 border-red-500/50 text-red-400' : ''
+                      }`}
                       onClick={() => handleRate('DISLIKE')}
                       disabled={ratingLoading}
                     >
-                      <ThumbsDown className="w-5 h-5" /> لم يعجبني
+                      <ThumbsDown className="w-4 h-4" /> لم يعجبني
                     </button>
                   </div>
                 )}
@@ -1203,12 +1256,13 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      
       {attacking && (
         <Modal isOpen={attacking}>
           <div className="flex flex-col items-center justify-center p-8">
-            <Sword className="w-16 h-16 text-accent-red animate-bounce mb-4" />
+            <Sword className="w-16 h-16 text-blood-400 animate-bounce mb-4" />
             <div className="text-2xl font-bold text-white mb-2">جاري تنفيذ القتال...</div>
-            <div className="text-hitman-300">يرجى الانتظار حتى انتهاء المعركة</div>
+            <div className="text-white/60">يرجى الانتظار حتى انتهاء المعركة</div>
             <div className="mt-6">
               <div className="loading-spinner"></div>
             </div>

@@ -28,34 +28,34 @@ export default function ConfinementRestriction({
   };
 
   return (
-    <div className={`bg-gradient-to-br from-hitman-800/90 to-hitman-900/90 border border-accent-red/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm ${className}`}>
+    <div className={`card-3d bg-gradient-to-br from-blood-950/90 to-black/80 border-blood-500/50 p-6 backdrop-blur-sm ${className}`}>
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div className="flex-shrink-0">
           {confinementMessage.type === 'hospital' ? (
-            <Heart className="w-8 h-8 text-accent-red animate-pulse" />
+            <Heart className="w-8 h-8 text-blood-400 animate-pulse" />
           ) : (
-            <Lock className="w-8 h-8 text-accent-red animate-pulse" />
+            <Lock className="w-8 h-8 text-blood-400 animate-pulse" />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-accent-red">
+            <h3 className="text-lg font-bold text-blood-400">
               {confinementMessage.title}
             </h3>
             {onClose && (
               <button
                 onClick={handleClose}
-                className="text-hitman-400 hover:text-white transition-colors"
+                className="text-white/40 hover:text-white transition-colors"
               >
                 ×
               </button>
             )}
           </div>
 
-          <p className="text-hitman-300 mb-4">
+          <p className="text-white/70 mb-4">
             {confinementMessage.message}
           </p>
 
@@ -63,9 +63,9 @@ export default function ConfinementRestriction({
             <div className="space-y-3">
               {/* Timer */}
               <div className="flex items-center gap-2 text-sm">
-                <Clock className="w-4 h-4 text-accent-red" />
-                <span className="text-hitman-300">الوقت المتبقي:</span>
-                <span className="font-mono text-accent-red font-bold">
+                <Clock className="w-4 h-4 text-blood-400" />
+                <span className="text-white/70">الوقت المتبقي:</span>
+                <span className="font-mono text-blood-400 font-bold">
                   {formatTime(confinementMessage.remainingSeconds)}
                 </span>
               </div>
@@ -73,8 +73,8 @@ export default function ConfinementRestriction({
               {/* Cost */}
               <div className="flex items-center gap-2 text-sm">
                 <MoneyIcon className="w-4 h-4" />
-                <span className="text-hitman-300">تكلفة الخروج السريع:</span>
-                <span className="font-bold text-accent-green">
+                <span className="text-white/70">تكلفة الخروج السريع:</span>
+                <span className="font-bold text-green-400">
                   {confinementMessage.cost?.toLocaleString() || 0}
                 </span>
               </div>
@@ -84,7 +84,7 @@ export default function ConfinementRestriction({
           {/* Action Button */}
           <button
             onClick={handleNavigate}
-            className="mt-4 w-full bg-gradient-to-r from-accent-red to-red-700 hover:from-red-600 hover:to-red-800 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+            className="btn-3d mt-4 w-full py-2 px-4 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
           >
             {confinementMessage.type === 'hospital' ? 'الذهاب إلى المستشفى' : 'الذهاب إلى السجن'}
             <ArrowRight className="w-4 h-4" />
@@ -93,4 +93,4 @@ export default function ConfinementRestriction({
       </div>
     </div>
   );
-} 
+}

@@ -22,32 +22,19 @@ const BloodContracts = ({ currentUserId }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [fightResult, setFightResult] = useState(null);
 
-  // Debug logging for blood contracts
-  useEffect(() => {
-    console.log('[BloodContracts] Debug data:', {
-      socket: socket?.connected,
-      bloodContracts,
-      contractsLength: bloodContracts?.length,
-      contractsData: bloodContracts,
-      currentUserId
-    });
-  }, [socket, bloodContracts, currentUserId]);
+
 
   // Request initial blood contract data when component mounts
   useEffect(() => {
     if (socket && socket.connected) {
-      console.log('[BloodContracts] Requesting blood contracts...');
       requestBloodContracts();
     }
   }, [socket, requestBloodContracts]);
 
   // Manual test function
   const testRequest = () => {
-    console.log('[BloodContracts] Manual test - requesting blood contracts');
     if (socket && socket.connected) {
       requestBloodContracts();
-    } else {
-      console.log('[BloodContracts] Socket not connected');
     }
   };
 

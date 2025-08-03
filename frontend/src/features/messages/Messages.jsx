@@ -4,15 +4,33 @@ import { useSocket } from '@/hooks/useSocket';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { User, Search } from 'lucide-react';
+import { 
+  User, 
+  Search, 
+  Edit2, 
+  Trash2, 
+  Plus, 
+  Volume2, 
+  VolumeX, 
+  Star, 
+  Shield,
+  MessageCircle,
+  Send,
+  Mail,
+  MailOpen,
+  Users,
+  Crown,
+  UserPlus,
+  Eye,
+  X,
+  ImageIcon,
+  Smile
+} from 'lucide-react';
 import notificationSound from '/notification.mp3';
-import { Edit2, Trash2, Plus, Volume2, VolumeX, Star, Shield } from 'lucide-react';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import VipName from '../profile/VipName.jsx';
 import '../profile/vipSparkle.css';
 import { jwtDecode } from 'jwt-decode';
-
-// Import the centralized image utility
 import { getImageUrl } from '@/utils/imageUtils.js';
 
 export default function Messages() {
@@ -28,7 +46,7 @@ export default function Messages() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
-  const [unread, setUnread] = useState({}); // { userId: true }
+  const [unread, setUnread] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -38,7 +56,7 @@ export default function Messages() {
   const [soundMuted, setSoundMuted] = useState(false);
   const audioRef = useRef(null);
   
-  // Get userId from JWT token instead of localStorage
+  // Get userId from JWT token
   const userId = customToken ? (() => {
     try {
       const decoded = jwtDecode(customToken);
@@ -49,6 +67,7 @@ export default function Messages() {
   })() : null;
   
   const [userInfo, setUserInfo] = useState({});
+  
   // Infinite scroll
   const INITIAL_VISIBLE = 30;
   const LOAD_MORE_COUNT = 20;
@@ -59,14 +78,16 @@ export default function Messages() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const inputRef = useRef(null);
-  // Emoji list (same as GlobalChat)
+  
+  // Game-oriented emoji list
   const emojiList = [
-    '😀','😃','😄','😁','😆','😅','😂','🤣','😜','😎','😍','🥳','😏','😇','😱','😡','😭','😢','😤','😈','👿','🤔','😴','🥺','😬','😲','😳','😅','😆','😋','😝','😤','😪','😵','🤯','🥶','🤤',
-    '⚔️','🛡️','🏹','🗡️','🪓','🔫','🧨','🛡️','🦾','🦿','🧙‍♂️','🧙‍♀️','🧛‍♂️','🧟‍♂️','🧟‍♀️','🧞‍♂️','🧞‍♀️','🧚‍♂️','🧚‍♀️','🐉','👾','👑','💀','☠️','🦴','🦹‍♂️','🦸‍♂️','🦸‍♀️',
-    '💰','💎','🪙','🧪','🧴','🍖','🍗','🍺','🍻','🥤','🍔','🍟','🍕','🍩','🍪','🍫','🍬','🍭','🎁','🎲','🃏','🀄','🎮','🕹️','🏆','🥇','🥈','🥉','🎯','🎵','🎶','🎤','🎸','🎻','🥁',
+    '😀','😃','😄','😁','😆','😅','😂','🤣','😜','😎','😍','🥳','😏','😇','😱','😡','😭','😢','😤','😈','👿','🤔','😴','🥺','😬','😲','😳','😋','😝','😪','😵','🤯','🥶','🤤',
+    '⚔️','🛡️','🏹','🗡️','🪓','🔫','🧨','🦾','🧙‍♂️','🧛‍♂️','🧟‍♂️','🐉','👾','👑','💀','☠️','🦴','🦹‍♂️','🦸‍♂️',
+    '💰','💎','🪙','🧪','🧴','🍖','🍗','🍺','🍻','🥤','🍔','🍟','🍕','🍩','🍪','🍫','🍬','🍭','🎁','🎲','🃏','🎮','🕹️','🏆','🥇','🥈','🥉','🎯',
     '✨','🔥','💥','⚡','🌟','🌈','❄️','💧','🌪️','🌊','🌋','🌀','🌙','☀️','🌞','🌚','🌛','🌜','🌠','🪄','🧿',
-    '👍','👎','👏','🙌','🙏','🤝','💪','🫡','🫶','🤙','🤘','🖖','✌️','🤞','🫲','🫱','👋','🤟','🫂','💔','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💯','🔔','🔊','🔇','🚩','🏳️','🏴','🏳️‍🌈','🏳️‍⚧️','🚀','🛸','🦄','🐺','🐱','🐶','🐲','🦅','🦉','🦇','🐾','🦷','🦸','🦹','🧙','🧚','🧛','🧟','🧞','🧜','🧝','🧙‍♂️','🧙‍♀️'
+    '👍','👎','👏','🙌','���','🤝','💪','🫡','🫶','🤙','🤘','🖖','✌️','🤞','👋','🤟','🫂','💔','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💯','🔔','🔊','🔇','🚩','🚀','🛸','🦄','🐺','🐱','🐶','🐲','🦅','🦉','🦇','🐾'
   ];
+  
   // Insert emoji at cursor position
   const insertEmoji = (emoji) => {
     const input = inputRef.current;
@@ -92,7 +113,6 @@ export default function Messages() {
     axios.get('/api/messages/inbox', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
       .then(res => {
         setConversations(res.data);
-        // Update unread state based on new data structure
         const unreadState = {};
         res.data.forEach(conversation => {
           if (conversation.hasUnreadMessages) {
@@ -100,11 +120,9 @@ export default function Messages() {
           }
         });
         setUnread(unreadState);
-        
-        // Refetch unread count to update navigation counter
         refetchUnreadCount();
         
-        // If coming from profile, auto-select user
+        // Auto-select user from navigation state
         if (location.state && location.state.userId) {
           const user = res.data.find(u => u.userId === location.state.userId);
           if (user) setSelectedUser(user);
@@ -120,12 +138,9 @@ export default function Messages() {
     if (!socket || !userId) return;
 
     const handleFriendshipUpdate = () => {
-      console.log('Messages: Refetching data due to friendship update');
-      // Refetch inbox to update friend status
       axios.get('/api/messages/inbox', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
         .then(res => {
           setConversations(res.data);
-          // Update unread state based on new data structure
           const unreadState = {};
           res.data.forEach(conversation => {
             if (conversation.hasUnreadMessages) {
@@ -134,17 +149,13 @@ export default function Messages() {
           });
           setUnread(unreadState);
         })
-        .catch(err => {
-          console.error('Error refetching inbox:', err);
-        });
+                  .catch(() => {});
       
-      // Refetch friends list
       axios.get('/api/friendship/list', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
         .then(res => setFriends(res.data.map(f => f.id)))
         .catch(() => setFriends([]));
     };
 
-    // Listen for all friendship-related socket events
     socket.on('friendship:updated', handleFriendshipUpdate);
     socket.on('friendship:request-sent', handleFriendshipUpdate);
     socket.on('friendship:request-received', handleFriendshipUpdate);
@@ -169,7 +180,6 @@ export default function Messages() {
       axios.get(`/api/messages/${selectedUser.userId}`, { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
         .then(res => {
           setMessages(res.data);
-          // Mark all unread messages from this user as read
           const unreadMessages = res.data.filter(msg => 
             msg.senderId === selectedUser.userId && 
             msg.receiverId === userId && 
@@ -177,28 +187,24 @@ export default function Messages() {
           );
           
           if (unreadMessages.length > 0) {
-            // Mark each unread message as read
             Promise.all(unreadMessages.map(msg => 
               axios.patch(`/api/messages/read/${msg.id}`, {}, { 
                 headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} 
               })
             )).then(() => {
-              // Update local state to mark messages as read
               setMessages(prev => prev.map(msg => 
                 unreadMessages.some(unread => unread.id === msg.id) 
                   ? { ...msg, isRead: true }
                   : msg
               ));
-              // Refetch unread count to update navigation counter
               refetchUnreadCount();
-            }).catch(console.error);
+            }).catch(() => {});
           }
         })
         .catch(() => setMessages([]))
         .finally(() => setLoadingMessages(false));
-      // Clear unread badge for this user
       setUnread(prev => ({ ...prev, [selectedUser.userId]: false }));
-      setSidebarOpen(false); // auto-close sidebar on mobile
+      setSidebarOpen(false);
     }
   }, [selectedUser, userId, customToken]);
 
@@ -206,7 +212,7 @@ export default function Messages() {
   useEffect(() => {
     if (!userId) return;
     
-          axios.get('/api/friendship/list', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
+    axios.get('/api/friendship/list', { headers: customToken ? { Authorization: `Bearer ${customToken}` } : {} })
       .then(res => setFriends(res.data.map(f => f.id)))
       .catch(() => setFriends([]));
   }, [userId, customToken]);
@@ -216,14 +222,14 @@ export default function Messages() {
     if (!userId) return;
     
     axios.get('/api/profile').then(res => {
-              setUserInfo({
-          username: res.data?.username || '',
-          avatarUrl: res.data?.avatarUrl || '',
-          isAdmin: res.data?.isAdmin || false,
-          isVip: res.data?.isVip || false,
-        });
-      }).catch(() => {
-        setUserInfo({ username: '', avatarUrl: '', isAdmin: false, isVip: false });
+      setUserInfo({
+        username: res.data?.username || '',
+        avatarUrl: res.data?.avatarUrl || '',
+        isAdmin: res.data?.isAdmin || false,
+        isVip: res.data?.isVip || false,
+      });
+    }).catch(() => {
+      setUserInfo({ username: '', avatarUrl: '', isAdmin: false, isVip: false });
     });
   }, [userId, customToken]);
 
@@ -236,6 +242,7 @@ export default function Messages() {
   useEffect(() => {
     setVisibleCount(INITIAL_VISIBLE);
   }, [messages.length]);
+  
   // Infinite scroll: load more on scroll up
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -252,6 +259,7 @@ export default function Messages() {
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [messages.length, visibleCount]);
+  
   // Maintain scroll position when loading more
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -276,7 +284,6 @@ export default function Messages() {
         ((msg.senderId === selectedUser.userId) || (msg.receiverId === selectedUser.userId))
       ) {
         setMessages(prev => [...prev, msg]);
-        // Play sound for incoming messages from other user
         if (!soundMuted && msg.senderId === selectedUser.userId && audioRef.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play();
@@ -402,349 +409,538 @@ export default function Messages() {
     }
   };
 
-  // UI
   return (
-    <div className="flex flex-col md:flex-row h-[80vh] bg-black rounded-xl shadow-lg overflow-hidden border border-zinc-800 relative pt-48 sm:pt-56" style={{ minHeight: '100dvh' }}>
-      {/* Player Search Bar */}
-      <div className="absolute top-32 left-0 w-full z-30 bg-zinc-950 border-b border-zinc-800 flex items-center gap-2 px-4 py-3" style={{ minHeight: '56px' }}>
-        <Search className="w-5 h-5 text-accent-red" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={handlePlayerSearch}
-          placeholder="ابحث عن لاعب..."
-          className="bg-zinc-800 text-zinc-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-red border border-zinc-700 text-sm w-full max-w-xs"
-        />
-        {searching && <span className="text-xs text-zinc-400 ml-2">جاري البحث...</span>}
-        {searchResults.length > 0 && (
-          <div className="absolute left-4 top-14 z-40 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg w-64 max-h-60 overflow-y-auto text-xs">
-            {searchResults.map(u => (
-              <button
-                key={u.id}
-                className="w-full text-right px-4 py-2 hover:bg-accent-red/80 text-zinc-200 border-b border-zinc-800 last:border-b-0"
-                onClick={() => {
-                  setSelectedUser({ userId: u.id, username: u.username });
-                  setSearchQuery('');
-                  setSearchResults([]);
-                }}
-              >
-                @{u.username}
-              </button>
-            ))}
+    <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom" dir="rtl">
+      <div className="container mx-auto max-w-6xl p-3 space-y-4">
+        
+        {/* Enhanced Header with Background Image */}
+        <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+          {/* Background Image Placeholder */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-gray-800 to-purple-900">
+            <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%233b82f6\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3Ccircle cx=\"20\" cy=\"20\" r=\"2\"/%3E%3Ccircle cx=\"40\" cy=\"40\" r=\"2\"/%3E%3Ccircle cx=\"40\" cy=\"20\" r=\"2\"/%3E%3Ccircle cx=\"20\" cy=\"40\" r=\"2\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
           </div>
-        )}
-      </div>
-      {/* Sidebar toggle for mobile */}
-      <button
-        className="md:hidden absolute top-2 right-2 z-20 bg-accent-red text-white rounded-full p-2 shadow-lg focus:outline-none"
-        onClick={() => setSidebarOpen((v) => !v)}
-        aria-label="فتح قائمة المحادثات"
-      >
-        {sidebarOpen ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-        )}
-      </button>
-      {/* Inbox Sidebar */}
-      <aside className={`fixed md:static top-0 right-0 h-full w-4/5 max-w-xs bg-zinc-900 border-l-4 border-accent-red flex flex-col z-10 transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:w-1/3 md:min-w-[220px]`}
-        style={{ boxShadow: sidebarOpen ? '0 0 0 9999px rgba(0,0,0,0.5)' : undefined }}
-      >
-        {/* Close button for mobile sidebar */}
-        <button
-          className="md:hidden absolute top-2 left-2 z-30 bg-zinc-800 text-accent-red rounded-full p-2 shadow focus:outline-none"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="إغلاق القائمة"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-        <h2 className="text-lg font-bold text-accent-red px-4 py-3 border-b border-zinc-800">الرسائل</h2>
-        {loadingInbox ? (
-          <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المحادثات..." />
-        ) : conversations.length === 0 ? (
-          <LoadingOrErrorPlaceholder error errorText="لا توجد محادثات" />
-        ) : (
-          <ul className="flex-1 overflow-y-auto divide-y divide-zinc-800">
-            {conversations.map(user => (
-              <li key={user.userId} className="relative">
-                <button
-                  className={`w-full text-right px-4 py-3 hover:bg-zinc-800 transition-colors duration-150 flex items-center gap-3 ${selectedUser?.userId === user.userId ? 'bg-accent-red text-white' : 'text-zinc-200'}`}
-                  onClick={e => { e.stopPropagation(); setSelectedUser(user); }}
-                >
-                  {getImageUrl(user.avatarUrl) ? (
-                    <img
-                      src={getImageUrl(user.avatarUrl)}
-                      alt="avatar"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  {/* Fallback icon when no avatar or image fails to load */}
-                  <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-gradient-to-br from-hitman-700 to-hitman-800 flex items-center justify-center ${getImageUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
-                    <span className="text-sm font-bold text-accent-red">
-                      {(user.displayName || user.name || user.username || "?")[0]}
-                    </span>
-                  </div>
-                  <span className="font-semibold truncate">
-                    <VipName user={user} />
-                  </span>
-                  {unread[user.userId] && (
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-red animate-pulse" />
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
 
-      {/* Conversation View */}
-      <main className="flex-1 flex flex-col bg-zinc-950 min-w-0">
-        {selectedUser ? (
-          <>
-            <div className="px-4 md:px-6 py-4 border-b border-zinc-800 flex items-center gap-3 bg-zinc-900 min-h-[56px]">
-              <button className="md:hidden text-accent-red mr-2" onClick={() => setSidebarOpen(true)} aria-label="رجوع للقائمة">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              {getImageUrl(selectedUser.avatarUrl) ? (
-                <img
-                  src={getImageUrl(selectedUser.avatarUrl)}
-                  alt="avatar"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-accent-red shadow-md"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextElementSibling.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              {/* Fallback icon when no avatar or image fails to load */}
-              <div className={`w-10 h-10 rounded-full border-2 border-accent-red shadow-md bg-hitman-800 flex items-center justify-center ${getImageUrl(selectedUser.avatarUrl) ? 'hidden' : 'flex'}`}>
-                <User className="w-5 h-5 text-accent-red" />
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/60"></div>
+
+          {/* Content */}
+          <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <span className="font-bold text-lg text-accent-red truncate">
-                <VipName user={selectedUser} />
-              </span>
-              {/* Add Friend Button */}
-              {selectedUser.userId && !friends.includes(selectedUser.userId) && (
-                <button
-                  className="ml-auto px-3 py-1 rounded bg-accent-red text-white text-xs font-bold shadow hover:bg-red-700 transition"
-                  onClick={() => handleAddFriend(selectedUser.userId)}
-                >
-                  إضافة صديق
-                </button>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">الرسائل الخاصة</h1>
+                <p className="text-xs sm:text-sm text-white/80 drop-shadow">Private Messages</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 text-white">
+              <div className="hidden sm:flex items-center space-x-2">
+                <ImageIcon className="w-4 h-4 text-white/60" />
+                <Mail className="w-4 h-4 text-blue-400 animate-pulse" />
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold drop-shadow-lg flex items-center gap-1">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  {conversations.length}
+                </div>
+                <div className="text-xs text-white/80 drop-shadow">محادثة</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="card-3d p-3">
+          <div className="flex items-center gap-2 relative">
+            <div className="p-1.5 rounded bg-blue-500/20 border border-blue-500/40">
+              <Search className="w-4 h-4 text-blue-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handlePlayerSearch}
+              placeholder="ابحث عن لاعب..."
+              className="input-3d flex-1 text-sm"
+            />
+            {searching && (
+              <div className="text-xs text-white/50">جاري البحث...</div>
+            )}
+            
+            {searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-40 card-3d bg-black/90 border-blood-500/50 mt-1 max-h-64 overflow-y-auto">
+                {searchResults.map(u => (
+                  <button
+                    key={u.id}
+                    className="w-full text-right px-4 py-2 hover:bg-blood-500/20 text-white/90 border-b border-white/10 last:border-b-0 text-sm transition-colors"
+                    onClick={() => {
+                      setSelectedUser({ userId: u.id, username: u.username });
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
+                  >
+                    @{u.username}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Messages Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
+          
+          {/* Conversations Sidebar */}
+          <div className="card-3d p-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-950/40 to-purple-950/40 border-b border-blue-500/30 p-3">
+              <h3 className="font-bold text-blue-400 text-sm flex items-center gap-2">
+                <MailOpen className="w-4 h-4" />
+                المحادثات ({conversations.length})
+              </h3>
+            </div>
+            
+            <div className="h-full overflow-y-auto bg-gradient-to-b from-black/40 to-hitman-950/40 custom-scrollbar">
+              {loadingInbox ? (
+                <div className="p-4">
+                  <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المحادثات..." />
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="p-4 text-center">
+                  <MessageCircle className="w-12 h-12 text-white/30 mx-auto mb-3" />
+                  <p className="text-white/50 text-sm">لا توجد محادثات</p>
+                  <p className="text-white/30 text-xs mt-1">ابحث عن لاعب لبدء محادثة</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/10">
+                  {conversations.map(user => (
+                    <button
+                      key={user.userId}
+                      className={`w-full text-right px-3 py-3 hover:bg-blue-500/20 transition-all duration-300 flex items-center gap-3 relative ${
+                        selectedUser?.userId === user.userId 
+                          ? 'bg-blue-500/30 border-r-2 border-blue-400' 
+                          : ''
+                      }`}
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <div className="relative">
+                        {getImageUrl(user.avatarUrl) ? (
+                          <img
+                            src={getImageUrl(user.avatarUrl)}
+                            alt="avatar"
+                            className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/40 shadow-md"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-10 h-10 rounded-full border-2 border-blue-500/40 bg-gradient-to-br from-blue-800/60 to-purple-800/60 flex items-center justify-center shadow-md ${getImageUrl(user.avatarUrl) ? 'hidden' : 'flex'}`}>
+                          <User className="w-5 h-5 text-blue-400" />
+                        </div>
+                        
+                        {/* Unread indicator */}
+                        {unread[user.userId] && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blood-500 rounded-full border border-black animate-pulse"></div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">
+                          <VipName user={user} />
+                        </div>
+                        <div className="text-xs text-white/50">
+                          {user.isVip && <Crown className="w-3 h-3 inline mr-1" />}
+                          {user.isAdmin && <Shield className="w-3 h-3 inline mr-1" />}
+                          لاعب
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            <div className="flex-1 overflow-y-auto px-2 md:px-6 py-4 space-y-2 bg-zinc-950" ref={messagesContainerRef}>
-              {loadingMore && (
-                <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المزيد..." />
-              )}
-              {loadingMessages ? (
-                <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المحادثة..." />
-              ) : messages.length === 0 ? (
-                <LoadingOrErrorPlaceholder error errorText="لا توجد رسائل بعد" />
-              ) : (
-                messages.slice(-visibleCount).map(msg => {
-                  const isSelf = msg.senderId == userId;
-                  const avatarUrl = isSelf ? userInfo.avatarUrl : selectedUser.avatarUrl;
-                  const isAdmin = isSelf ? userInfo.isAdmin : selectedUser.isAdmin;
-                  const isVip = isSelf ? userInfo.isVip : selectedUser.isVip;
-                  return (
-                    <div key={msg.id} className={`flex w-full items-end gap-2 ${isSelf ? 'justify-end' : 'justify-start'}`} style={{ direction: 'rtl' }}>
-                      {!isSelf && (
-                        <img src={getImageUrl(avatarUrl)} alt={selectedUser.username} className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2" title={selectedUser.username} />
-                      )}
-                      <div className={`relative ${isSelf ? 'ml-auto' : 'mr-auto'} my-2 px-3 py-2 rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-200 max-w-[80%] shadow text-xs sm:text-sm inline-block align-bottom`} style={{ wordBreak: 'break-word', maxWidth: '75vw' }}>
-                        <div className="flex flex-row items-center flex-wrap gap-2">
+          </div>
+
+          {/* Messages Area */}
+          <div className="lg:col-span-2 card-3d p-0 overflow-hidden">
+            {selectedUser ? (
+              <>
+                {/* Chat Header */}
+                <div className="bg-gradient-to-r from-purple-950/40 to-blue-950/40 border-b border-purple-500/30 p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      {getImageUrl(selectedUser.avatarUrl) ? (
+                        <img
+                          src={getImageUrl(selectedUser.avatarUrl)}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full object-cover border-2 border-purple-500/40"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-8 h-8 rounded-full border-2 border-purple-500/40 bg-gradient-to-br from-purple-800/60 to-blue-800/60 flex items-center justify-center ${getImageUrl(selectedUser.avatarUrl) ? 'hidden' : 'flex'}`}>
+                        <User className="w-4 h-4 text-purple-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-purple-400 text-sm">
+                        <VipName user={selectedUser} />
+                      </div>
+                      <div className="text-xs text-white/50">محادثة خاصة</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSoundMuted(!soundMuted)}
+                      className={`p-2 rounded-lg transition-all duration-300 ${
+                        soundMuted 
+                          ? 'bg-red-500/20 border border-red-500/40 text-red-400' 
+                          : 'bg-green-500/20 border border-green-500/40 text-green-400'
+                      }`}
+                      title={soundMuted ? 'تشغيل الصوت' : 'كتم الصوت'}
+                    >
+                      {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    </button>
+                    
+                    {selectedUser.userId && !friends.includes(selectedUser.userId) && (
+                      <button
+                        className="btn-3d-secondary text-xs px-3 py-1 flex items-center gap-1"
+                        onClick={() => handleAddFriend(selectedUser.userId)}
+                      >
+                        <UserPlus className="w-3 h-3" />
+                        إضافة صديق
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Messages Area */}
+                <div
+                  ref={messagesContainerRef}
+                  className="h-96 overflow-y-auto px-4 py-3 bg-gradient-to-b from-black/40 to-hitman-950/40 space-y-2 custom-scrollbar"
+                >
+                  {loadingMore && (
+                    <div className="text-center text-xs text-white/50 mb-2">
+                      <div className="inline-flex items-center gap-2">
+                        <div className="w-3 h-3 border border-purple-500/50 border-t-purple-500 rounded-full animate-spin"></div>
+                        جاري تحميل المزيد...
+                      </div>
+                    </div>
+                  )}
+                  
+                  {loadingMessages ? (
+                    <div className="h-full flex items-center justify-center">
+                      <LoadingOrErrorPlaceholder loading loadingText="جاري تحميل المحادثة..." />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <MessageCircle className="w-12 h-12 text-white/30 mx-auto mb-3" />
+                        <p className="text-white/50 text-sm">لا توجد رسائل بعد</p>
+                        <p className="text-white/30 text-xs mt-1">ابدأ محادثة جديدة!</p>
+                      </div>
+                    </div>
+                  ) : (
+                    messages.slice(-visibleCount).map(msg => {
+                      const isSelf = msg.senderId == userId;
+                      const avatarUrl = isSelf ? userInfo.avatarUrl : selectedUser.avatarUrl;
+                      const isAdmin = isSelf ? userInfo.isAdmin : selectedUser.isAdmin;
+                      const isVip = isSelf ? userInfo.isVip : selectedUser.isVip;
+                      
+                      return (
+                        <div key={msg.id} className={`flex w-full items-end gap-2 ${isSelf ? 'justify-end' : 'justify-start'}`}>
+                          {/* Avatar for others */}
                           {!isSelf && (
-                            <span className="font-semibold text-accent-red flex items-center gap-1">
-                              <VipName user={selectedUser} />
-                              {isAdmin && <Shield className="w-4 h-4 text-accent-red" title="مشرف" />}
-                            </span>
-                          )}
-                          {editingMessageId === msg.id ? (
-                            <>
-                              <input
-                                className="bg-zinc-700 text-zinc-200 rounded px-2 py-1 text-xs sm:text-sm w-32 sm:w-48"
-                                value={editContent}
-                                onChange={e => setEditContent(e.target.value)}
-                                maxLength={500}
-                                autoFocus
-                              />
-                              <button className="ml-2 text-accent-red font-bold text-xs" onClick={() => {
-                                if (!editContent.trim()) return;
-                                socket.emit('edit_message', { messageId: msg.id, newContent: editContent.trim() }, (res) => {
-                                  if (res?.error) setError(res.error);
-                                  setEditingMessageId(null);
-                                });
-                              }}>حفظ</button>
-                              <button className="ml-1 text-zinc-400 text-xs" onClick={() => setEditingMessageId(null)}>إلغاء</button>
-                            </>
-                          ) : (
-                            <span className="text-sm">
-                              {msg.content}
-                              {msg.edited && (
-                                <span className="ml-1 text-xs text-zinc-400">(معدل)</span>
+                            <div className="relative flex-shrink-0">
+                              {getImageUrl(avatarUrl) ? (
+                                <img
+                                  src={getImageUrl(avatarUrl)}
+                                  alt={selectedUser.username}
+                                  className="w-8 h-8 rounded-full border-2 border-purple-500/40 object-cover shadow-md"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextElementSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`w-8 h-8 rounded-full border-2 border-purple-500/40 bg-gradient-to-br from-purple-800/60 to-blue-800/60 flex items-center justify-center shadow-md ${getImageUrl(avatarUrl) ? 'hidden' : 'flex'}`}>
+                                <User className="w-4 h-4 text-purple-400" />
+                              </div>
+                              
+                              {/* Admin/VIP badges */}
+                              {(isAdmin || isVip) && (
+                                <div className="absolute -top-1 -right-1 flex gap-0.5">
+                                  {isAdmin && (
+                                    <div className="w-3 h-3 bg-blood-600 rounded-full flex items-center justify-center border border-blood-400">
+                                      <Shield className="w-2 h-2 text-white" />
+                                    </div>
+                                  )}
+                                  {isVip && (
+                                    <div className="w-3 h-3 bg-yellow-600 rounded-full flex items-center justify-center border border-yellow-400">
+                                      <Crown className="w-2 h-2 text-white" />
+                                    </div>
+                                  )}
+                                </div>
                               )}
-                            </span>
+                            </div>
                           )}
-                          {/* Emoji Reactions */}
-                          <div className="flex gap-0.5 sm:gap-1 items-center flex-wrap">
-                            {Object.entries(msg.reactions || {})
-                              .filter(([, arr]) => arr.length > 0)
-                              .map(([emoji, arr]) => {
-                                const reacted = arr.includes(Number(userId));
-                                return (
-                                  <button
-                                    key={emoji}
-                                    className={`px-1 rounded text-base sm:text-lg ${reacted ? 'bg-accent-red text-white' : 'bg-zinc-700 text-zinc-200'} hover:bg-zinc-600`}
-                                    onClick={() => handleReaction(msg, emoji)}
-                                    aria-label={`تفاعل ${emoji}`}
-                                  >
-                                    {emoji} <span className="text-xs">{arr.length}</span>
-                                  </button>
-                                );
-                              })}
-                            {/* Expand/collapse button */}
-                            <button
-                              className="px-1 rounded text-base sm:text-lg bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
-                              onClick={() => setExpandedReactions((prev) => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                              title={expandedReactions[msg.id] ? 'إخفاء الرموز' : 'إضافة رمز تعبيري'}
-                              aria-label="إضافة رمز تعبيري"
-                            >
-                              {expandedReactions[msg.id] ? '×' : <Plus className="w-4 h-4" />}
-                            </button>
-                            {/* Expanded emoji picker */}
-                            {expandedReactions[msg.id] && (
-                              <div className="flex gap-1 ml-2 overflow-x-auto max-w-[60vw] sm:max-w-xs pb-1">
-                                {emojiList.map((emoji) => {
-                                  if ((msg.reactions?.[emoji]?.length || 0) > 0) return null;
+                          
+                          {/* Message Bubble */}
+                          <div className={`max-w-[75%] px-3 py-2 rounded-xl shadow-md ${
+                            isSelf 
+                              ? 'bg-gradient-to-r from-blue-600/60 to-purple-600/40 border border-blue-500/40 text-blue-100'
+                              : 'bg-gradient-to-r from-hitman-800/60 to-dark-800/40 border border-white/20 text-white'
+                          }`}>
+                            {/* Username for others */}
+                            {!isSelf && (
+                              <div className="flex items-center gap-1 mb-1">
+                                <VipName user={selectedUser} className="compact" />
+                                {isAdmin && <Shield className="w-3 h-3 text-blood-400" />}
+                                {isVip && <Crown className="w-3 h-3 text-yellow-400" />}
+                              </div>
+                            )}
+                            
+                            {/* Message Content */}
+                            {editingMessageId === msg.id ? (
+                              <div className="flex items-center gap-2 mb-2">
+                                <input
+                                  className="input-3d text-xs flex-1"
+                                  value={editContent}
+                                  onChange={e => setEditContent(e.target.value)}
+                                  maxLength={500}
+                                  autoFocus
+                                />
+                                <button
+                                  className="btn-3d text-xs px-2 py-1"
+                                  onClick={() => {
+                                    if (!editContent.trim()) return;
+                                    socket.emit('edit_message', { messageId: msg.id, newContent: editContent.trim() }, (res) => {
+                                      if (res?.error) setError(res.error);
+                                      setEditingMessageId(null);
+                                    });
+                                  }}
+                                >
+                                  حفظ
+                                </button>
+                                <button
+                                  className="btn-3d-secondary text-xs px-2 py-1"
+                                  onClick={() => setEditingMessageId(null)}
+                                >
+                                  إلغاء
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-sm break-words">
+                                {msg.content}
+                                {msg.edited && (
+                                  <span className="text-xs text-white/50 mr-2">(معدل)</span>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Emoji Reactions */}
+                            <div className="flex gap-1 items-center flex-wrap mt-2">
+                              {Object.entries(msg.reactions || {})
+                                .filter(([, arr]) => arr.length > 0)
+                                .map(([emoji, arr]) => {
+                                  const reacted = arr.includes(Number(userId));
                                   return (
                                     <button
                                       key={emoji}
-                                      className="px-1 rounded text-base sm:text-lg bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+                                      className={`px-2 py-0.5 rounded-full text-xs transition-all duration-300 ${
+                                        reacted 
+                                          ? 'bg-blood-500/40 border border-blood-500/60 text-blood-300' 
+                                          : 'bg-white/10 border border-white/20 text-white/70 hover:bg-white/20'
+                                      }`}
                                       onClick={() => handleReaction(msg, emoji)}
-                                      aria-label={`تفاعل ${emoji}`}
                                     >
-                                      {emoji}
+                                      {emoji} {arr.length}
                                     </button>
                                   );
                                 })}
+                              
+                              {/* Reaction picker toggle */}
+                              <button
+                                className="p-1 rounded-full bg-white/10 border border-white/20 text-white/50 hover:bg-white/20 hover:text-white/70 transition-all duration-300"
+                                onClick={() =>
+                                  setExpandedReactions((prev) => ({
+                                    ...prev,
+                                    [msg.id]: !prev[msg.id],
+                                  }))
+                                }
+                              >
+                                {expandedReactions[msg.id] ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                              </button>
+                              
+                              {/* Quick reaction picker */}
+                              {expandedReactions[msg.id] && (
+                                <div className="flex gap-1 bg-black/60 border border-white/20 rounded-lg p-1">
+                                  {['👍', '😂', '🔥', '❤️', '😮', '😢'].map((emoji) => {
+                                    if ((msg.reactions?.[emoji]?.length || 0) > 0) return null;
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        className="p-1 rounded hover:bg-white/20 transition-colors"
+                                        onClick={() => {
+                                          handleReaction(msg, emoji);
+                                          setExpandedReactions((prev) => ({ ...prev, [msg.id]: false }));
+                                        }}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Message Actions */}
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-1">
+                                {/* Edit button for own messages */}
+                                {isSelf && editingMessageId !== msg.id && !msg.deleted && (
+                                  <button
+                                    className="p-1 rounded text-white/50 hover:text-yellow-400 transition-colors"
+                                    title="تعديل الرسالة"
+                                    onClick={() => {
+                                      setEditingMessageId(msg.id);
+                                      setEditContent(msg.content);
+                                    }}
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                                
+                                {/* Delete button for own messages */}
+                                {isSelf && editingMessageId !== msg.id && !msg.deleted && (
+                                  <button
+                                    className="p-1 rounded text-white/50 hover:text-red-400 transition-colors"
+                                    title="حذف الرسالة"
+                                    onClick={() => {
+                                      if (!window.confirm('هل أنت متأكد من حذف الرسالة؟')) return;
+                                      socket.emit('delete_message', { messageId: msg.id }, (res) => {
+                                        if (res?.error) setError(res.error);
+                                      });
+                                    }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
                               </div>
-                            )}
+                              
+                              {/* Timestamp */}
+                              <span className="text-xs text-white/40">
+                                {formatTime(msg.createdAt)}
+                              </span>
+                            </div>
                           </div>
-                          {/* Edit/delete for own messages */}
-                          {isSelf && editingMessageId !== msg.id && !msg.deleted && (
-                            <>
-                              <button
-                                className="ml-2 text-zinc-400 hover:text-accent-red"
-                                title="تعديل الرسالة"
-                                aria-label="تعديل الرسالة"
-                                onClick={() => {
-                                  setEditingMessageId(msg.id);
-                                  setEditContent(msg.content);
-                                }}
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                className="ml-2 text-zinc-400 hover:text-red-600"
-                                title="حذف الرسالة"
-                                aria-label="حذف الرسالة"
-                                onClick={() => {
-                                  if (!window.confirm('هل أنت متأكد من حذف الرسالة؟')) return;
-                                  socket.emit('delete_message', { messageId: msg.id }, (res) => {
-                                    if (res?.error) setError(res.error);
-                                  });
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
+                          
+                          {/* Avatar for self */}
+                          {isSelf && (
+                            <div className="relative flex-shrink-0">
+                              {getImageUrl(avatarUrl) ? (
+                                <img
+                                  src={getImageUrl(avatarUrl)}
+                                  alt={userInfo.username}
+                                  className="w-8 h-8 rounded-full border-2 border-blue-500/40 object-cover shadow-md"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextElementSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`w-8 h-8 rounded-full border-2 border-blue-500/40 bg-gradient-to-br from-blue-800/60 to-purple-800/60 flex items-center justify-center shadow-md ${getImageUrl(avatarUrl) ? 'hidden' : 'flex'}`}>
+                                <User className="w-4 h-4 text-blue-400" />
+                              </div>
+                            </div>
                           )}
-                          <span className="block text-xs text-zinc-500 whitespace-nowrap text-left" style={{ direction: 'ltr' }}>
-                            {formatTime(msg.createdAt)}
-                          </span>
                         </div>
-                      </div>
-                      {isSelf && (
-                        <img src={getImageUrl(avatarUrl)} alt={userInfo.username} className="w-8 h-8 rounded-full border-2 border-zinc-800 object-cover shadow order-2" title={userInfo.username} />
+                      );
+                    })
+                  )}
+                  
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input Area */}
+                <div className="bg-gradient-to-r from-hitman-900/60 to-dark-900/60 border-t border-purple-500/30 p-3">
+                  <div className="flex items-end gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        ref={inputRef}
+                        className="input-3d text-sm"
+                        value={newMessage}
+                        onChange={e => setNewMessage(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && !sending && handleSend()}
+                        placeholder="اكتب رسالة..."
+                        disabled={sending}
+                        autoFocus
+                      />
+                      
+                      {/* Emoji Picker Button */}
+                      <button
+                        type="button"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition-colors"
+                        onClick={() => setShowEmojiPicker(v => !v)}
+                        title="إدراج رمز تعبيري"
+                        disabled={sending}
+                      >
+                        <Smile className="w-4 h-4 text-white/60 hover:text-yellow-400" />
+                      </button>
+                      
+                      {/* Emoji Picker Dropdown */}
+                      {showEmojiPicker && (
+                        <div className="absolute left-0 bottom-12 z-10 card-3d bg-black/90 border-purple-500/50 p-3 w-80 max-h-64 overflow-y-auto">
+                          <div className="grid grid-cols-8 gap-1">
+                            {emojiList.map((emoji, idx) => (
+                              <button
+                                key={emoji + '-' + idx}
+                                type="button"
+                                className="text-lg hover:bg-white/20 rounded p-1 transition-colors"
+                                onClick={() => insertEmoji(emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            {/* Sound notification audio */}
-            <audio ref={audioRef} src={notificationSound} preload="auto" />
-            {/* Sound mute toggle */}
-            <button
-              onClick={() => setSoundMuted(!soundMuted)}
-              className="absolute left-2 top-2 text-zinc-400 hover:text-accent-red transition-colors z-10"
-              title={soundMuted ? 'تشغيل الصوت' : 'كتم الصوت'}
-              aria-label={soundMuted ? 'تشغيل الصوت' : 'كتم الصوت'}
-            >
-              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <form
-              className="flex items-center gap-2 px-2 md:px-6 py-4 border-t border-zinc-800 bg-zinc-900 relative"
-              onSubmit={e => { e.preventDefault(); handleSend(); }}
-            >
-              {/* Emoji Picker Button */}
-              <button
-                type="button"
-                className="text-2xl px-2 focus:outline-none text-zinc-400 hover:text-accent-red transition-colors"
-                onClick={() => setShowEmojiPicker(v => !v)}
-                aria-label="إدراج رمز تعبيري"
-                tabIndex={-1}
-                disabled={sending}
-              >
-                😊
-              </button>
-              {/* Emoji Picker Dropdown */}
-              {showEmojiPicker && (
-                <div className="absolute left-0 bottom-12 z-30 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg p-2 w-[90vw] max-w-xs sm:max-w-md max-h-56 overflow-y-auto">
-                  <div className="grid grid-cols-8 grid-rows-4 gap-1">
-                    {emojiList.map((emoji, idx) => (
-                      <button
-                        key={emoji + '-' + idx}
-                        type="button"
-                        className="text-xl sm:text-2xl hover:bg-zinc-700 rounded p-1 min-w-[2.2rem]"
-                        onClick={() => insertEmoji(emoji)}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                    
+                    <button
+                      onClick={handleSend}
+                      disabled={sending || !newMessage.trim()}
+                      className="btn-3d px-4 py-2 flex items-center gap-2 text-sm"
+                    >
+                      <Send className="w-4 h-4" />
+                      {sending ? 'جاري الإرسال...' : 'إرسال'}
+                    </button>
                   </div>
+                  
+                  {error && (
+                    <div className="text-red-400 text-sm mt-2">{error}</div>
+                  )}
                 </div>
-              )}
-              <input
-                ref={inputRef}
-                className="input-field flex-1 text-base"
-                value={newMessage}
-                onChange={e => setNewMessage(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !sending && handleSend()}
-                placeholder="اكتب رسالة…"
-                disabled={sending}
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="btn-primary px-4 py-2 md:px-6"
-                disabled={sending || !newMessage.trim()}
-              >
-                {sending ? '...' : 'إرسال'}
-              </button>
-            </form>
-            {error && <div className="text-red-500 text-sm px-4 md:px-6 pb-2">{error}</div>}
-          </>
-        ) : (
-          <LoadingOrErrorPlaceholder error errorText="اختر محادثة لعرض الرسائل" />
-        )}
-      </main>
+              </>
+            ) : (
+              <div className="h-full flex items-center justify-center bg-gradient-to-b from-black/40 to-hitman-950/40">
+                <div className="text-center">
+                  <MessageCircle className="w-16 h-16 text-white/30 mx-auto mb-4" />
+                  <p className="text-white/50 text-lg mb-2">اختر محادثة</p>
+                  <p className="text-white/30 text-sm">ابحث عن لاعب أو اختر محادثة موجودة</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Sound notification audio */}
+      <audio ref={audioRef} src={notificationSound} preload="auto" />
     </div>
   );
 }

@@ -115,9 +115,6 @@ export class TaskService {
       // Get current value for the metric
       const currentValue = await this.getCurrentMetricValue(character, task.metric);
       
-      // Debug logging
-      console.log(`Task ${task.id} (${task.metric}): Current value = ${currentValue}, Goal = ${task.goal}, Current progress = ${progress.progress}`);
-      
       // Update progress based on metric type
       if (this.isCumulativeMetric(task.metric)) {
         // For cumulative metrics, use the current value directly
@@ -132,7 +129,6 @@ export class TaskService {
       // Mark as completed if goal met
       if (!progress.isCompleted && progress.progress >= task.goal) {
         progress.isCompleted = true;
-        console.log(`Task ${task.id} marked as completed! Progress: ${progress.progress}, Goal: ${task.goal}`);
       }
 
       await progress.save();
@@ -234,49 +230,57 @@ export class TaskService {
   }
 
   // Call this whenever a player performs a trackable action
-  static async updateProgress(userId, metric, value = 1, transaction = null) {
+  static async updateProgress(userId, metric, value) {
     try {
-      console.log(`[TaskService] Updating progress for user ${userId}, metric ${metric}, value ${value}`);
-      
-      // Ensure value is a number
-      const numericValue = Number(value);
-      if (isNaN(numericValue)) {
-        console.error(`[TaskService] Invalid value for metric ${metric}: ${value}`);
-        return;
+      const character = await Character.findByPk(userId);
+      if (!character) {
+        return { success: false, message: 'Character not found' };
       }
-      
-      // Find all active tasks for this metric
-      const tasks = await Task.findAll({ 
-        where: { metric, isActive: true },
-        transaction 
+
+      // Get all active tasks for this user
+      const activeTasks = await Task.findAll({
+        where: {
+          userId,
+          isCompleted: false,
+          expiresAt: { [Op.gt]: new Date() }
+        }
       });
-      
-      for (const task of tasks) {
-        let progress = await UserTaskProgress.findOne({ 
-          where: { userId, taskId: task.id },
-          transaction 
-        });
-        if (!progress) {
-          progress = await UserTaskProgress.create({ 
-            userId, taskId: task.id, progress: 0 
-          }, { transaction });
+
+      let updatedTasks = [];
+
+      for (const task of activeTasks) {
+        if (task.metric === metric) {
+          const currentValue = await this.getCurrentValue(character, metric);
+          const progress = await this.calculateProgress(task, currentValue);
+
+          if (progress.progress >= 100 && !task.isCompleted) {
+            task.isCompleted = true;
+            task.completedAt = new Date();
+            await task.save();
+
+            // Award rewards
+            if (task.rewards) {
+              if (task.rewards.money) {
+                character.money += task.rewards.money;
+              }
+              if (task.rewards.experience) {
+                character.exp += task.rewards.experience;
+              }
+              if (task.rewards.blackcoins) {
+                character.blackcoins += task.rewards.blackcoins;
+              }
+            }
+
+            await character.save();
+            updatedTasks.push(task);
+          }
         }
-        // For cumulative metrics, increment; for snapshot metrics, set
-        if (this.isCumulativeMetric(metric)) {
-          progress.progress = Math.floor(progress.progress + numericValue);
-        } else {
-          // For snapshot metrics (level, money, fame, bank_balance, blackcoins, days_in_game, etc.)
-          if (numericValue > progress.progress) progress.progress = Math.floor(numericValue);
-        }
-        // Mark as completed if goal met
-        if (!progress.isCompleted && progress.progress >= task.goal) {
-          progress.isCompleted = true;
-        }
-        await progress.save({ transaction });
       }
+
+      return { success: true, updatedTasks };
     } catch (error) {
       console.error(`[TaskService] Error updating progress for user ${userId}, metric ${metric}:`, error);
-      throw error;
+      return { success: false, message: 'Failed to update progress' };
     }
   }
 

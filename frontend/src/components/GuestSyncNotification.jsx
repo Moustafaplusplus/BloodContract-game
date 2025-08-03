@@ -20,7 +20,7 @@ export default function GuestSyncNotification() {
 
   return (
     <>
-      <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border border-yellow-600/50 rounded-xl p-6 shadow-lg">
+      <div className="card-3d bg-gradient-to-r from-yellow-900/30 to-orange-900/20 border-yellow-500/50 p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3 space-x-reverse">
             <AlertTriangle className="w-6 h-6 text-yellow-400 mt-1 flex-shrink-0" />
@@ -34,7 +34,7 @@ export default function GuestSyncNotification() {
               <div className="flex space-x-3 space-x-reverse">
                 <button
                   onClick={() => setShowModal(true)}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center"
+                  className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center"
                 >
                   <UserCheck className="w-4 h-4 ml-2" />
                   ربط الحساب
@@ -64,4 +64,4 @@ export default function GuestSyncNotification() {
       />
     </>
   );
-} 
+}

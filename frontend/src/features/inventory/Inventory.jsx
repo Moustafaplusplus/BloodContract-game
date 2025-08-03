@@ -6,9 +6,29 @@ import Modal from "@/components/Modal"
 import GangBombModal from "./GangBombModal"
 import MoneyIcon from "@/components/MoneyIcon"
 import { 
-  Sword, Shield, Zap, Heart, ImageIcon, XCircle, Trash2, Star, Gem, Package, 
-  Play, Bomb, Clock, Crown, Target, Award, Users, Eye, TrendingUp,
-  Backpack, Sparkles, Flame
+  Sword, 
+  Shield, 
+  Zap, 
+  Heart, 
+  XCircle, 
+  Trash2, 
+  Star, 
+  Gem, 
+  Package, 
+  Play, 
+  Bomb, 
+  Clock, 
+  Crown, 
+  Target, 
+  Award, 
+  Users, 
+  Eye, 
+  TrendingUp,
+  Backpack, 
+  Sparkles, 
+  Flame,
+  ShoppingBag,
+  Layers
 } from "lucide-react"
 import { getImageUrl } from '@/utils/imageUtils'
 
@@ -24,6 +44,7 @@ const rarityColors = {
 
 const weaponTypes = ["weapon"]
 
+// Enhanced Stat Component
 function Stat({ icon: Icon, color, value, label }) {
   return (
     <div className="flex items-center gap-1 text-xs font-bold">
@@ -34,15 +55,31 @@ function Stat({ icon: Icon, color, value, label }) {
   )
 }
 
+// Enhanced ItemCard Component with blood theme
 function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOptions }) {
   const [imgError, setImgError] = useState(false)
   
   // Enhanced item type visuals
   const getItemVisuals = (itemType) => {
     const types = {
-      weapon: { icon: item.subtype === 'gun' ? Zap : item.subtype === 'knife' ? Sword : Sword, color: 'red', bgGrad: 'from-red-950/40 to-blood-950/20' },
-      armor: { icon: Shield, color: 'blue', bgGrad: 'from-blue-950/40 to-cyan-950/20' },
-      special: { icon: Gem, color: 'purple', bgGrad: 'from-purple-950/40 to-pink-950/20' }
+      weapon: { 
+        icon: item.subtype === 'gun' ? Zap : item.subtype === 'knife' ? Sword : Sword, 
+        color: 'red', 
+        bgGrad: 'from-red-950/40 to-blood-950/20',
+        borderColor: 'border-red-500/30'
+      },
+      armor: { 
+        icon: Shield, 
+        color: 'blue', 
+        bgGrad: 'from-blue-950/40 to-cyan-950/20',
+        borderColor: 'border-blue-500/30'
+      },
+      special: { 
+        icon: Gem, 
+        color: 'purple', 
+        bgGrad: 'from-purple-950/40 to-pink-950/20',
+        borderColor: 'border-purple-500/30'
+      }
     };
     return types[itemType] || types.weapon;
   };
@@ -52,84 +89,85 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
 
   return (
     <div
-      className={`card-3d p-3 transition-all duration-300 relative overflow-hidden ${
+      className={`card-3d p-3 transition-all duration-300 relative overflow-hidden group ${
         item.type === 'special'
-          ? "border-purple-500/50 hover:border-purple-400/70 hover:shadow-md hover:shadow-purple-500/20"
+          ? `${visuals.borderColor} hover:border-purple-400/70 hover:shadow-md hover:shadow-purple-500/20`
           : isEquipped
             ? "border-blood-500/60 ring-1 ring-blood-500/40 shadow-lg shadow-blood-500/30 blood-glow"
-            : "hover:border-red-600/50 hover:shadow-md hover:shadow-red-500/20"
-      } hover:scale-[1.02] group`}
+            : `${visuals.borderColor} hover:border-red-600/50 hover:shadow-md hover:shadow-red-500/20`
+      } hover:scale-[1.02]`}
     >
       {/* Enhanced Background Gradient */}
       <div className={`absolute inset-0 bg-gradient-to-br ${visuals.bgGrad} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
-      {/* Item Banner Image Placeholder */}
-      <div className="relative mb-3 h-14 bg-gradient-to-r from-black/60 via-blood-950/40 to-black/60 rounded border border-blood-500/20 overflow-hidden">
+      {/* Enhanced Item Banner Image Placeholder */}
+      <div className="relative mb-3 h-16 bg-gradient-to-r from-black/60 via-blood-950/40 to-black/60 rounded border border-blood-500/20 overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           {!imgError && item.imageUrl ? (
             <img
               src={getImageUrl(item.imageUrl) || "/placeholder.svg"}
               alt={item.name}
-              className="w-full h-full object-contain rounded"
+              className="w-full h-full object-contain rounded group-hover:scale-110 transition-transform duration-300"
               onError={() => setImgError(true)}
             />
           ) : (
             <div className="text-blood-400/30">
-              <ImageIcon className="w-6 h-6" />
+              <IconComponent className="w-8 h-8" />
             </div>
           )}
         </div>
         
-        {/* Item type overlay */}
+        {/* Enhanced Item type overlay */}
         <div className="absolute top-1 right-1">
           <div className={`p-1 rounded bg-${visuals.color}-500/30 border border-${visuals.color}-500/40`}>
             <IconComponent className={`w-3 h-3 text-${visuals.color}-400`} />
           </div>
         </div>
         
-        {/* Rarity indicator */}
+        {/* Enhanced Rarity indicator */}
         {item.rarity && (
           <div className="absolute bottom-1 left-1">
-            <div className={`px-1 py-0.5 rounded bg-${rarityColors[item.rarity]?.replace('text-', '')}-500/30 border border-${rarityColors[item.rarity]?.replace('text-', '')}-500/40`}>
-              <span className={`text-xs ${rarityColors[item.rarity]} font-bold`}>
-                {item.rarity}
-              </span>
+            <div className={`px-2 py-0.5 rounded-full text-xs font-bold bg-black/60 backdrop-blur-sm ${rarityColors[item.rarity]} border border-current/30`}>
+              {item.rarity}
             </div>
           </div>
         )}
         
-        {/* Equipped badge */}
+        {/* Enhanced Equipped badge */}
         {isEquipped && (
           <div className="absolute bottom-1 right-1">
-            <div className="p-0.5 rounded-full bg-blood-500/30 border border-blood-500/40">
-              <Star className="w-2 h-2 text-blood-400" />
+            <div className="p-1 rounded-full bg-blood-500/30 border border-blood-500/40">
+              <Star className="w-3 h-3 text-blood-400 animate-pulse" />
             </div>
           </div>
         )}
       </div>
 
-      {/* Enhanced Status Badges */}
+      {/* Enhanced Content */}
       <div className="relative z-10">
-        {isEquipped && (
-          <span className="absolute -top-1 left-0 bg-gradient-to-r from-blood-600 to-blood-700 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-lg z-10 animate-pulse">
-            مجهز
-          </span>
-        )}
-        {item.type === 'special' && (
-          <span className="absolute -top-1 left-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-lg z-10">
-            استهلاكي
-          </span>
-        )}
+        {/* Enhanced Status Badges */}
+        <div className="mb-2">
+          {isEquipped && (
+            <span className="bg-gradient-to-r from-blood-600 to-blood-700 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-lg animate-pulse">
+              مجهز
+            </span>
+          )}
+          {item.type === 'special' && (
+            <span className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-lg">
+              استهلاكي
+            </span>
+          )}
+        </div>
 
-        {/* Name */}
-        <div className="flex items-center justify-between mb-2 mt-2">
-          <span className="font-bold text-sm text-white truncate group-hover:text-red-100 transition-colors">
+        {/* Enhanced Name */}
+        <div className="mb-2">
+          <span className="font-bold text-sm text-white truncate group-hover:text-red-100 transition-colors block">
             {item.name}
           </span>
         </div>
 
         {/* Enhanced Stats */}
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="flex flex-wrap gap-1 mb-3">
           {item.damage !== undefined && item.damage !== null && (
             <Stat icon={Sword} color="text-red-400" value={item.damage} label="ضرر" />
           )}
@@ -142,9 +180,10 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
           {item.hpBonus !== undefined && item.hpBonus !== null && item.hpBonus !== 0 && (
             <Stat icon={Heart} color="text-green-400" value={`+${item.hpBonus}`} label="صحة" />
           )}
+          
           {/* Enhanced Special Item Effects */}
           {item.type === 'special' && item.effect && (
-            <>
+            <div className="w-full card-3d bg-purple-950/20 border-purple-500/30 p-2 space-y-1 mt-2">
               {item.effect.health && (
                 <Stat icon={Heart} color="text-green-400" value={item.effect.health === 'max' ? '100%' : `+${item.effect.health}`} label="صحة" />
               )}
@@ -152,27 +191,41 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
                 <Stat icon={Zap} color="text-yellow-400" value={item.effect.energy === 'max' ? '100%' : `+${item.effect.energy}`} label="طاقة" />
               )}
               {item.effect.experience && (
-                <Stat icon={Sword} color="text-blue-400" value={`+${item.effect.experience}`} label="خبرة" />
+                <Stat icon={Target} color="text-blue-400" value={`+${item.effect.experience}`} label="خبرة" />
               )}
               {item.effect.cdReset && (
                 <Stat icon={Clock} color="text-green-400" value="إعادة" label="تعيين" />
               )}
-            </>
+              {item.effect.nameChange && (
+                <div className="flex items-center gap-1 text-xs font-bold text-purple-400">
+                  <Sparkles className="w-3 h-3" />
+                  <span>تغيير الاسم</span>
+                </div>
+              )}
+              {item.effect.gangBomb && (
+                <div className="flex items-center gap-1 text-xs font-bold text-red-400">
+                  <Bomb className="w-3 h-3" />
+                  <span>قنبلة عصابة</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
         {/* Enhanced Quantity */}
-        <div className="flex items-center gap-2 text-xs mb-2 bg-black/40 border border-white/10 rounded px-2 py-1">
-          <span className="text-white/50">الكمية:</span>
-          <span className="font-mono text-blood-300 font-bold">{item.quantity}</span>
+        <div className="card-3d bg-black/40 border-white/10 rounded px-2 py-1 mb-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-white/50">الكمية:</span>
+            <span className="font-mono text-blood-300 font-bold">{item.quantity}</span>
+          </div>
         </div>
 
         {/* Enhanced Actions */}
-        <div className="flex gap-1 mt-2 relative z-20">
+        <div className="flex gap-1 relative z-20">
           {isEquipped ? (
             <button
               onClick={() => onUnequip(item)}
-              className="bg-gradient-to-r from-zinc-800 to-black hover:from-red-700 hover:to-red-800 text-white font-bold py-2 rounded text-xs flex-1 flex items-center justify-center gap-1 transition-all duration-200 border border-zinc-700/50 hover:border-red-600/50"
+              className="btn-3d-secondary flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-red-600/50"
             >
               <XCircle className="w-3 h-3" /> فك
             </button>
@@ -182,13 +235,13 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
                 <>
                   <button
                     onClick={() => onUse(item)}
-                    className="bg-gradient-to-r from-green-700 to-green-800 hover:from-green-600 hover:to-green-700 text-white font-bold py-2 rounded text-xs flex-1 flex items-center justify-center gap-1 transition-all duration-200 shadow-md shadow-green-900/30 border border-green-600/30"
+                    className="btn-3d flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-green-600/50"
                   >
                     <Play className="w-3 h-3" /> استخدام
                   </button>
                   <button
                     onClick={() => onSell(item)}
-                    className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-bold py-2 rounded text-xs flex-1 flex items-center justify-center gap-1 transition-all duration-200 shadow-md shadow-red-900/30 border border-red-600/30"
+                    className="btn-3d-secondary flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-red-600/50"
                   >
                     <Trash2 className="w-3 h-3" /> بيع
                   </button>
@@ -197,7 +250,7 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
                 <>
                   {slotOptions && slotOptions.length > 0 && (
                     <select
-                      className="flex-1 bg-black/60 border border-red-900/30 text-white rounded text-xs px-2 py-2 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
+                      className="flex-1 bg-black/60 border border-blood-500/30 text-white rounded text-xs px-2 py-2 focus:border-blood-500 focus:ring-1 focus:ring-blood-500/30"
                       defaultValue=""
                       onChange={(e) => onEquip(item, e.target.value)}
                     >
@@ -211,7 +264,7 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
                   )}
                   <button
                     onClick={() => onSell(item)}
-                    className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-bold py-2 rounded text-xs flex-1 flex items-center justify-center gap-1 transition-all duration-200 shadow-md shadow-red-900/30 border border-red-600/30"
+                    className="btn-3d-secondary flex-1 text-xs py-2 flex items-center justify-center gap-1 hover:border-red-600/50"
                   >
                     <Trash2 className="w-3 h-3" /> بيع
                   </button>
@@ -225,15 +278,18 @@ function ItemCard({ item, onEquip, onUnequip, onSell, onUse, isEquipped, slotOpt
   )
 }
 
+// Enhanced Empty State Component
 function EmptyState({ icon: Icon, message }) {
   return (
-    <div className="card-3d p-6 flex flex-col items-center justify-center text-white/40">
-      <Icon className="w-12 h-12 mb-3 text-blood-500/60" />
+    <div className="card-3d p-8 flex flex-col items-center justify-center text-white/40">
+      <Icon className="w-16 h-16 mb-4 text-blood-500/60" />
       <span className="text-sm font-bold">{message}</span>
+      <p className="text-xs text-white/30 mt-2">لا توجد عناصر في هذا القسم</p>
     </div>
   )
 }
 
+// Enhanced Section Header Component
 function SectionHeader({ icon: Icon, title, color = "text-blood-500", accentColor = "via-blood-500" }) {
   return (
     <div className="mb-6">
@@ -242,8 +298,10 @@ function SectionHeader({ icon: Icon, title, color = "text-blood-500", accentColo
           <Icon className={`w-6 h-6 ${color}`} />
         </div>
         <h2 className="text-xl font-bold text-white">{title}</h2>
+        <div className="flex-1 flex items-center">
+          <div className={`h-0.5 bg-gradient-to-r from-transparent ${accentColor} to-transparent flex-1 ml-4`} />
+        </div>
       </div>
-      <div className={`w-24 h-0.5 bg-gradient-to-r from-transparent ${accentColor} to-transparent`} />
     </div>
   )
 }
@@ -333,7 +391,7 @@ export default function Inventory() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || "فشل في الفك")
-      setModal({ open: true, type: "success", title: "تم الفك", message: "تم فك تجهيز العنصر!" })
+      setModal({ open: true, type: "success", title: "تم الفك", message: "تم فك تجهيز ��لعنصر!" })
       setTimeout(() => setModal({ open: false }), 1200)
       invalidateHud?.()
       setTimeout(() => window.location.reload(), 800)
@@ -352,7 +410,7 @@ export default function Inventory() {
       confirmText: "بيع سريع (100 مال)",
       cancelText: "إلغاء",
       extraButton: {
-        text: "الانتقال للسو�� السوداء",
+        text: "الانتقال للسوق السوداء",
         action: async () => {
           window.location.href = '/dashboard/black-market';
         }
@@ -505,7 +563,15 @@ export default function Inventory() {
       </div>
     )
 
-  if (error) return <div className="text-center text-red-500 py-12">{error}</div>
+  if (error) return (
+    <div className="min-h-screen blood-gradient flex items-center justify-center">
+      <div className="text-center card-3d p-6">
+        <div className="text-red-500 text-6xl mb-4">⚠️</div>
+        <h3 className="text-xl font-bold text-red-400 mb-2">خطأ في التحميل</h3>
+        <p className="text-white/60">{error}</p>
+      </div>
+    </div>
+  )
 
   const { weapons, armors, specials } = groupItems()
   const weaponsSplit = splitEquipped(weapons)
@@ -513,47 +579,53 @@ export default function Inventory() {
   const specialsSplit = splitEquipped(specials)
 
   return (
-    <div className="min-h-screen blood-gradient text-white p-3 safe-area-top safe-area-bottom" dir="rtl">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom" dir="rtl">
+      <div className="container mx-auto max-w-7xl p-3 space-y-6">
         
-        {/* Enhanced Header with Inventory Banner */}
-        <div className="relative">
-          {/* Inventory Banner Image Placeholder */}
-          <div className="relative h-20 bg-gradient-to-r from-blood-950/60 via-black/40 to-blood-950/60 rounded-lg border border-blood-500/30 overflow-hidden mb-4">
-            <div className="absolute inset-0 bg-gradient-to-r from-blood-500/10 to-red-500/10"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Backpack className="w-6 h-6 text-blood-400" />
-                  <h1 className="text-lg font-bold text-blood-400 animate-glow-blood">
-                    جرد اللاعب
-                  </h1>
-                  <Crown className="w-6 h-6 text-yellow-400" />
-                </div>
-                <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-blood-500 to-transparent mx-auto"></div>
+        {/* Enhanced Header with Background Image */}
+        <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+          {/* Background Image Placeholder */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blood-900 via-purple-800 to-blue-900">
+            <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23dc2626\" fill-opacity=\"0.1\"%3E%3Crect x=\"10\" y=\"10\" width=\"40\" height=\"40\" rx=\"5\"/%3E%3Crect x=\"20\" y=\"20\" width=\"20\" height=\"20\" rx=\"3\"/%3E%3Ccircle cx=\"15\" cy=\"15\" r=\"3\"/%3E%3Ccircle cx=\"45\" cy=\"45\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+          </div>
+
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/50"></div>
+
+          {/* Content */}
+          <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blood-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <Backpack className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">جرد اللاعب</h1>
+                <p className="text-xs sm:text-sm text-white/80 drop-shadow">إدارة العتاد والعناصر</p>
               </div>
             </div>
-            {/* Inventory indicators */}
-            <div className="absolute top-2 left-2">
-              <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-            </div>
-            <div className="absolute top-2 right-2">
-              <TrendingUp className="w-4 h-4 text-green-400 animate-pulse" />
+
+            <div className="flex items-center space-x-4 text-white">
+              <div className="hidden sm:flex items-center space-x-2">
+                <Layers className="w-4 h-4 text-white/60" />
+                <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold drop-shadow-lg">{items.length}</div>
+                <div className="text-xs text-white/80 drop-shadow">عنصر</div>
+              </div>
             </div>
           </div>
-          
-          <p className="text-white/60 text-center text-sm">إدارة أسلحت�� ودروعك وعناصرك الخاصة</p>
         </div>
 
         {/* Enhanced Weapons Section */}
-        <section className="mb-8">
+        <section className="space-y-6">
           <SectionHeader icon={Sword} title="الأسلحة" />
 
           {/* Equipped Weapons */}
-          <div className="mb-6">
+          <div>
             <h3 className="text-sm text-blood-400 font-bold mb-3 flex items-center gap-2">
               <Star className="w-4 h-4" />
-              العناصر المجهزة
+              العناصر المجهزة ({weaponsSplit.equipped.length})
             </h3>
             {weaponsSplit.equipped.length === 0 ? (
               <EmptyState icon={Sword} message="لا يوجد أسلحة مجهزة." />
@@ -570,7 +642,7 @@ export default function Inventory() {
           <div>
             <h3 className="text-sm text-white/70 font-bold mb-3 flex items-center gap-2">
               <Package className="w-4 h-4" />
-              العناصر غير المجهزة
+              العناصر غير المجهزة ({weaponsSplit.unequipped.length})
             </h3>
             {weaponsSplit.unequipped.length === 0 ? (
               <EmptyState icon={Sword} message="لا يوجد أسلحة غير مجهزة." />
@@ -592,14 +664,14 @@ export default function Inventory() {
         </section>
 
         {/* Enhanced Armors Section */}
-        <section className="mb-8">
+        <section className="space-y-6">
           <SectionHeader icon={Shield} title="الدروع" color="text-blue-400" accentColor="via-blue-400" />
 
           {/* Equipped Armors */}
-          <div className="mb-6">
+          <div>
             <h3 className="text-sm text-blood-400 font-bold mb-3 flex items-center gap-2">
               <Star className="w-4 h-4" />
-              العناصر المجهزة
+              العناصر المجهزة ({armorsSplit.equipped.length})
             </h3>
             {armorsSplit.equipped.length === 0 ? (
               <EmptyState icon={Shield} message="لا يوجد دروع مجهزة." />
@@ -616,7 +688,7 @@ export default function Inventory() {
           <div>
             <h3 className="text-sm text-white/70 font-bold mb-3 flex items-center gap-2">
               <Package className="w-4 h-4" />
-              العناصر غير المجهزة
+              العناصر غير المجهزة ({armorsSplit.unequipped.length})
             </h3>
             {armorsSplit.unequipped.length === 0 ? (
               <EmptyState icon={Shield} message="لا يوجد دروع غير مجهزة." />
@@ -638,13 +710,13 @@ export default function Inventory() {
         </section>
 
         {/* Enhanced Special Items Section */}
-        <section className="mb-8">
+        <section className="space-y-6">
           <SectionHeader icon={Gem} title="العناصر الخاصة" color="text-purple-400" accentColor="via-purple-400" />
 
           <div>
             <h3 className="text-sm text-purple-400 font-bold mb-3 flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              العناصر القابلة للاستهلاك
+              <Sparkles className="w-4 h-4" />
+              العناصر القابلة للاستهلاك ({specials.length})
             </h3>
             {specials.length === 0 ? (
               <EmptyState icon={Gem} message="لا توجد عناصر خاصة قابلة للاستهلاك." />
@@ -665,13 +737,13 @@ export default function Inventory() {
           </div>
         </section>
 
-        {/* Inventory Tips */}
+        {/* Enhanced Inventory Tips */}
         <div className="card-3d p-4 bg-gradient-to-r from-blood-950/20 to-black/40 border-blood-500/20">
-          <h3 className="text-sm font-bold text-blood-400 mb-2 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-blood-400 mb-3 flex items-center gap-2">
             <Target className="w-4 h-4" />
             نصائح الجرد
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-white/70">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-white/70">
             <div className="flex items-center gap-2">
               <Award className="w-3 h-3 text-yellow-400" />
               <span>جهز أفضل الأسلحة والدروع لزيادة قوتك</span>
@@ -687,6 +759,14 @@ export default function Inventory() {
             <div className="flex items-center gap-2">
               <Flame className="w-3 h-3 text-orange-400" />
               <span>تحقق من ندرة العناصر قبل البيع</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-3 h-3 text-purple-400" />
+              <span>استخدم السوق السوداء لبيع العناصر بسعر أفضل</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-3 h-3 text-cyan-400" />
+              <span>راقب التأثيرات والمكافآت قبل الاستخدام</span>
             </div>
           </div>
         </div>

@@ -28,7 +28,7 @@ export const FeatureUnlockNotification = () => {
 
   return (
     <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
-      <div className="bg-gradient-to-r from-green-900 to-green-800 border border-green-600 rounded-lg p-4 shadow-2xl animate-pulse">
+      <div className="card-3d bg-gradient-to-r from-green-900/80 to-green-800/60 border-green-500/50 p-4 animate-pulse">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
             <Unlock className="w-6 h-6 text-green-400" />
@@ -62,7 +62,7 @@ export const FeatureProgressCard = () => {
 
   if (!nextFeature) {
     return (
-      <div className="bg-gradient-to-r from-purple-900 to-purple-800 border border-purple-600 rounded-lg p-4">
+      <div className="card-3d bg-gradient-to-r from-purple-900/30 to-purple-800/20 border-purple-500/50 p-4">
         <div className="flex items-center gap-3">
           <Star className="w-6 h-6 text-purple-400" />
           <div>
@@ -78,7 +78,7 @@ export const FeatureProgressCard = () => {
   const progress = Math.max(0, 1 - (levelsNeeded / 5));
 
   return (
-    <div className="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-600 rounded-lg p-4">
+    <div className="card-3d bg-gradient-to-r from-blue-900/30 to-blue-800/20 border-blue-500/50 p-4">
       <div className="flex items-center gap-3 mb-3">
         <Lock className="w-6 h-6 text-blue-400" />
         <div>
@@ -95,9 +95,9 @@ export const FeatureProgressCard = () => {
             <span className="text-blue-300">مستواك الحالي: {playerLevel}</span>
           </div>
           
-          <div className="w-full bg-blue-950 rounded-full h-3">
+          <div className="progress-3d h-3">
             <div 
-              className="bg-gradient-to-r from-blue-400 to-blue-500 h-3 rounded-full transition-all duration-300"
+              className="progress-3d-fill bg-gradient-to-r from-blue-400 to-blue-500 h-3 rounded-full transition-all duration-300"
               style={{ width: `${progress * 100}%` }}
             />
           </div>
@@ -113,7 +113,7 @@ export const FeatureProgressCard = () => {
             <h4 className="text-blue-300 text-sm font-medium mb-2">الميزات المقفلة:</h4>
             <div className="space-y-1">
               {lockedFeatures.slice(0, 3).map((feature, index) => (
-                <div key={feature.key || feature.feature || `locked-feature-${index}`} className="flex items-center justify-between p-1 bg-blue-950/50 rounded text-xs">
+                <div key={feature.key || feature.feature || `locked-feature-${index}`} className="flex items-center justify-between p-1 bg-black/20 rounded text-xs">
                   <span className="text-blue-200">{feature.name || feature.feature}</span>
                   <span className="text-blue-400">المستوى {feature.level || feature.requiredLevel}</span>
                 </div>
@@ -141,7 +141,7 @@ export const FeatureUnlockList = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-gray-900 to-gray-800 border border-gray-600 rounded-lg p-4">
+    <div className="card-3d bg-gradient-to-r from-gray-900/30 to-gray-800/20 border-gray-500/50 p-4">
       <h3 className="text-gray-300 font-bold mb-3 flex items-center gap-2">
         <Lock className="w-5 h-5" />
         الميزات المقفلة
@@ -149,7 +149,7 @@ export const FeatureUnlockList = () => {
       
       <div className="space-y-2">
         {lockedFeatures.slice(0, 5).map((feature, index) => (
-          <div key={feature.key || feature.feature || `locked-feature-${index}`} className="flex items-center justify-between p-2 bg-gray-800 rounded">
+          <div key={feature.key || feature.feature || `locked-feature-${index}`} className="flex items-center justify-between p-2 bg-black/20 rounded">
             <span className="text-gray-300 text-sm">{feature.name || feature.feature}</span>
             <span className="text-gray-400 text-xs">المستوى {feature.level || feature.requiredLevel}</span>
           </div>
@@ -163,4 +163,4 @@ export const FeatureUnlockList = () => {
       </div>
     </div>
   );
-}; 
+};

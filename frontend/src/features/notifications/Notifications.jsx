@@ -7,6 +7,35 @@ import { useSocket } from '@/hooks/useSocket';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'react-toastify';
 import MoneyIcon from '@/components/MoneyIcon';
+import { 
+  Bell, 
+  Trash2, 
+  CheckCircle, 
+  ArrowLeft, 
+  RefreshCw, 
+  Shield,
+  Sword,
+  DollarSign,
+  MessageCircle,
+  Users,
+  Clock,
+  Zap,
+  Crown,
+  Heart,
+  ImageIcon,
+  AlertTriangle,
+  Info,
+  Target,
+  Home,
+  Briefcase,
+  ShoppingCart,
+  User,
+  Activity,
+  Star,
+  XCircle,
+  Eye,
+  Loader
+} from 'lucide-react';
 
 const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -46,70 +75,70 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 
   const getNotificationIcon = (type) => {
     const icons = {
-      ATTACKED: '⚔️',
-      HOSPITALIZED: '🏥',
-      JAILED: '🔒',
+      ATTACKED: <Sword className="w-6 h-6 text-red-400" />,
+      HOSPITALIZED: <Heart className="w-6 h-6 text-red-400" />,
+      JAILED: <Shield className="w-6 h-6 text-orange-400" />,
       BANK_INTEREST: <MoneyIcon className="w-6 h-6" />,
-      JOB_SALARY: '💼',
-      BLACK_MARKET_SOLD: '🛒',
-      MESSAGE_RECEIVED: '💬',
-      FRIEND_REQUEST_RECEIVED: '👥',
-      FRIEND_REQUEST_ACCEPTED: '✅',
-      CRIME_COOLDOWN_ENDED: '⏰',
-      GYM_COOLDOWN_ENDED: '💪',
-      CONTRACT_EXECUTED: '🎯',
-      CONTRACT_FULFILLED: '📋',
-      VIP_EXPIRED: '👑',
-      VIP_ACTIVATED: '👑',
-      OUT_OF_HOSPITAL: '🏥',
-      OUT_OF_JAIL: '🔓',
-      GANG_JOIN_REQUEST: '👥',
-      GANG_MEMBER_LEFT: '👥',
-      ASSASSINATED: '💀',
-      GHOST_ASSASSINATED: '👻',
-      CONTRACT_ATTEMPTED: '🎯',
-      CONTRACT_EXPIRED: '⏰',
-      CONTRACT_TARGET_ASSASSINATED: '💀',
-      ATTACK_IMMUNITY_ACTIVATED: '🛡️',
-      ATTACK_IMMUNITY_PROTECTED: '🛡️',
-      GANG_BOMB_IMMUNITY_PROTECTED: '🛡️',
-      SYSTEM: '🔔'
+      JOB_SALARY: <Briefcase className="w-6 h-6 text-green-400" />,
+      BLACK_MARKET_SOLD: <ShoppingCart className="w-6 h-6 text-purple-400" />,
+      MESSAGE_RECEIVED: <MessageCircle className="w-6 h-6 text-blue-400" />,
+      FRIEND_REQUEST_RECEIVED: <Users className="w-6 h-6 text-cyan-400" />,
+      FRIEND_REQUEST_ACCEPTED: <CheckCircle className="w-6 h-6 text-green-400" />,
+      CRIME_COOLDOWN_ENDED: <Clock className="w-6 h-6 text-yellow-400" />,
+      GYM_COOLDOWN_ENDED: <Zap className="w-6 h-6 text-yellow-400" />,
+      CONTRACT_EXECUTED: <Target className="w-6 h-6 text-red-400" />,
+      CONTRACT_FULFILLED: <CheckCircle className="w-6 h-6 text-green-400" />,
+      VIP_EXPIRED: <Crown className="w-6 h-6 text-gray-400" />,
+      VIP_ACTIVATED: <Crown className="w-6 h-6 text-yellow-400" />,
+      OUT_OF_HOSPITAL: <Heart className="w-6 h-6 text-green-400" />,
+      OUT_OF_JAIL: <Shield className="w-6 h-6 text-green-400" />,
+      GANG_JOIN_REQUEST: <Users className="w-6 h-6 text-cyan-400" />,
+      GANG_MEMBER_LEFT: <Users className="w-6 h-6 text-orange-400" />,
+      ASSASSINATED: <Target className="w-6 h-6 text-red-400" />,
+      GHOST_ASSASSINATED: <Target className="w-6 h-6 text-purple-400" />,
+      CONTRACT_ATTEMPTED: <Target className="w-6 h-6 text-orange-400" />,
+      CONTRACT_EXPIRED: <Clock className="w-6 h-6 text-gray-400" />,
+      CONTRACT_TARGET_ASSASSINATED: <Target className="w-6 h-6 text-red-400" />,
+      ATTACK_IMMUNITY_ACTIVATED: <Shield className="w-6 h-6 text-blue-400" />,
+      ATTACK_IMMUNITY_PROTECTED: <Shield className="w-6 h-6 text-blue-400" />,
+      GANG_BOMB_IMMUNITY_PROTECTED: <Shield className="w-6 h-6 text-blue-400" />,
+      SYSTEM: <Bell className="w-6 h-6 text-gray-400" />
     };
-    return icons[type] || '🔔';
+    return icons[type] || <Bell className="w-6 h-6 text-gray-400" />;
   };
 
   const getNotificationColor = (type) => {
     const colors = {
-      ATTACKED: 'border-red-500 bg-red-900/20',
-      HOSPITALIZED: 'border-red-500 bg-red-900/20',
-      JAILED: 'border-orange-500 bg-orange-900/20',
-      BANK_INTEREST: 'border-green-500 bg-green-900/20',
-      JOB_SALARY: 'border-green-500 bg-green-900/20',
-      BLACK_MARKET_SOLD: 'border-purple-500 bg-purple-900/20',
-      MESSAGE_RECEIVED: 'border-blue-500 bg-blue-900/20',
-      FRIEND_REQUEST_RECEIVED: 'border-cyan-500 bg-cyan-900/20',
-      FRIEND_REQUEST_ACCEPTED: 'border-green-500 bg-green-900/20',
-      CRIME_COOLDOWN_ENDED: 'border-yellow-500 bg-yellow-900/20',
-      GYM_COOLDOWN_ENDED: 'border-yellow-500 bg-yellow-900/20',
-      CONTRACT_EXECUTED: 'border-red-500 bg-red-900/20',
-      CONTRACT_FULFILLED: 'border-green-500 bg-green-900/20',
-      VIP_EXPIRED: 'border-gray-500 bg-gray-900/20',
-      VIP_ACTIVATED: 'border-yellow-500 bg-yellow-900/20',
-      OUT_OF_HOSPITAL: 'border-green-500 bg-green-900/20',
-      OUT_OF_JAIL: 'border-green-500 bg-green-900/20',
-      GANG_JOIN_REQUEST: 'border-cyan-500 bg-cyan-900/20',
-      GANG_MEMBER_LEFT: 'border-orange-500 bg-orange-900/20',
-      ASSASSINATED: 'border-red-500 bg-red-900/20',
-      GHOST_ASSASSINATED: 'border-purple-500 bg-purple-900/20',
-      CONTRACT_ATTEMPTED: 'border-orange-500 bg-orange-900/20',
-      CONTRACT_EXPIRED: 'border-gray-500 bg-gray-900/20',
-      CONTRACT_TARGET_ASSASSINATED: 'border-red-500 bg-red-900/20',
-      ATTACK_IMMUNITY_ACTIVATED: 'border-blue-500 bg-blue-900/20',
-      ATTACK_IMMUNITY_PROTECTED: 'border-blue-500 bg-blue-900/20',
-      GANG_BOMB_IMMUNITY_PROTECTED: 'border-blue-500 bg-blue-900/20',
-      SYSTEM: 'border-gray-500 bg-gray-900/20'
+      ATTACKED: 'border-red-500/50 bg-red-950/30',
+      HOSPITALIZED: 'border-red-500/50 bg-red-950/30',
+      JAILED: 'border-orange-500/50 bg-orange-950/30',
+      BANK_INTEREST: 'border-green-500/50 bg-green-950/30',
+      JOB_SALARY: 'border-green-500/50 bg-green-950/30',
+      BLACK_MARKET_SOLD: 'border-purple-500/50 bg-purple-950/30',
+      MESSAGE_RECEIVED: 'border-blue-500/50 bg-blue-950/30',
+      FRIEND_REQUEST_RECEIVED: 'border-cyan-500/50 bg-cyan-950/30',
+      FRIEND_REQUEST_ACCEPTED: 'border-green-500/50 bg-green-950/30',
+      CRIME_COOLDOWN_ENDED: 'border-yellow-500/50 bg-yellow-950/30',
+      GYM_COOLDOWN_ENDED: 'border-yellow-500/50 bg-yellow-950/30',
+      CONTRACT_EXECUTED: 'border-red-500/50 bg-red-950/30',
+      CONTRACT_FULFILLED: 'border-green-500/50 bg-green-950/30',
+      VIP_EXPIRED: 'border-gray-500/50 bg-gray-950/30',
+      VIP_ACTIVATED: 'border-yellow-500/50 bg-yellow-950/30',
+      OUT_OF_HOSPITAL: 'border-green-500/50 bg-green-950/30',
+      OUT_OF_JAIL: 'border-green-500/50 bg-green-950/30',
+      GANG_JOIN_REQUEST: 'border-cyan-500/50 bg-cyan-950/30',
+      GANG_MEMBER_LEFT: 'border-orange-500/50 bg-orange-950/30',
+      ASSASSINATED: 'border-red-500/50 bg-red-950/30',
+      GHOST_ASSASSINATED: 'border-purple-500/50 bg-purple-950/30',
+      CONTRACT_ATTEMPTED: 'border-orange-500/50 bg-orange-950/30',
+      CONTRACT_EXPIRED: 'border-gray-500/50 bg-gray-950/30',
+      CONTRACT_TARGET_ASSASSINATED: 'border-red-500/50 bg-red-950/30',
+      ATTACK_IMMUNITY_ACTIVATED: 'border-blue-500/50 bg-blue-950/30',
+      ATTACK_IMMUNITY_PROTECTED: 'border-blue-500/50 bg-blue-950/30',
+      GANG_BOMB_IMMUNITY_PROTECTED: 'border-blue-500/50 bg-blue-950/30',
+      SYSTEM: 'border-gray-500/50 bg-gray-950/30'
     };
-    return colors[type] || 'border-gray-500 bg-gray-900/20';
+    return colors[type] || 'border-gray-500/50 bg-gray-950/30';
   };
 
   const formatDate = (dateString) => {
@@ -125,24 +154,25 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 
   return (
     <div 
-      className={`p-4 border-r-4 rounded-lg mb-3 transition-all duration-200 hover:bg-zinc-800/50 ${
+      className={`card-3d p-4 transition-all duration-300 hover:scale-[1.01] cursor-pointer ${
         getNotificationColor(notification.type)
-      } ${!notification.isRead ? 'bg-zinc-800/30' : ''}`}
+      } ${!notification.isRead ? 'border-l-4 border-l-blood-500' : ''}`}
       onClick={handleMarkAsRead}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3 flex-1">
-          <div className="text-2xl flex-shrink-0">
+          <div className="flex-shrink-0">
             {getNotificationIcon(notification.type)}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className={`font-bold text-sm mb-1 ${!notification.isRead ? 'text-white' : 'text-gray-300'}`}>
+            <h3 className={`font-bold text-sm mb-1 ${!notification.isRead ? 'text-white' : 'text-white/80'}`}>
               {notification.title}
             </h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-white/70 text-sm leading-relaxed break-words">
               {notification.content}
             </p>
-            <p className="text-gray-500 text-xs mt-2">
+            <p className="text-white/50 text-xs mt-2 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
               {formatDate(notification.createdAt)}
             </p>
           </div>
@@ -150,7 +180,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
         
         <div className="flex items-center gap-2 flex-shrink-0">
           {!notification.isRead && (
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <div className="w-2 h-2 bg-blood-500 rounded-full animate-pulse"></div>
           )}
           <button
             onClick={(e) => {
@@ -158,15 +188,13 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
               handleDelete();
             }}
             disabled={isDeleting}
-            className="text-gray-400 hover:text-red-400 transition-colors p-1"
-            aria-label="حذف الإشعار"
+            className="p-1.5 rounded text-white/50 hover:text-red-400 hover:bg-red-500/20 transition-all duration-300"
+            title="حذف الإشعار"
           >
             {isDeleting ? (
-              <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+              <Loader className="w-4 h-4 animate-spin" />
             ) : (
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-              </svg>
+              <Trash2 className="w-4 h-4" />
             )}
           </button>
         </div>
@@ -249,7 +277,6 @@ const Notifications = () => {
     if (!socket) return;
 
     const handleTestResponse = (data) => {
-      
       toast.success('تم اختبار الاتصال بنجاح!', {
         position: "bottom-center",
         autoClose: 2000,
@@ -266,10 +293,8 @@ const Notifications = () => {
   // Update local notifications when context notifications change (real-time updates)
   useEffect(() => {
     if (contextNotifications.length > 0 && notifications.length === 0) {
-      // If we have context notifications but no local notifications, use context ones
       setNotifications(contextNotifications);
     } else if (contextNotifications.length > 0 && notifications.length > 0) {
-      // If we have both, merge them and remove duplicates
       const merged = [...contextNotifications];
       notifications.forEach(notification => {
         if (!merged.find(n => n.id === notification.id)) {
@@ -336,97 +361,184 @@ const Notifications = () => {
   };
 
   if (loading) {
-    return <LoadingOrErrorPlaceholder loading={true} />;
+    return (
+      <div className="min-h-screen blood-gradient text-white flex items-center justify-center">
+        <div className="text-center card-3d p-8">
+          <div className="w-12 h-12 border border-blue-500/50 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-blue-300">جاري تحميل الإشعارات...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <LoadingOrErrorPlaceholder error={error} />;
+    return (
+      <div className="min-h-screen blood-gradient text-white flex items-center justify-center">
+        <div className="text-center card-3d p-8">
+          <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-400 mb-4">{error}</p>
+          <button 
+            onClick={() => loadNotifications()}
+            className="btn-3d px-4 py-2 flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 rounded-full bg-zinc-900 hover:bg-accent-red/30 border border-accent-red/40 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-              </svg>
-            </button>
-            <h1 className="text-2xl font-bold text-white">الإشعارات</h1>
+    <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom" dir="rtl">
+      <div className="container mx-auto max-w-6xl p-3 space-y-4">
+        
+        {/* Enhanced Header with Background Image */}
+        <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900 via-gray-800 to-purple-900">
+            <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%233b82f6\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"8\"/%3E%3Cpath d=\"M15 15l3 3-3 3-3-3z\"/%3E%3Cpath d=\"M45 15l3 3-3 3-3-3z\"/%3E%3Cpath d=\"M15 45l3 3-3 3-3-3z\"/%3E%3Cpath d=\"M45 45l3 3-3 3-3-3z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
           </div>
+
+          <div className="absolute inset-0 bg-black/60"></div>
+
+          <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">الإشعارات</h1>
+                <p className="text-xs sm:text-sm text-white/80 drop-shadow">Notifications</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 text-white">
+              <div className="hidden sm:flex items-center space-x-2">
+                <ImageIcon className="w-4 h-4 text-white/60" />
+                <Activity className="w-4 h-4 text-blue-400 animate-pulse" />
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold drop-shadow-lg flex items-center gap-1">
+                  <Bell className="w-4 h-4 text-blue-400" />
+                  {unreadCount}
+                </div>
+                <div className="text-xs text-white/80 drop-shadow">غير مقروء</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2 justify-between items-center">
+          <button
+            onClick={() => navigate(-1)}
+            className="btn-3d-secondary px-4 py-2 flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            رجوع
+          </button>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleMarkAllAsRead}
               disabled={markingAllRead || notifications.every(n => n.isRead)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium"
+              className="btn-3d bg-green-600/80 hover:bg-green-700/80 disabled:opacity-50 px-4 py-2 text-sm flex items-center gap-2"
             >
-              {markingAllRead ? 'جاري التحديث...' : 'تحديد الكل كمقروء'}
+              {markingAllRead ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  جاري التحديث...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  تحديد الكل كمقروء
+                </>
+              )}
             </button>
             
             <button
               onClick={handleDeleteAll}
               disabled={deletingAll || notifications.length === 0}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium"
+              className="btn-3d bg-red-600/80 hover:bg-red-700/80 disabled:opacity-50 px-4 py-2 text-sm flex items-center gap-2"
             >
-              {deletingAll ? 'جاري الحذف...' : 'حذف الكل'}
+              {deletingAll ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  جاري الحذف...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  حذف الكل
+                </>
+              )}
             </button>
 
             <button
               onClick={async () => {
                 try {
                   const token = localStorage.getItem('jwt');
-                  const response = await axios.post('/api/notifications/test', {}, {
+                  await axios.post('/api/notifications/test', {}, {
                     headers: { Authorization: `Bearer ${token}` }
                   });
-          
                 } catch (error) {
                   console.error('Test notification error:', error);
                 }
               }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-medium"
+              className="btn-3d bg-blue-600/80 hover:bg-blue-700/80 px-4 py-2 text-sm flex items-center gap-2"
             >
+              <Bell className="w-4 h-4" />
               اختبار الإشعارات
             </button>
-
-            {/* Debug Panel */}
-            <details className="px-4 py-2 bg-gray-800 rounded-lg text-sm">
-              <summary className="cursor-pointer text-gray-300">معلومات التصحيح</summary>
-              <div className="mt-2 space-y-1 text-xs text-gray-400">
-                <div>عدد الإشعارات غير المقروءة: {unreadCount}</div>
-                <div>عدد الإشعارات المحلية: {notifications.length}</div>
-                <div>عدد الإشعارات في السياق: {contextNotifications.length}</div>
-                <div>حالة التحميل: {loading ? 'جاري التحميل' : 'مكتمل'}</div>
-                <div>هل يوجد المزيد: {hasMore ? 'نعم' : 'لا'}</div>
-                <div>حالة الاتصال بالسيرفر: {socket?.connected ? 'متصل' : 'غير متصل'}</div>
-                <button
-                  onClick={() => {
-                    if (socket?.connected) {
-                      // Emit a test event to verify socket is working
-                      socket.emit('test', { message: 'Socket test from frontend' });
-                    }
-                  }}
-                  className="mt-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-                >
-                  اختبار الاتصال
-                </button>
-              </div>
-            </details>
           </div>
         </div>
 
+        {/* Debug Panel */}
+        <details className="card-3d p-4">
+          <summary className="cursor-pointer text-white/80 font-bold flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            معلومات التصحيح
+          </summary>
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div className="card-3d bg-black/40 border-white/10 p-2 text-center">
+              <div className="text-white/70">غي�� المقروءة</div>
+              <div className="text-lg font-bold text-red-400">{unreadCount}</div>
+            </div>
+            <div className="card-3d bg-black/40 border-white/10 p-2 text-center">
+              <div className="text-white/70">المحلية</div>
+              <div className="text-lg font-bold text-blue-400">{notifications.length}</div>
+            </div>
+            <div className="card-3d bg-black/40 border-white/10 p-2 text-center">
+              <div className="text-white/70">في السياق</div>
+              <div className="text-lg font-bold text-purple-400">{contextNotifications.length}</div>
+            </div>
+            <div className="card-3d bg-black/40 border-white/10 p-2 text-center">
+              <div className="text-white/70">الاتصال</div>
+              <div className={`text-lg font-bold ${socket?.connected ? 'text-green-400' : 'text-red-400'}`}>
+                {socket?.connected ? 'متصل' : 'منقطع'}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (socket?.connected) {
+                socket.emit('test', { message: 'Socket test from frontend' });
+              }
+            }}
+            className="btn-3d-secondary mt-3 px-4 py-2 text-xs"
+          >
+            اختبار ��لاتصال
+          </button>
+        </details>
+
         {/* Notifications List */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {notifications.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔔</div>
-              <h3 className="text-xl font-bold text-gray-300 mb-2">لا توجد إشعارات</h3>
-              <p className="text-gray-500">ستظهر هنا الإشعارات الجديدة عند وصولها</p>
+            <div className="card-3d p-12 text-center">
+              <Bell className="w-16 h-16 text-white/30 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-white/50 mb-2">لا توجد إشعارات</h3>
+              <p className="text-white/30">ستظهر هنا الإشعارات الجديدة عند وصولها</p>
             </div>
           ) : (
             notifications.map((notification, index) => (
@@ -445,14 +557,18 @@ const Notifications = () => {
           
           {loadingMore && (
             <div className="text-center py-4">
-              <div className="inline-block w-6 h-6 border-2 border-accent-red border-t-transparent rounded-full animate-spin"></div>
-              <span className="ml-2 text-gray-400">جاري تحميل المزيد...</span>
+              <div className="inline-flex items-center gap-2 text-blue-400">
+                <Loader className="w-5 h-5 animate-spin" />
+                <span>جاري تحميل المزيد...</span>
+              </div>
             </div>
           )}
           
           {!hasMore && notifications.length > 0 && (
-            <div className="text-center py-4 text-gray-500">
-              لا توجد المزيد من الإشعارات
+            <div className="text-center py-4">
+              <div className="card-3d bg-black/40 border-white/10 p-3 inline-block">
+                <span className="text-white/50 text-sm">لا توجد المزيد من الإشعارات</span>
+              </div>
             </div>
           )}
         </div>
@@ -461,4 +577,4 @@ const Notifications = () => {
   );
 };
 
-export default Notifications; 
+export default Notifications;

@@ -2,47 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-import { Heart, ThumbsUp, ThumbsDown, Trophy, Star, Target, Skull } from 'lucide-react';
+import { Heart, ThumbsUp, ThumbsDown, Trophy, Star, Target, Skull, ImageIcon, Building2, Loader } from 'lucide-react';
 import MoneyIcon from '@/components/MoneyIcon';
 import { toast } from 'react-hot-toast';
 import VipName from '@/features/profile/VipName.jsx';
 import '@/features/profile/vipSparkle.css';
 
 const TABS = [
-  { key: 'fame', label: 'الشهرة', icon: Trophy },
-  { key: 'level', label: 'المستوى', icon: Star },
-  { key: 'money', label: 'المال', icon: MoneyIcon },
-  { key: 'killCount', label: 'القتل', icon: Target },
-  { key: 'crimesCommitted', label: 'الجرائم', icon: Skull },
+  { key: 'fame', label: 'الشهرة', icon: Trophy, color: 'yellow', bgGrad: 'from-yellow-950/30 to-amber-950/20' },
+  { key: 'level', label: 'المستوى', icon: Star, color: 'blue', bgGrad: 'from-blue-950/30 to-cyan-950/20' },
+  { key: 'money', label: 'المال', icon: MoneyIcon, color: 'green', bgGrad: 'from-green-950/30 to-emerald-950/20' },
+  { key: 'killCount', label: 'القتل', icon: Target, color: 'red', bgGrad: 'from-red-950/30 to-blood-950/20' },
+  { key: 'crimesCommitted', label: 'الجرائم', icon: Skull, color: 'blood', bgGrad: 'from-blood-950/30 to-red-950/20' },
 ];
-
-const columns = {
-  fame: [
-    { key: 'ranking', label: '#' },
-    { key: 'name', label: 'الاسم' },
-    { key: 'criteria', label: 'الشهرة' },
-  ],
-  level: [
-    { key: 'ranking', label: '#' },
-    { key: 'name', label: 'الاسم' },
-    { key: 'criteria', label: 'المستوى' },
-  ],
-  money: [
-    { key: 'ranking', label: '#' },
-    { key: 'name', label: 'الاسم' },
-    { key: 'criteria', label: 'المال' },
-  ],
-  killCount: [
-    { key: 'ranking', label: '#' },
-    { key: 'name', label: 'الاسم' },
-    { key: 'criteria', label: 'القتل' },
-  ],
-  crimesCommitted: [
-    { key: 'ranking', label: '#' },
-    { key: 'name', label: 'الاسم' },
-    { key: 'criteria', label: 'الجرائم' },
-  ],
-};
 
 function Ranking() {
   const [activeTab, setActiveTab] = useState('fame');
@@ -126,8 +98,8 @@ function Ranking() {
     if (value === null || value === undefined) return '-';
     
     switch (type) {
-          case 'money':
-      return `${value.toLocaleString()}`;
+      case 'money':
+        return `${value.toLocaleString()}`;
       case 'fame':
       case 'level':
       case 'killCount':
@@ -138,168 +110,225 @@ function Ranking() {
     }
   };
 
-  const getTabIcon = (tabKey) => {
-    const tab = TABS.find(t => t.key === tabKey);
-    return tab ? tab.icon : Trophy;
-  };
+  const currentTab = TABS.find(tab => tab.key === activeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Header */}
-      <div className="text-center mb-8 animate-fade-in">
-        <h1 className="text-3xl sm:text-4xl font-bouya mb-4 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow">
-          تصنيف اللاعبين
-        </h1>
-        <div className="w-32 h-1 bg-gradient-to-r from-transparent via-accent-red to-transparent mx-auto"></div>
-      </div>
+    <div className="min-h-screen blood-gradient text-white safe-area-top safe-area-bottom" dir="rtl">
+      <div className="container mx-auto max-w-6xl p-4 space-y-6">
+        
+        {/* Enhanced Header with Background Image */}
+        <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden bg-black/90">
+          {/* Background Image Placeholder */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+            <div className={"absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23dc2626\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"}></div>
+          </div>
 
-      {/* Tabs */}
-      <div className="max-w-4xl mx-auto mb-8 flex flex-wrap justify-center gap-2 animate-fade-in">
-        {TABS.map(tab => {
-          const IconComponent = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 border-2 ${
-                activeTab === tab.key 
-                  ? 'border-accent-red bg-red-900/50 text-accent-red shadow-lg shadow-red-900/20' 
-                  : 'border-hitman-700 bg-hitman-800/30 text-hitman-300 hover:border-accent-red hover:text-accent-red hover:bg-red-900/20'
-              }`}
-            >
-              <IconComponent className="w-5 h-5" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/50"></div>
 
-      {/* Rankings Table */}
-      <div className="max-w-6xl mx-auto bg-gradient-to-br from-hitman-800/30 to-hitman-900/30 backdrop-blur-sm border border-hitman-700 rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
-        {loading ? (
-          <div className="p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
-            <p className="text-hitman-300 text-lg">جاري تحميل التصنيفات...</p>
+          {/* Content */}
+          <div className="relative z-10 h-full flex items-center justify-between p-4 sm:p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-600/80 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">تصنيف اللاعبين</h1>
+                <p className="text-xs sm:text-sm text-white/80 drop-shadow">Player Rankings</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 text-white">
+              <div className="hidden sm:flex items-center space-x-2">
+                <ImageIcon className="w-4 h-4 text-white/60" />
+                <Trophy className="w-4 h-4 text-yellow-400 animate-pulse" />
+              </div>
+              <div className="text-right">
+                <div className="text-lg sm:text-xl font-bold drop-shadow-lg">{currentTab?.label}</div>
+                <div className="text-xs text-white/80 drop-shadow">Ranking</div>
+              </div>
+            </div>
           </div>
-        ) : error ? (
-          <div className="p-12 text-center">
-            <p className="text-red-400 text-lg">{error}</p>
+        </div>
+
+        {/* Enhanced Tabs */}
+        <div className="card-3d p-4">
+          <h2 className="text-lg font-bold text-blood-400 mb-4 flex items-center gap-2">
+            <Trophy className="w-5 h-5" />
+            فئات التصنيف
+          </h2>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {TABS.map(tab => {
+              const IconComponent = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`card-3d bg-gradient-to-br ${tab.bgGrad} border-${tab.color}-500/30 p-3 text-center group transition-all duration-300 ${
+                    activeTab === tab.key 
+                      ? `border-${tab.color}-500/60 shadow-lg shadow-${tab.color}-500/30` 
+                      : 'hover:border-white/40'
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg bg-${tab.color}-500/20 border border-${tab.color}-500/40 inline-block mb-2 group-hover:scale-110 transition-transform duration-300`}>
+                    <IconComponent className={`w-5 h-5 text-${tab.color}-400`} />
+                  </div>
+                  <div className={`text-sm font-bold ${
+                    activeTab === tab.key ? `text-${tab.color}-400` : 'text-white/90'
+                  }`}>
+                    {tab.label}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-hitman-900/80 border-b border-hitman-700">
-                <tr>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-accent-red">#</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-accent-red">اللاعب</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-accent-red">{TABS.find(t => t.key === activeTab)?.label}</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-accent-red">التقييم</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hitman-700">
-                {players.map((player, idx) => {
-                  const playerRating = ratings[player.userId] || { likes: 0, dislikes: 0, userRating: null };
-                  const isRatingLoading = ratingLoading[player.userId];
-                  
-                  return (
-                    <tr 
-                      key={player.ranking} 
-                      className={`hover:bg-hitman-700/30 transition-colors duration-200 ${
-                        idx < 3 ? 'bg-gradient-to-r from-yellow-900/20 to-yellow-800/10' : ''
-                      }`}
-                    >
-                      {/* Ranking */}
-                      <td className="px-6 py-4 text-center">
-                        <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
-                          idx === 0 ? 'bg-yellow-500 text-black' :
-                          idx === 1 ? 'bg-gray-400 text-black' :
-                          idx === 2 ? 'bg-amber-600 text-white' :
-                          'bg-hitman-700 text-hitman-300'
-                        }`}>
-                          {player.ranking}
-                        </div>
-                      </td>
-                      
-                      {/* Player Name */}
-                      <td className="px-6 py-4">
-                        <Link 
-                          to={`/dashboard/profile/${player.username}`}
-                          className="flex items-center gap-3 group hover:text-accent-red transition-colors duration-200"
-                        >
-                          <div className="w-10 h-10 bg-gradient-to-br from-hitman-700 to-hitman-800 rounded-full flex items-center justify-center border border-hitman-600 group-hover:border-accent-red transition-colors">
-                            <span className="text-lg font-bold text-hitman-300 group-hover:text-accent-red">
-                              {(player.name || player.username)?.charAt(0).toUpperCase()}
-                            </span>
+        </div>
+
+        {/* Rankings Table */}
+        <div className="card-3d p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-blood-400 flex items-center gap-2">
+              <currentTab.icon className="w-5 h-5" />
+              ترتيب {currentTab?.label}
+            </h2>
+            <div className="flex items-center gap-2 text-sm text-white/60">
+              <Building2 className="w-4 h-4" />
+              <span>أفضل 50 لاعب</span>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center gap-3 card-3d bg-black/40 border-white/20 px-6 py-4">
+                <Loader className="w-6 h-6 animate-spin text-blood-400" />
+                <p className="text-white/90">جاري تحميل التصنيفات...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="card-3d bg-red-950/30 border-red-500/50 px-6 py-4 inline-block">
+                <p className="text-red-400">{error}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="px-4 py-3 text-right text-sm font-bold text-blood-400">#</th>
+                    <th className="px-4 py-3 text-right text-sm font-bold text-blood-400">اللاعب</th>
+                    <th className="px-4 py-3 text-right text-sm font-bold text-blood-400">{currentTab?.label}</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold text-blood-400">التقييم</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {players.map((player, idx) => {
+                    const playerRating = ratings[player.userId] || { likes: 0, dislikes: 0, userRating: null };
+                    const isRatingLoading = ratingLoading[player.userId];
+                    
+                    return (
+                      <tr 
+                        key={player.ranking} 
+                        className={`hover:bg-white/5 transition-colors duration-200 ${
+                          idx < 3 ? 'bg-gradient-to-r from-yellow-950/20 to-yellow-800/10' : ''
+                        }`}
+                      >
+                        {/* Ranking */}
+                        <td className="px-4 py-4 text-center">
+                          <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                            idx === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-400 text-black' :
+                            idx === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-300 text-black' :
+                            idx === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white' :
+                            'bg-gradient-to-r from-white/20 to-white/10 text-white/90'
+                          }`}>
+                            {player.ranking}
                           </div>
-                          <div>
-                            <div className="font-bold text-white group-hover:text-accent-red transition-colors">
-                              <VipName user={player} disableLink={true} />
+                        </td>
+                        
+                        {/* Player Name */}
+                        <td className="px-4 py-4">
+                          <Link 
+                            to={`/dashboard/profile/${player.username}`}
+                            className="flex items-center gap-3 group hover:text-blood-400 transition-colors duration-200"
+                          >
+                            <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center border border-white/20 group-hover:border-blood-400/50 transition-colors">
+                              <span className="text-sm font-bold text-white group-hover:text-blood-400">
+                                {(player.name || player.username)?.charAt(0).toUpperCase()}
+                              </span>
                             </div>
-                            <div className="text-xs text-hitman-400">
-                              المستوى {player.level || 1}
+                            <div>
+                              <div className="font-bold text-white group-hover:text-blood-400 transition-colors">
+                                <VipName user={player} disableLink={true} />
+                              </div>
+                              <div className="text-xs text-white/50">
+                                المستوى {player.level || 1}
+                              </div>
+                            </div>
+                          </Link>
+                        </td>
+                        
+                        {/* Criteria Value */}
+                        <td className="px-4 py-4 text-right">
+                          <span className={`font-mono text-lg font-bold text-${currentTab?.color}-400`}>
+                            {formatValue(player.criteria, activeTab)}
+                          </span>
+                        </td>
+                        
+                        {/* Rating */}
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-center gap-3">
+                            {/* Like Button */}
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleRate(player.userId, 'LIKE')}
+                                disabled={isRatingLoading}
+                                className={`p-2 rounded-lg transition-all duration-200 ${
+                                  playerRating.userRating === 'LIKE'
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+                                    : 'bg-white/10 text-white/70 hover:bg-green-600 hover:text-white hover:shadow-lg hover:shadow-green-600/30'
+                                } ${isRatingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                <ThumbsUp className="w-4 h-4" />
+                              </button>
+                              <span className="text-sm font-bold text-green-400 min-w-[20px] text-center">
+                                {playerRating.likes}
+                              </span>
+                            </div>
+                            
+                            {/* Dislike Button */}
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleRate(player.userId, 'DISLIKE')}
+                                disabled={isRatingLoading}
+                                className={`p-2 rounded-lg transition-all duration-200 ${
+                                  playerRating.userRating === 'DISLIKE'
+                                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
+                                    : 'bg-white/10 text-white/70 hover:bg-red-600 hover:text-white hover:shadow-lg hover:shadow-red-600/30'
+                                } ${isRatingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                <ThumbsDown className="w-4 h-4" />
+                              </button>
+                              <span className="text-sm font-bold text-red-400 min-w-[20px] text-center">
+                                {playerRating.dislikes}
+                              </span>
                             </div>
                           </div>
-                        </Link>
-                      </td>
-                      
-                      {/* Criteria Value */}
-                      <td className="px-6 py-4 text-right">
-                        <span className="font-mono text-lg font-bold text-accent-green">
-                          {formatValue(player.criteria, activeTab)}
-                        </span>
-                      </td>
-                      
-                      {/* Rating */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          {/* Like/Dislike Buttons */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleRate(player.userId, 'LIKE')}
-                              disabled={isRatingLoading}
-                              className={`p-2 rounded-lg transition-all duration-200 ${
-                                playerRating.userRating === 'LIKE'
-                                  ? 'bg-green-600 text-white shadow-lg'
-                                  : 'bg-hitman-700 text-hitman-300 hover:bg-green-600 hover:text-white'
-                              } ${isRatingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                              <ThumbsUp className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm font-bold text-green-400 min-w-[20px] text-center">
-                              {playerRating.likes}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleRate(player.userId, 'DISLIKE')}
-                              disabled={isRatingLoading}
-                              className={`p-2 rounded-lg transition-all duration-200 ${
-                                playerRating.userRating === 'DISLIKE'
-                                  ? 'bg-red-600 text-white shadow-lg'
-                                  : 'bg-hitman-700 text-hitman-300 hover:bg-red-600 hover:text-white'
-                              } ${isRatingLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                              <ThumbsDown className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm font-bold text-red-400 min-w-[20px] text-center">
-                              {playerRating.dislikes}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      
-      {/* Footer Info */}
-      <div className="max-w-4xl mx-auto mt-8 text-center text-hitman-400 text-sm">
-        <p>يتم تحديث التصنيفات كل 5 دقائق • يمكنك النقر على اسم اللاعب لعرض ملفه الشخصي</p>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        
+        {/* Footer Info */}
+        <div className="card-3d p-4 text-center">
+          <p className="text-white/60 text-sm">
+            يتم تحديث التصنيفات كل 5 دقائق • يمكنك النقر على اسم اللاعب لعرض ملفه الشخصي
+          </p>
+        </div>
       </div>
     </div>
   );

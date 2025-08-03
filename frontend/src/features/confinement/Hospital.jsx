@@ -52,14 +52,7 @@ export default function Hospital() {
           total = Math.max(1, Math.round((releaseAt - startedAt) / 1000));
         }
         
-        // Debug: Let's see what the backend is actually sending
-        console.log('Backend Hospital Data:', {
-          remainingSeconds: data.remainingSeconds,
-          releaseAt: data.releaseAt,
-          startedAt: data.startedAt,
-          calculatedTotal: total,
-          originalDuration: data.originalDuration || 'not provided'
-        });
+
         
 
         
@@ -239,21 +232,21 @@ export default function Hospital() {
   // Banner and main layout
   return (
     <div className="min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white p-4 pt-20">
-      {/* Banner */}
-      <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-10 flex items-center justify-center bg-gradient-to-br from-accent-red/40 to-black/60 border-2 border-accent-red animate-fade-in">
-        <div className="absolute inset-0 w-full h-full object-cover opacity-40 bg-gradient-to-br from-red-900 to-black"></div>
-        <div className="relative z-10 text-center">
-          <Heart className="w-16 h-16 mx-auto text-accent-red mb-2 animate-bounce" />
-          <h1 className="text-4xl font-bouya mb-2 text-transparent bg-clip-text bg-gradient-to-r from-accent-red via-red-400 to-accent-red animate-glow">
+      {/* Enhanced Header */}
+      <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden mb-10 card-3d bg-blood-gradient">
+        <div className="absolute inset-0 bg-gradient-to-br from-blood-900/20 to-black/60"></div>
+        <div className="relative z-10 text-center p-8">
+          <Heart className="w-16 h-16 mx-auto text-blood-400 mb-2 animate-bounce" />
+          <h1 className="text-4xl font-bouya mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blood-400 via-blood-300 to-blood-400 animate-glow-blood">
             المستشفى
           </h1>
-          <p className="text-hitman-300 text-lg">
+          <p className="text-white/80 text-lg">
             مركز العلاج والشفاء
           </p>
           {hospitalCount !== null && (
-            <div className="mt-2 flex items-center justify-center gap-2 text-accent-yellow text-lg animate-pulse">
+            <div className="mt-2 flex items-center justify-center gap-2 text-blood-300 text-lg">
               <Users className="w-5 h-5" />
-              <span>عدد المرضى الآن: <b>{hospitalCount}</b></span>
+              <span>عدد المرضى الآن: <b className="text-blood-400">{hospitalCount}</b></span>
             </div>
           )}
         </div>
@@ -262,35 +255,35 @@ export default function Hospital() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
         {/* Hospital Status */}
-        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-2xl p-8 shadow-lg animate-fade-in">
-          <h2 className="text-2xl font-bold mb-6 text-accent-red text-center">حالة المستشفى</h2>
+        <div className="card-3d p-8 animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6 text-blood-400 text-center">حالة المستشفى</h2>
           
           {hospitalStatus?.inHospital ? (
             <div className="space-y-6">
               <div className="text-center">
                 <div className="text-6xl mb-4">🏥</div>
-                <h3 className="text-xl font-bold text-accent-red mb-2">أنت الآن في المستشفى</h3>
-                <p className="text-hitman-300">تحتاج إلى وقت للشفاء من إصاباتك</p>
+                <h3 className="text-xl font-bold text-blood-400 mb-2">أنت الآن في المستشفى</h3>
+                <p className="text-white/70">تحتاج إلى وقت للشفاء من إصاباتك</p>
               </div>
 
               {/* Timer */}
-              <div className="text-center bg-hitman-800/30 rounded-xl p-6">
-                <Clock className="w-8 h-8 text-accent-red mx-auto mb-2" />
-                <div className="text-3xl font-mono text-accent-red mb-2">
+              <div className="text-center bg-black/20 rounded-xl p-6 border border-blood-500/20">
+                <Clock className="w-8 h-8 text-blood-400 mx-auto mb-2" />
+                <div className="text-3xl font-mono text-blood-400 mb-2">
                   {formatTime(remainingTime)}
                 </div>
-                <p className="text-hitman-300 text-sm">الوقت المتبقي للشفاء</p>
+                <p className="text-white/70 text-sm">الوقت المتبقي للشفاء</p>
               </div>
 
               {/* Progress Bar */}
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-hitman-300">تقدم الشفاء</span>
-                  <span className="text-accent-red font-bold">{Math.round(getProgressPercentage())}%</span>
+                  <span className="text-white/70">تقدم الشفاء</span>
+                  <span className="text-blood-400 font-bold">{Math.round(getProgressPercentage())}%</span>
                 </div>
-                <div className="w-full bg-hitman-700 rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-accent-red to-red-600 h-3 rounded-full transition-all duration-1000"
+                <div className="progress-3d h-3">
+                  <div
+                    className="progress-3d-fill bg-gradient-to-r from-blood-600 to-blood-400 h-3 rounded-full transition-all duration-1000"
                     style={{ width: `${getProgressPercentage()}%` }}
                   ></div>
                 </div>
@@ -330,9 +323,9 @@ export default function Hospital() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 text-accent-green mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-accent-green mb-2">أنت بصحة جيدة</h3>
-              <p className="text-hitman-300">
+              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-green-400 mb-2">أنت بصحة جيدة</h3>
+              <p className="text-white/70">
                 لست في المستشفى حالياً. يمكنك العودة إلى اللعب!
               </p>
             </div>
@@ -340,8 +333,8 @@ export default function Hospital() {
         </div>
 
         {/* Hospital Information */}
-        <div className="bg-gradient-to-br from-hitman-800/50 to-hitman-900/50 border border-hitman-700 rounded-2xl p-8 shadow-lg animate-fade-in">
-          <h2 className="text-2xl font-bold mb-6 text-accent-red text-center">معلومات المستشفى</h2>
+        <div className="card-3d p-8 animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6 text-blood-400 text-center">معلومات المستشفى</h2>
           
           <div className="space-y-6">
             <div className="bg-hitman-800/30 rounded-xl p-4">
@@ -398,4 +391,4 @@ export default function Hospital() {
       </div>
     </div>
   );
-} 
+}

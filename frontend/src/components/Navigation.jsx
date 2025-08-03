@@ -37,7 +37,7 @@ export function MenuButton({ isOpen, setIsOpen }) {
 }
 
 // Enhanced Navigation Item with 3D effects and mobile optimization
-const NavItem = ({ to, label, icon: Icon, hasNotification, notificationCount, isUnlocked, onClick, category }) => {
+const NavItem = ({ to, label, icon: Icon, hasNotification, notificationCount, isUnlocked, onClick, category, closeMenu }) => {
   const [isPressed, setIsPressed] = useState(false)
 
   return (
@@ -56,6 +56,9 @@ const NavItem = ({ to, label, icon: Icon, hasNotification, notificationCount, is
         if (!isUnlocked) {
           e.preventDefault()
           onClick?.()
+        } else {
+          // Close the navigation menu when clicking an unlocked item
+          closeMenu?.()
         }
       }}
       onTouchStart={() => setIsPressed(true)}
@@ -142,11 +145,14 @@ export default function Navigation({ isOpen, setIsOpen }) {
     extras: true
   })
 
-  // Auto-close navigation on mobile after navigation
+  // Auto-close navigation after navigation
   const handleNavigation = (path) => {
-    if (window.innerWidth < 1024) {
-      setIsOpen(false)
-    }
+    setIsOpen(false)
+  }
+
+  // Close menu function
+  const closeMenu = () => {
+    setIsOpen(false)
   }
 
   const handleLogout = () => {
@@ -204,7 +210,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
       items: [
         { to: "/dashboard/gangs", label: "العصابات", icon: Group, feature: "gangs" },
         { to: "/dashboard/friends", label: "الأصدقاء", icon: UserPlus, hasNotification: pendingCount > 0, notificationCount: pendingCount, feature: "friends" },
-        { to: "/dashboard/messages", label: "الرس��ئل", icon: MessageSquare, hasNotification: unreadCount > 0, notificationCount: unreadCount, feature: "messages" },
+        { to: "/dashboard/messages", label: "الرسائل", icon: MessageSquare, hasNotification: unreadCount > 0, notificationCount: unreadCount, feature: "messages" },
         { to: "/dashboard/global-chat", label: "الدردشة", icon: MessageCircle, feature: "chat" },
       ]
     },
@@ -312,6 +318,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
                               handleNavigation(item.to);
                             }
                           }}
+                          closeMenu={closeMenu}
                         />
                       );
                     })}
@@ -334,6 +341,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
                 icon={Settings}
                 isUnlocked={true}
                 onClick={() => handleNavigation('/admin/panel')}
+                closeMenu={closeMenu}
               />
             </div>
           )}

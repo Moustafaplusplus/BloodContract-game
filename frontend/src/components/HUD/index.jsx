@@ -201,28 +201,6 @@ export default function HUD({ menuButton }) {
     }
   }, [socket])
 
-  // Debug logging for HUD data - moved before early return
-  useEffect(() => {
-    if (hudData) {
-      const healthPercent = hudData.maxHp > 0 ? (hudData.hp / hudData.maxHp) * 100 : 0
-      const energyPercent = hudData.maxEnergy > 0 ? (hudData.energy / hudData.maxEnergy) * 100 : 0
-      const expPercent = hudData.nextLevelExp > 0 ? (hudData.exp / hudData.nextLevelExp) * 100 : 0
-      
-      console.log('[HUD] Debug data:', {
-        energy: hudData?.energy,
-        maxEnergy: hudData?.maxEnergy,
-        energyPercent,
-        hp: hudData?.hp,
-        maxHp: hudData?.maxHp,
-        healthPercent,
-        level: hudData?.level,
-        exp: hudData?.exp,
-        nextLevelExp: hudData?.nextLevelExp,
-        expPercent
-      });
-    }
-  }, [hudData]);
-
   // Auto-collapse after interaction on mobile
   const handleMobileAction = (action) => {
     if (isMobile) {
@@ -270,32 +248,32 @@ export default function HUD({ menuButton }) {
         <div className="h-full blood-gradient border-r border-blood-500/30 flex flex-col">
           
           {/* Enhanced Header with Menu Button and Toggle */}
-          <div className="p-2 border-b border-blood-500/20 flex items-center justify-between">
+          <div className="p-2 border-b border-blood-500/20">
             {/* Menu Button */}
-            <div className={`transition-all duration-300 ${isExpanded ? 'w-auto' : 'w-full flex justify-center'}`}>
+            <div className="flex justify-center mb-2">
               {menuButton}
             </div>
             
-            {/* Enhanced Expand/Collapse Toggle */}
-            {isExpanded && (
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="btn-touch card-3d w-8 h-8 flex items-center justify-center ml-1 group"
-                title="طي الشريط الجانبي"
-              >
-                <ChevronLeft className="w-3 h-3 text-white group-hover:text-blood-400 transition-colors" />
-              </button>
-            )}
-
-            {!isExpanded && (
-              <button
-                onClick={() => setIsExpanded(true)}
-                className="absolute -right-2 top-1/2 -translate-y-1/2 btn-touch card-3d w-5 h-8 flex items-center justify-center group z-10"
-                title="توسيع الشريط الجانبي"
-              >
-                <ChevronRight className="w-2 h-2 text-white group-hover:text-blood-400 transition-colors" />
-              </button>
-            )}
+            {/* Expand/Collapse Toggle - moved below menu button */}
+            <div className="flex justify-center">
+              {isExpanded ? (
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="btn-touch card-3d w-8 h-8 flex items-center justify-center group"
+                  title="طي الشريط الجانبي"
+                >
+                  <ChevronLeft className="w-3 h-3 text-white group-hover:text-blood-400 transition-colors" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsExpanded(true)}
+                  className="btn-touch card-3d w-8 h-8 flex items-center justify-center group"
+                  title="توسيع الشريط الجانبي"
+                >
+                  <ChevronRight className="w-3 h-3 text-white group-hover:text-blood-400 transition-colors" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Enhanced User Level */}

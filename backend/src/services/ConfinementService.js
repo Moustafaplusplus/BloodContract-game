@@ -201,90 +201,63 @@ export class ConfinementService {
     }
   }
 
-  static async healOut(userId, fullHeal = true) {
-    const t = await sequelize.transaction();
+  static async healOut(userId) {
     try {
-      console.log('[ConfinementService] Starting healOut for userId:', userId);
-      
-      // First get the character ID for this user
-      const character = await withTimeout(
-        Character.findOne({ where: { userId }, transaction: t }),
-        3000
-      );
+      const character = await Character.findByPk(userId);
       if (!character) {
-        console.log('[ConfinementService] Character not found for userId:', userId);
-        await t.rollback();
-        throw new Error("Character not found");
-      }
-      
-      console.log('[ConfinementService] Found character:', character.id);
-      
-      const rec = await withTimeout(
-        Hospital.findOne({ 
-          where: { userId: userId, releasedAt: { [Op.gt]: this.now() } }, 
-          transaction: t, 
-          lock: t.LOCK.UPDATE 
-        }),
-        3000
-      );
-      
-      if (!rec) {
-        console.log('[ConfinementService] No active hospital record found for userId:', userId);
-        await t.rollback();
-        throw new Error("Not in hospital");
-      }
-      
-      console.log('[ConfinementService] Found hospital record:', rec.id);
-      
-      const remainingSeconds = this.secondsLeft(rec.releasedAt);
-      const minutesLeft = Math.ceil(remainingSeconds / 60);
-      // Fixed heal cost: 100 money per minute
-      const cost = minutesLeft * 100;
-      
-      console.log('[ConfinementService] Heal cost:', cost, 'Character money:', character.money);
-      
-      if (character.money < cost) {
-        console.log('[ConfinementService] Insufficient funds for heal');
-        await t.rollback();
-        throw new Error("Insufficient funds");
+        return { success: false, message: 'Character not found' };
       }
 
-      character.money -= cost;
-      
-      // Restore 100% HP if paid heal, 80% if natural
-      const maxHp = typeof character.getMaxHp === 'function' ? character.getMaxHp() : character.maxHp;
-      character.hp = fullHeal ? maxHp : Math.floor(maxHp * 0.8);
-      
-      console.log('[ConfinementService] Updated character - Money:', character.money, 'HP:', character.hp);
-      
-      await character.save({ transaction: t });
-      await rec.destroy({ transaction: t });
-
-      console.log('[ConfinementService] Committing transaction...');
-      await t.commit();
-      console.log('[ConfinementService] Transaction committed successfully');
-      
-      // Emit hospital leave event
-      if (io) {
-        io.to(`user:${userId}`).emit('hospital:leave');
-      }
-
-      // Create notification for hospital release (non-blocking)
-      setImmediate(async () => {
-        try {
-          const notification = await NotificationService.createOutOfHospitalNotification(userId);
-          emitNotification(userId, notification);
-          console.log('[ConfinementService] Hospital notification created successfully');
-        } catch (notificationError) {
-          console.error('[ConfinementService] Notification error (non-critical):', notificationError.message);
+      const rec = await Confinement.findOne({
+        where: {
+          userId,
+          type: 'hospital',
+          releaseAt: { [Op.gt]: new Date() }
         }
       });
-      
-      return { success: true, newCash: character.money, hp: character.hp };
+
+      if (!rec) {
+        return { success: false, message: 'No active hospital record found' };
+      }
+
+      const cost = Math.ceil((rec.releaseAt - new Date()) / (1000 * 60 * 60)) * 1000;
+
+      if (character.money < cost) {
+        return { success: false, message: 'Insufficient funds for heal' };
+      }
+
+      const transaction = await sequelize.transaction();
+
+      try {
+        character.money -= cost;
+        character.hp = character.maxHp;
+        await character.save({ transaction });
+
+        await rec.destroy({ transaction });
+
+        await transaction.commit();
+
+        // Create notification
+        try {
+          await Notification.create({
+            userId,
+            type: 'hospital',
+            title: 'تم الشفاء',
+            message: `تم شفاؤك من المستشفى مقابل ${cost.toLocaleString()} دولار`,
+            isRead: false
+          });
+        } catch (notificationError) {
+          // Non-critical error, don't fail the operation
+        }
+
+        return { success: true, message: 'Healed successfully', cost };
+      } catch (err) {
+        await transaction.rollback();
+        throw err;
+      }
     } catch (err) {
       console.error('[ConfinementService] Error in healOut:', err.message);
-      await t.rollback();
-      throw err;
+      return { success: false, message: 'Internal server error' };
     }
   }
 

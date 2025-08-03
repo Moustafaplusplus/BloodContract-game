@@ -1,6 +1,7 @@
 import { GameNews, User } from '../models/index.js';
 import { Notification } from '../models/Notification.js';
 import { Character } from '../models/Character.js';
+import { Op } from 'sequelize';
 
 export class GameNewsService {
   // Get all active game news
@@ -36,7 +37,7 @@ export class GameNewsService {
       });
 
       // Send notification to all players
-      await this.notifyAllPlayers(news);
+      await this.notifyAllPlayers(news.id);
 
       return news;
     } catch (error) {
@@ -119,62 +120,61 @@ export class GameNewsService {
   }
 
   // Notify all players about new game news
-  static async notifyAllPlayers(news) {
+  static async notifyAllPlayers(newsId) {
     try {
-      // Get all characters (all characters are considered active)
+      const news = await GameNews.findByPk(newsId);
+      if (!news) {
+        throw new Error('News not found');
+      }
+
+      // Get all active characters
       const characters = await Character.findAll({
+        where: {
+          lastActive: { [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Active in last 7 days
+        },
         attributes: ['userId']
       });
 
-      console.log(`Found ${characters.length} active characters to notify`);
+      if (characters.length === 0) {
+        return { success: false, message: 'No active users found to notify' };
+      }
 
       const userIds = characters.map(char => char.userId);
 
-      if (userIds.length === 0) {
-        console.log('No active users found to notify');
-        return { success: true, notifiedCount: 0 };
-      }
-
-      // Create notifications for all players
+      // Create notifications for all users
       const notifications = userIds.map(userId => ({
-        userId: userId,
-        type: 'SYSTEM',
-        title: 'تحديث جديد في اللعبة!',
-        content: `تم نشر تحديث جديد: "${news.title}". يمكنك مشاهدته في قسم أخبار اللعبة في الصفحة الرئيسية.`,
-        data: {
-          newsId: news.id,
-          newsTitle: news.title
-        },
-        isRead: false
+        userId,
+        type: 'game_news',
+        title: 'أخبار اللعبة',
+        message: news.title,
+        data: { newsId: news.id },
+        isRead: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }));
 
       const createdNotifications = await Notification.bulkCreate(notifications);
-      console.log(`Created ${createdNotifications.length} notifications`);
 
-      // Also emit socket event for real-time notifications
+      // Emit socket notifications
       try {
-        const { emitNotification } = await import('../socket.js');
-        userIds.forEach(userId => {
-          emitNotification(userId, {
-            type: 'SYSTEM',
-            title: 'تحديث جديد في اللعبة!',
-            content: `تم نشر تحديث جديد: "${news.title}". يمكنك مشاهدته في قسم أخبار اللعبة في الصفحة الرئيسية.`,
-            data: {
-              newsId: news.id,
-              newsTitle: news.title
-            }
+        if (global.io) {
+          userIds.forEach(userId => {
+            global.io.to(`user:${userId}`).emit('notification:new', {
+              type: 'game_news',
+              title: 'أخبار اللعبة',
+              message: news.title,
+              data: { newsId: news.id }
+            });
           });
-        });
-        console.log(`Emitted socket notifications to ${userIds.length} users`);
+        }
       } catch (socketError) {
         console.error('Socket notification error:', socketError);
       }
 
-      return { success: true, notifiedCount: userIds.length };
+      return { success: true, notifiedUsers: userIds.length };
     } catch (error) {
       console.error('Failed to notify players:', error);
-      // Don't throw error here as the news was created successfully
-      return { success: false, error: error.message };
+      return { success: false, message: 'Failed to notify players' };
     }
   }
 } 

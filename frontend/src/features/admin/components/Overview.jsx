@@ -55,7 +55,7 @@ export default function Overview() {
           throw new Error('User is not an admin');
         }
       } catch (error) {
-        console.error('Debug Overview: Profile check failed:', error.response?.status, error.response?.data);
+
         throw new Error('Authentication or admin check failed');
       }
       
@@ -64,7 +64,7 @@ export default function Overview() {
       }).then(res => {
         return res.data;
       }).catch(error => {
-        console.error('Debug Overview: Error response:', error.response?.status, error.response?.data);
+
         throw error;
       });
     },

@@ -11,11 +11,11 @@ export default function ConfinementWrapper({
 
   if (loading) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white ${className}`}>
+      <div className={`min-h-screen blood-gradient text-white ${className}`}>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-red mx-auto mb-4"></div>
-            <p className="text-hitman-300">جاري التحقق من حالة الاحتجاز...</p>
+          <div className="text-center card-3d p-8">
+            <div className="loading-shimmer w-12 h-12 rounded-full mx-auto mb-4"></div>
+            <p className="text-white/70">جاري التحقق من حالة الاحتجاز...</p>
           </div>
         </div>
       </div>
@@ -27,7 +27,7 @@ export default function ConfinementWrapper({
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-hitman-950 via-hitman-900 to-black text-white ${className}`}>
+    <div className={`min-h-screen blood-gradient text-white ${className}`}>
       {showRestriction && (
         <div className={`p-4 ${restrictionPosition === 'top' ? 'pt-20' : 'pt-4'}`}>
           <ConfinementRestriction />
@@ -46,4 +46,4 @@ export default function ConfinementWrapper({
       )}
     </div>
   );
-} 
+}
