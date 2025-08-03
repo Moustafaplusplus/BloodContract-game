@@ -1,6 +1,6 @@
 import { User } from '../models/User.js';
 import { UserService } from '../services/UserService.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { uploadToFirebase } from '../config/firebase.js';
 
 export class UserController {

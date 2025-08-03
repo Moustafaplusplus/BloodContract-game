@@ -1,6 +1,6 @@
 import express from 'express';
 import { FightController } from '../controllers/FightController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { checkConfinementAccess } from '../middleware/confinement.js';
 
 const router = express.Router();

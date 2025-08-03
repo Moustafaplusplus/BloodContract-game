@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { SpecialItemController } from '../controllers/SpecialItemController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 
 const router = express.Router();
@@ -26,15 +26,15 @@ const upload = multer({
 router.get('/', SpecialItemController.getSpecialItems);
 
 // Protected routes (require authentication)
-router.post('/buy/:id', auth, SpecialItemController.buySpecialItem);
-router.post('/:id/use', auth, SpecialItemController.useSpecialItem);
-router.post('/sell/:id', auth, SpecialItemController.sellSpecialItem);
+router.post('/buy/:id', firebaseAuth, SpecialItemController.buySpecialItem);
+router.post('/:id/use', firebaseAuth, SpecialItemController.useSpecialItem);
+router.post('/sell/:id', firebaseAuth, SpecialItemController.sellSpecialItem);
 
 // Admin routes
-router.get('/admin', auth, adminAuth, SpecialItemController.getAllSpecialItemsForAdmin);
-router.post('/admin', auth, adminAuth, SpecialItemController.createSpecialItem);
-router.put('/admin/:id', auth, adminAuth, SpecialItemController.updateSpecialItem);
-router.delete('/admin/:id', auth, adminAuth, SpecialItemController.deleteSpecialItem);
-router.post('/upload-image', auth, adminAuth, upload.single('image'), SpecialItemController.uploadImage);
+router.get('/admin', firebaseAuth, adminAuth, SpecialItemController.getAllSpecialItemsForAdmin);
+router.post('/admin', firebaseAuth, adminAuth, SpecialItemController.createSpecialItem);
+router.put('/admin/:id', firebaseAuth, adminAuth, SpecialItemController.updateSpecialItem);
+router.delete('/admin/:id', firebaseAuth, adminAuth, SpecialItemController.deleteSpecialItem);
+router.post('/upload-image', firebaseAuth, adminAuth, upload.single('image'), SpecialItemController.uploadImage);
 
 export default router; 

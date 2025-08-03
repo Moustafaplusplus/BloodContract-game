@@ -27,7 +27,7 @@ export default function IpManagement() {
   const { data: blockedIps, isLoading: blockedIpsLoading } = useQuery({
     queryKey: ['admin-blocked-ips'],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.get('/api/admin/ips/blocked', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -39,7 +39,7 @@ export default function IpManagement() {
   const { data: ipStats, isLoading: ipStatsLoading } = useQuery({
     queryKey: ['admin-ip-stats'],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.get('/api/admin/ips/stats', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -51,7 +51,7 @@ export default function IpManagement() {
   const { data: flaggedIps, isLoading: flaggedIpsLoading } = useQuery({
     queryKey: ['admin-flagged-ips'],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.get('/api/admin/ips/flagged', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -62,7 +62,7 @@ export default function IpManagement() {
   // Block IP mutation
   const blockIpMutation = useMutation({
     mutationFn: ({ ipAddress, reason }) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.post('/api/admin/ips/block', { ipAddress, reason }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -82,7 +82,7 @@ export default function IpManagement() {
   // Unblock IP mutation
   const unblockIpMutation = useMutation({
     mutationFn: ({ ipAddress }) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.delete(`/api/admin/ips/${ipAddress}/unblock`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

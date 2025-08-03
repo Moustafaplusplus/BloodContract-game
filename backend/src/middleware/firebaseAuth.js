@@ -1,10 +1,9 @@
-import jwt from 'jsonwebtoken';
-import { Character } from '../models/Character.js';
+import admin from 'firebase-admin';
 import { User, IpTracking } from '../models/index.js';
 import { getRealIpAddress, getUserAgent } from '../utils/ipUtils.js';
 
-const SECRET = process.env.JWT_SECRET;
-if (!SECRET) throw new Error('JWT_SECRET environment variable is required');
+// Import Firebase configuration to ensure it's initialized
+import '../config/firebase.js';
 
 // Helper function to run database operations with timeout
 async function withTimeout(promise, timeoutMs = 8000) {
@@ -16,35 +15,29 @@ async function withTimeout(promise, timeoutMs = 8000) {
   ]);
 }
 
-export async function auth(req, res, next) {
+export async function firebaseAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
     return res.status(401).json({ message: 'No authentication token provided' });
   }
+  
   const token = authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ message: 'No authentication token provided' });
   }
   
   try {
-    const decoded = jwt.verify(token, SECRET);
-    if (!decoded?.id) {
-      return res.status(403).json({ message: 'Invalid authentication token - missing user ID' });
-    }
-
-    // Get user and check for bans with timeout
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const firebaseUid = decodedToken.uid;
+    
+    // Get user from database by Firebase UID
     let user;
     try {
-      user = await withTimeout(User.findByPk(decoded.id), 3000);
+      user = await withTimeout(User.findOne({ where: { firebaseUid } }), 3000);
     } catch (dbError) {
-      console.error('Auth middleware error - User lookup failed:', dbError.message);
-      // If database is down, allow request to proceed with limited info
-      req.user = { 
-        id: decoded.id, 
-        characterId: decoded.characterId,
-        firebaseUid: decoded.firebaseUid 
-      };
-      return next();
+      console.error('Firebase auth middleware error - User lookup failed:', dbError.message);
+      return res.status(500).json({ message: 'Database error during authentication' });
     }
 
     if (!user) {
@@ -84,7 +77,7 @@ export async function auth(req, res, next) {
         });
       }
     } catch (dbError) {
-      console.error('Auth middleware error - IP check failed:', dbError.message);
+      console.error('Firebase auth middleware error - IP check failed:', dbError.message);
       // Continue without IP checking if database is unavailable
     }
 
@@ -94,7 +87,7 @@ export async function auth(req, res, next) {
         await withTimeout(
           IpTracking.findOrCreate({
             where: { 
-              userId: decoded.id,
+              userId: user.id,
               ipAddress 
             },
             defaults: {
@@ -109,7 +102,7 @@ export async function auth(req, res, next) {
         await withTimeout(
           IpTracking.update(
             { lastSeen: new Date() },
-            { where: { userId: decoded.id, ipAddress } }
+            { where: { userId: user.id, ipAddress } }
           ),
           2000
         );
@@ -118,7 +111,7 @@ export async function auth(req, res, next) {
         await withTimeout(
           User.update(
             { lastIpAddress: ipAddress },
-            { where: { id: decoded.id } }
+            { where: { id: user.id } }
           ),
           2000
         );
@@ -128,20 +121,22 @@ export async function auth(req, res, next) {
       }
     });
 
+    // Set user info in request
     req.user = { 
-      id: decoded.id, 
-      characterId: decoded.characterId,
-      firebaseUid: decoded.firebaseUid 
+      id: user.id, 
+      characterId: user.characterId,
+      firebaseUid: user.firebaseUid 
     };
     
     // Update lastActive for the user's character (non-blocking)
-    if (decoded.id) {
+    if (user.id) {
       setImmediate(async () => {
         try {
+          const { Character } = await import('../models/Character.js');
           await withTimeout(
             Character.update(
               { lastActive: new Date() },
-              { where: { userId: decoded.id } }
+              { where: { userId: user.id } }
             ),
             2000
           );
@@ -154,10 +149,23 @@ export async function auth(req, res, next) {
     
     next();
   } catch (err) {
-    console.error('Auth middleware error:', err.message);
-    const msg = err.name === 'TokenExpiredError' 
-      ? 'Authentication token expired' 
-      : 'Invalid authentication token';
+    console.error('Firebase auth middleware error:', err.message);
+    console.error('Firebase auth middleware error details:', {
+      name: err.name,
+      code: err.code,
+      message: err.message,
+      stack: err.stack
+    });
+    
+    let msg = 'Invalid authentication token';
+    if (err.code === 'auth/id-token-expired') {
+      msg = 'Authentication token expired';
+    } else if (err.code === 'auth/id-token-revoked') {
+      msg = 'Authentication token revoked';
+    } else if (err.code === 'auth/invalid-id-token') {
+      msg = 'Invalid token format';
+    }
+    
     res.status(401).json({ message: msg });
   }
-}
+} 

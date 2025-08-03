@@ -11,7 +11,7 @@ export default function AdminReturnButton() {
 
   const handleReturnToAdmin = () => {
     // Restore the original admin token
-    localStorage.setItem('jwt', adminOriginalToken);
+    // Firebase token is automatically handled by axios interceptor
     
     // Clear the temporary storage
     localStorage.removeItem('adminOriginalToken');

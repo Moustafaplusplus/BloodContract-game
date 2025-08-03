@@ -1,7 +1,7 @@
 
 import express from 'express';
 const router = express.Router();
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { User, BloodContract } from '../models/index.js';
 import { Op } from 'sequelize';
 import { Character } from '../models/Character.js';
@@ -13,7 +13,7 @@ import { Statistic } from '../models/Statistic.js';
 import { NotificationService } from '../services/NotificationService.js';
 import { emitNotification } from '../socket.js';
 // Ghost Assassin: Instantly hospitalize a target for 5 black coins
-router.post('/ghost-assassin', auth, async (req, res) => {
+router.post('/ghost-assassin', firebaseAuth, async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const userId = req.user.id;
@@ -144,7 +144,7 @@ router.post('/ghost-assassin', auth, async (req, res) => {
 });
 
 // Create a new blood contract
-router.post('/', auth, async (req, res) => {
+router.post('/', firebaseAuth, async (req, res) => {
   try {
     const posterId = req.user.id;
     const { targetId, price } = req.body;
@@ -205,7 +205,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // List available contracts (with visibility and canFulfill flag)
-router.get('/available', auth, async (req, res) => {
+router.get('/available', firebaseAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
@@ -306,7 +306,7 @@ router.get('/available', auth, async (req, res) => {
 });
 
 // Fulfill a contract (attack/assassination)
-router.post('/:id/accept', auth, async (req, res) => {
+router.post('/:id/accept', firebaseAuth, async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const userId = req.user.id;
@@ -448,7 +448,7 @@ router.post('/:id/accept', auth, async (req, res) => {
 });
 
 // Get reward info after fulfillment
-router.get('/:id/reward', auth, async (req, res) => {
+router.get('/:id/reward', firebaseAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const contract = await BloodContract.findByPk(req.params.id, {
@@ -476,7 +476,7 @@ router.get('/:id/reward', auth, async (req, res) => {
 });
 
 // Get fight result/log for a contract
-router.get('/:id/result', auth, async (req, res) => {
+router.get('/:id/result', firebaseAuth, async (req, res) => {
   try {
     const contract = await BloodContract.findByPk(req.params.id);
     if (!contract) {

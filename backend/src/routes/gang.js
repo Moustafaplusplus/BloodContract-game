@@ -1,6 +1,6 @@
 import express from 'express';
 import { GangController } from '../controllers/GangController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { validate } from '../middleware/validation.js';
 
 const router = express.Router();

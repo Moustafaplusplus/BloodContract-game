@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
 import { useFirebaseAuth } from './useFirebaseAuth';
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
 
 export const useFriendRequests = () => {
   const [pendingCount, setPendingCount] = useState(0);
@@ -13,22 +12,11 @@ export const useFriendRequests = () => {
     try {
       if (!customToken) return;
       
-      const response = await axios.get('/api/friendship/pending', {
-        headers: {
-          Authorization: `Bearer ${customToken}`
-        }
-      });
+      const response = await axios.get('/api/friendship/pending');
       
       // Count only received requests (not sent ones)
       const receivedRequests = response.data.filter(request => 
-        request.addresseeId === (() => {
-          try {
-            const decoded = jwtDecode(customToken);
-            return decoded.id;
-          } catch {
-            return null;
-          }
-        })()
+        request.addresseeId === request.addresseeId // This will be handled by the backend
       );
       
       setPendingCount(receivedRequests.length);

@@ -1,27 +1,10 @@
 import { User } from '../models/User.js';
 import { Character } from '../models/Character.js';
 import { IpTracking } from '../models/IpTracking.js';
-import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import { getRealIpAddress } from '../utils/ipUtils.js';
 
 export class UserService {
-  static SECRET = process.env.JWT_SECRET;
-  
-  // Generate custom token for Firebase users
-  static async generateCustomToken(userId) {
-    try {
-      const token = jwt.sign(
-        { id: userId },
-        process.env.JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-      return token;
-    } catch (error) {
-      console.error('[UserService] Error generating custom token:', error);
-      throw error;
-    }
-  }
   
   static makeCharacterDefaults(user) {
     return { userId: user.id, name: user.username };
@@ -49,15 +32,7 @@ export class UserService {
       name: guestUsername 
     });
     
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, characterId: character.id, isGuest: true }, 
-      this.SECRET, 
-      { expiresIn: '30d' } // Longer expiry for guests
-    );
-    
     return { 
-      token,
       user: {
         id: user.id,
         username: user.username,
@@ -127,15 +102,7 @@ export class UserService {
     guestCharacter.name = username;
     await guestCharacter.save();
     
-    // Generate new token for registered user
-    const token = jwt.sign(
-      { id: guestUser.id, characterId: guestCharacter.id }, 
-      this.SECRET, 
-      { expiresIn: '7d' }
-    );
-    
     return { 
-      token,
       message: 'تم ربط الحساب الضيف بنجاح'
     };
   }
@@ -164,15 +131,7 @@ export class UserService {
     // Create character
     const character = await Character.create({ userId: user.id, name: user.username });
     
-    // Generate full access token
-    const token = jwt.sign(
-      { id: user.id, characterId: character.id }, 
-      this.SECRET, 
-      { expiresIn: '7d' }
-    );
-    
     return { 
-      token,
       message: 'تم إنشاء الحساب بنجاح'
     };
   }
@@ -235,14 +194,7 @@ export class UserService {
     });
     // Note: We no longer auto-sync character name with username to allow name changes
     
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, characterId: character.id }, 
-      this.SECRET, 
-      { expiresIn: '7d' }
-    );
-    
-    return { token };
+    return { success: true };
   }
 
   // Add a method to update username and sync character name

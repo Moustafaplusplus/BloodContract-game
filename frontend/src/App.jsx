@@ -27,7 +27,7 @@ import GangDetailsWrapper from './features/gangs/GangDetailsWrapper';
 import AdminPanel from "@/features/admin/AdminPanel";
 import { SocketProvider } from "@/contexts/SocketContext";
 import { FamePopupProvider } from "@/contexts/FamePopupContext";
-import { jwtDecode } from "jwt-decode";
+
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 

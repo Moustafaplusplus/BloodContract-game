@@ -66,7 +66,7 @@ export default function GangDetails({ gang, onRefresh }) {
         
         // Fallback: try to decode JWT token to get user ID
         try {
-          const token = localStorage.getItem('jwt');
+          const token = null;
           if (token) {
             // Simple JWT decode (payload only)
             const payload = JSON.parse(atob(token.split('.')[1]));
@@ -121,7 +121,7 @@ export default function GangDetails({ gang, onRefresh }) {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.patch(`/api/gangs/${gang.id}/board`, { board }, { headers });
       setBoard(res.data.board);
@@ -138,7 +138,7 @@ export default function GangDetails({ gang, onRefresh }) {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/leave`, {}, { headers });
       navigate('/dashboard/gangs');
@@ -156,7 +156,7 @@ export default function GangDetails({ gang, onRefresh }) {
     try {
       const amount = parseInt(donateAmount, 10);
       if (!amount || amount <= 0) throw new Error('أدخل مبلغًا صحيحًا');
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.post(`/api/gangs/${gang.id}/contribute`, { amount }, { headers });
       setVault(res.data.gangMoney);
@@ -176,7 +176,7 @@ export default function GangDetails({ gang, onRefresh }) {
       const amount = parseInt(transferAmount, 10);
       if (!amount || amount <= 0) throw new Error('أدخل مبلغًا صحيحًا');
       if (!transferTarget) throw new Error('اختر عضوًا');
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.post(`/api/gangs/${gang.id}/transfer-money`, { memberId: transferTarget, amount }, { headers });
       setVault(res.data.gangMoney);
@@ -193,7 +193,7 @@ export default function GangDetails({ gang, onRefresh }) {
     setDeleting(true);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.delete(`/api/gangs/${gang.id}`, { headers });
       navigate('/dashboard/gangs');
@@ -210,7 +210,7 @@ export default function GangDetails({ gang, onRefresh }) {
     setKickingMember(targetUserId);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/${gang.id}/kick`, { targetUserId }, { headers });
       if (onRefresh) onRefresh();
@@ -226,7 +226,7 @@ export default function GangDetails({ gang, onRefresh }) {
     setPromotingMember(targetUserId);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/${gang.id}/promote`, { targetUserId }, { headers });
       if (onRefresh) onRefresh();
@@ -242,7 +242,7 @@ export default function GangDetails({ gang, onRefresh }) {
     setPromotingMember(targetUserId);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/${gang.id}/demote`, { targetUserId }, { headers });
       if (onRefresh) onRefresh();
@@ -257,7 +257,7 @@ export default function GangDetails({ gang, onRefresh }) {
   const loadJoinRequests = async () => {
     if (!isAdmin) return;
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.get(`/api/gangs/${gang.id}/join-requests`, { headers });
       setJoinRequests(response.data);
@@ -271,7 +271,7 @@ export default function GangDetails({ gang, onRefresh }) {
     if (!window.confirm('هل أنت متأكد من قبول هذا الطلب؟')) return;
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/${gang.id}/join-requests/accept`, { requestId }, { headers });
       await loadJoinRequests(); // Reload requests
@@ -286,7 +286,7 @@ export default function GangDetails({ gang, onRefresh }) {
     if (!window.confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/${gang.id}/join-requests/reject`, { requestId }, { headers });
       await loadJoinRequests(); // Reload requests

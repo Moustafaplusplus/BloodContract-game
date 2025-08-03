@@ -49,7 +49,7 @@ export default function CharacterManagement() {
   const { data: charactersData, isLoading: charactersLoading } = useQuery({
     queryKey: ['admin-characters', debouncedSearchTerm],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.get(`/api/admin/characters?search=${debouncedSearchTerm}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -60,7 +60,7 @@ export default function CharacterManagement() {
   // Fetch inventory counts for all users
   const fetchInventoryCounts = async () => {
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const counts = {};
       
       // Fetch counts for each character
@@ -93,7 +93,7 @@ export default function CharacterManagement() {
   // Update character mutation
   const updateCharacterMutation = useMutation({
     mutationFn: ({ id, updates }) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.put(`/api/admin/characters/${id}`, updates, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -112,7 +112,7 @@ export default function CharacterManagement() {
   // Ban/Unban user mutation
   const banUserMutation = useMutation({
     mutationFn: ({ userId, isBanned }) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.put(`/api/admin/users/${userId}/ban`, { isBanned }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -211,7 +211,7 @@ export default function CharacterManagement() {
     });
     
     // Fetch inventory data
-    const token = localStorage.getItem('jwt');
+    const token = null;
     axios.get(`/api/admin/users/${userId}/inventory`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then(res => {

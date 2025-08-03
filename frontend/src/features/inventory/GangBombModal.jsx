@@ -20,7 +20,7 @@ export default function GangBombModal({ isOpen, onClose, onUse, itemId }) {
   const fetchGangs = async () => {
     try {
       setGangsLoading(true);
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const [gangsRes, myGangRes] = await Promise.all([
         axios.get('/api/gangs', { headers }),
@@ -45,7 +45,7 @@ export default function GangBombModal({ isOpen, onClose, onUse, itemId }) {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(`/api/special-items/${itemId}/use`, {
         targetGangId: selectedGangId

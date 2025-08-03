@@ -1,6 +1,6 @@
 import express from 'express';
 import { AdminSystemController, uploadCar, uploadHouse, uploadDog, uploadWeapon, uploadArmor } from '../controllers/AdminSystemController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 import * as AdminCarHouseDog from '../controllers/AdminSystemController.js';
 

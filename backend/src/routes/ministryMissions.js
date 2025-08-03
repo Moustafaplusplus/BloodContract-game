@@ -1,6 +1,6 @@
 import express from 'express';
 import { MinistryMissionController } from '../controllers/MinistryMissionController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 import multer from 'multer';
 import path from 'path';
@@ -24,25 +24,25 @@ const upload = multer({
 });
 
 // Get all missions list with user progress
-router.get('/list', auth, MinistryMissionController.getMissionsList);
+router.get('/list', firebaseAuth, MinistryMissionController.getMissionsList);
 
 // Get specific mission data
-router.get('/:missionId', auth, MinistryMissionController.getMissionData);
+router.get('/:missionId', firebaseAuth, MinistryMissionController.getMissionData);
 
 // Complete a mission
-router.post('/complete', auth, MinistryMissionController.completeMission);
+router.post('/complete', firebaseAuth, MinistryMissionController.completeMission);
 
 // Get user mission statistics
-router.get('/stats/user', auth, MinistryMissionController.getUserMissionStats);
+router.get('/stats/user', firebaseAuth, MinistryMissionController.getUserMissionStats);
 
 // Admin routes
-router.get('/admin/list', auth, adminAuth, MinistryMissionController.getAdminMissionsList);
-router.post('/admin', auth, adminAuth, MinistryMissionController.createMission);
-router.put('/admin/:id', auth, adminAuth, MinistryMissionController.updateMission);
-router.delete('/admin/:id', auth, adminAuth, MinistryMissionController.deleteMission);
+router.get('/admin/list', firebaseAuth, adminAuth, MinistryMissionController.getAdminMissionsList);
+router.post('/admin', firebaseAuth, adminAuth, MinistryMissionController.createMission);
+router.put('/admin/:id', firebaseAuth, adminAuth, MinistryMissionController.updateMission);
+router.delete('/admin/:id', firebaseAuth, adminAuth, MinistryMissionController.deleteMission);
 
 // Admin: Upload mission image
-router.post('/admin/upload-image', auth, adminAuth, upload.single('image'), async (req, res) => {
+router.post('/admin/upload-image', firebaseAuth, adminAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });

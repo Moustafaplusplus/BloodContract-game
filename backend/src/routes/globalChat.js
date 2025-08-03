@@ -1,6 +1,6 @@
 import express from 'express';
 import GlobalChatController from '../controllers/GlobalChatController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 
 const router = express.Router();
@@ -11,12 +11,12 @@ router.get('/test', (req, res) => {
 });
 
 // Get recent global messages
-router.get('/messages', auth, GlobalChatController.getRecentMessages);
+router.get('/messages', firebaseAuth, GlobalChatController.getRecentMessages);
 
 // Get system messages only
-router.get('/system', auth, GlobalChatController.getSystemMessages);
+router.get('/system', firebaseAuth, GlobalChatController.getSystemMessages);
 
 // Send system message (admin only)
-router.post('/system', auth, adminAuth, GlobalChatController.sendSystemMessage);
+router.post('/system', firebaseAuth, adminAuth, GlobalChatController.sendSystemMessage);
 
 export default router; 

@@ -53,7 +53,7 @@ export default function TasksManagement() {
   async function fetchTasks() {
     setLoading(true);
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       
       
       const res = await axios.get('/api/tasks/all', {
@@ -94,7 +94,7 @@ export default function TasksManagement() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       
       // Clean up form data - convert empty strings to 0 for numeric fields
       const cleanedForm = {
@@ -125,7 +125,7 @@ export default function TasksManagement() {
 
   async function handleDelete(id) {
     if (!window.confirm('هل أنت متأكد من حذف هذه المهمة؟')) return;
-    const token = localStorage.getItem('jwt');
+    const token = null;
     await axios.delete(`/api/tasks/${id}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

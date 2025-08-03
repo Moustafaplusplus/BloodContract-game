@@ -24,13 +24,17 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({ error: 'Invalid token' });
+  // Firebase auth errors
+  if (err.code === 'auth/id-token-expired') {
+    return res.status(401).json({ error: 'Authentication token expired' });
   }
 
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({ error: 'Token expired' });
+  if (err.code === 'auth/id-token-revoked') {
+    return res.status(401).json({ error: 'Authentication token revoked' });
+  }
+
+  if (err.code === 'auth/invalid-id-token') {
+    return res.status(401).json({ error: 'Invalid authentication token' });
   }
 
   // Default error response

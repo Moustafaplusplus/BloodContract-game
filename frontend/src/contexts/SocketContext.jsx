@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { jwtDecode } from 'jwt-decode';
+
 
 const SocketContext = createContext(null);
 
-function createSocket({ token }) {
+function createSocket({ firebaseToken }) {
   const API_URL =
     import.meta.env.VITE_API_URL ||
     'https://bloodcontract-game-production.up.railway.app';
   return io(API_URL, {
     path: '/ws',
-    auth: { token },
+    auth: { token: firebaseToken },
     transports: ['websocket', 'polling'],
     forceNew: true, // Force new connection for each user
     reconnection: true,
@@ -28,8 +28,11 @@ export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
   const [cooldowns, setCooldowns] = useState({});
   const [connectionAttempts, setConnectionAttempts] = useState(0);
-  const [token, setToken] = useState(null);
+  const [firebaseToken, setFirebaseToken] = useState(null);
   const [userId, setUserId] = useState(null);
+  
+  // Get Firebase token from FirebaseAuthProvider
+  const { customToken } = useFirebaseAuth();
   
   // Real-time game state
   const [hudData, setHudData] = useState(null);
@@ -67,63 +70,18 @@ export function SocketProvider({ children }) {
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [introStatus, setIntroStatus] = useState(null);
 
-  // Get token from localStorage and track changes
+  // Update Firebase token when it changes
   useEffect(() => {
-    const getToken = () => {
-      const storedToken = localStorage.getItem('jwt');
-      return storedToken;
-    };
-
-    // Set initial token
-    setToken(getToken());
-
-    // Listen for storage changes (when user logs in/out in another tab)
-    const handleStorageChange = (e) => {
-      if (e.key === 'jwt') {
-        setToken(e.newValue);
-      }
-    };
-
-    // Listen for custom auth events
-    const handleAuthChange = () => {
-      setToken(getToken());
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('auth-change', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('auth-change', handleAuthChange);
-    };
-  }, []);
-
-  // Extract userId from token
-  useEffect(() => {
-    if (!token) {
-      setUserId(null);
-      return;
+    if (customToken) {
+      setFirebaseToken(customToken);
+    } else {
+      setFirebaseToken(null);
     }
-
-    try {
-      const { id, exp } = jwtDecode(token);
-      const now = Math.floor(Date.now() / 1000);
-      if (exp < now) {
-        localStorage.removeItem('jwt');
-        setToken(null);
-        setUserId(null);
-        return;
-      }
-      setUserId(id);
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      setUserId(null);
-    }
-  }, [token]);
+  }, [customToken]);
 
   // Socket connection management
   useEffect(() => {
-    if (!token || !userId) {
+    if (!firebaseToken) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -131,7 +89,7 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    const newSocket = createSocket({ token });
+    const newSocket = createSocket({ firebaseToken });
     
     newSocket.on('connect', () => {
       

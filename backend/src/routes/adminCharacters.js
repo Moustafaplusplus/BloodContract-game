@@ -1,6 +1,6 @@
 import express from 'express';
 import { AdminCharacterController } from '../controllers/AdminCharacterController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 
 const router = express.Router();

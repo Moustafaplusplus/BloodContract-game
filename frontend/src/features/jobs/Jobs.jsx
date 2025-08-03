@@ -144,7 +144,7 @@ export default function Jobs() {
     queryFn: async () => {
       const response = await fetch('/api/jobs', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+          'Authorization': `Bearer ${null}`
         }
       });
       if (!response.ok) throw new Error('Failed to fetch jobs');
@@ -165,7 +165,7 @@ export default function Jobs() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+          'Authorization': `Bearer ${null}`
         },
         body: JSON.stringify({ jobId })
       });
@@ -196,7 +196,7 @@ export default function Jobs() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+          'Authorization': `Bearer ${null}`
         }
       });
       if (!response.ok) {

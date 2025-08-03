@@ -20,7 +20,7 @@ export default function GangDetailsWrapper() {
     try {
       setLoading(true);
       setError('');
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const response = await axios.get(`/api/gangs/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });

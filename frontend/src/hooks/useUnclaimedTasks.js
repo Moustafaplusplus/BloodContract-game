@@ -17,9 +17,7 @@ export function useUnclaimedTasks() {
       setLoading(true);
       
       // Use the efficient backend endpoint
-      const response = await axios.get('/api/tasks/unclaimed-count', {
-        headers: { Authorization: `Bearer ${customToken}` }
-      });
+      const response = await axios.get('/api/tasks/unclaimed-count');
 
       setUnclaimedCount(response.data.count);
     } catch (error) {

@@ -1,6 +1,6 @@
 import express from 'express';
 import { UserController } from '../controllers/UserController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import admin from 'firebase-admin';
 
 // Import Firebase configuration to ensure it's initialized
@@ -98,12 +98,7 @@ router.post('/firebase-token', async (req, res) => {
       }
     }
 
-    // Generate custom token for API calls
-    const { UserService } = await import('../services/UserService.js');
-    const token = UserService.generateCustomToken(user.id, user.firebaseUid);
-
     res.json({
-      token,
       user: {
         id: user.id,
         username: user.username,
@@ -151,16 +146,16 @@ router.post('/guest', async (req, res) => {
 });
 
 // Sync guest account to registered account
-router.post('/sync-guest', auth, UserController.syncGuestAccount);
+router.post('/sync-guest', firebaseAuth, UserController.syncGuestAccount);
 
 // Mark intro as seen
-router.post('/mark-intro-seen', auth, UserController.markIntroAsSeen);
+router.post('/mark-intro-seen', firebaseAuth, UserController.markIntroAsSeen);
 
 // Get intro status
-router.get('/intro-status', auth, UserController.getIntroStatus);
+router.get('/intro-status', firebaseAuth, UserController.getIntroStatus);
 
 // Check if user is authenticated
-router.get('/status', auth, (req, res) => {
+router.get('/status', firebaseAuth, (req, res) => {
   res.json({ 
     authenticated: true, 
     user: req.user 

@@ -477,11 +477,8 @@ const Notifications = () => {
 
             <button
               onClick={async () => {
-                try {
-                  const token = localStorage.getItem('jwt');
-                  await axios.post('/api/notifications/test', {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                  });
+                                  try {
+                    await axios.post('/api/notifications/test');
                 } catch (error) {
                   console.error('Test notification error:', error);
                 }

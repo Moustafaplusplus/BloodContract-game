@@ -12,11 +12,7 @@ export const useUnreadMessages = () => {
     try {
       if (!customToken) return;
       
-      const response = await axios.get('/api/messages/inbox', {
-        headers: {
-          Authorization: `Bearer ${customToken}`
-        }
-      });
+      const response = await axios.get('/api/messages/inbox');
       
       // Count conversations with unread messages
       const unreadConversations = response.data.filter(conversation => 

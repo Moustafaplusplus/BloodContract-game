@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { CrimeController } from '../controllers/CrimeController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 import { validate } from '../middleware/validation.js';
 import { checkConfinementAccess } from '../middleware/confinement.js';
@@ -31,7 +31,7 @@ const upload = multer({
   }
 });
 
-router.post('/upload-image', auth, adminAuth, upload.single('image'), async (req, res) => {
+router.post('/upload-image', firebaseAuth, adminAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -52,15 +52,15 @@ router.post('/upload-image', auth, adminAuth, upload.single('image'), async (req
   }
 });
 
-router.post('/', auth, adminAuth, CrimeController.createCrime);
-router.get('/', auth, CrimeController.getCrimes);
-router.get('/admin', auth, adminAuth, CrimeController.getAllCrimes);
-router.get('/:id', auth, CrimeController.getCrimeById);
-router.put('/:id', auth, adminAuth, CrimeController.updateCrime);
-router.delete('/:id', auth, adminAuth, CrimeController.deleteCrime);
-router.post('/execute/:crimeId', auth, checkConfinementAccess, validate('executeCrime'), CrimeController.executeCrime);
+router.post('/', firebaseAuth, adminAuth, CrimeController.createCrime);
+router.get('/', firebaseAuth, CrimeController.getCrimes);
+router.get('/admin', firebaseAuth, adminAuth, CrimeController.getAllCrimes);
+router.get('/:id', firebaseAuth, CrimeController.getCrimeById);
+router.put('/:id', firebaseAuth, adminAuth, CrimeController.updateCrime);
+router.delete('/:id', firebaseAuth, adminAuth, CrimeController.deleteCrime);
+router.post('/execute/:crimeId', firebaseAuth, checkConfinementAccess, validate('executeCrime'), CrimeController.executeCrime);
 
-router.get('/debug/:id', auth, adminAuth, async (req, res) => {
+router.get('/debug/:id', firebaseAuth, adminAuth, async (req, res) => {
   try {
     const crimeId = parseInt(req.params.id, 10);
     const crime = await Crime.findByPk(crimeId);
@@ -74,6 +74,6 @@ router.get('/debug/:id', auth, adminAuth, async (req, res) => {
   }
 });
 
-router.post('/execute', auth, validate('executeCrime'), CrimeController.executeCrime);
+router.post('/execute', firebaseAuth, validate('executeCrime'), CrimeController.executeCrime);
 
 export default router; 

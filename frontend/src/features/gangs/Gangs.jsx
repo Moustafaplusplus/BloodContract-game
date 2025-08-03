@@ -136,7 +136,7 @@ export default function Gangs() {
   useEffect(() => {
     if (!socket) return;
     const fetchGangs = () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       Promise.all([
         axios.get('/api/gangs', { headers }),
@@ -158,7 +158,7 @@ export default function Gangs() {
 
   useEffect(() => {
     setLoading(true);
-    const token = localStorage.getItem('jwt');
+    const token = null;
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     Promise.all([
       axios.get('/api/gangs', { headers }),
@@ -174,7 +174,7 @@ export default function Gangs() {
 
   const handleJoinGang = async (gangId) => {
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post(`/api/gangs/${gangId}/join`, {}, { headers });
       
@@ -198,7 +198,7 @@ export default function Gangs() {
 
   const handleCancelRequest = async (gangId) => {
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.delete(`/api/gangs/${gangId}/join-requests/cancel`, { headers });
       

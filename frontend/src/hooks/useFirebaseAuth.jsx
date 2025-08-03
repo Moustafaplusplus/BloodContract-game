@@ -47,31 +47,19 @@ export function FirebaseAuthProvider({ children }) {
         setUser(firebaseUser);
         setIsGuest(firebaseUser.isAnonymous);
         
-        // Get custom token from backend for API calls
+        // Get Firebase ID token for API calls
         try {
           const idToken = await firebaseUser.getIdToken();
-          const response = await axios.post('/api/auth/firebase-token', {
-            idToken
-          });
-          
-          if (response.data.token) {
-            setCustomToken(response.data.token);
-            // Save token to localStorage for AuthProvider compatibility
-            localStorage.setItem('jwt', response.data.token);
-            // Set axios interceptor with custom token
-            axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-            // Dispatch custom event for AuthProvider to react to auth changes
-            window.dispatchEvent(new CustomEvent('auth-change'));
-          }
+          setCustomToken(idToken);
+          // Set axios interceptor with Firebase ID token
+          axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
         } catch (error) {
-          console.error('Failed to get custom token:', error);
+          console.error('Failed to get Firebase ID token:', error);
         }
       } else {
         setUser(null);
         setIsGuest(false);
         setCustomToken(null);
-        // Clear token from localStorage
-        localStorage.removeItem('jwt');
         delete axios.defaults.headers.common['Authorization'];
       }
       
@@ -188,7 +176,7 @@ export function FirebaseAuthProvider({ children }) {
       await signOut(auth);
       setCustomToken(null);
       // Clear token from localStorage
-      localStorage.removeItem('jwt');
+      
       delete axios.defaults.headers.common['Authorization'];
       // Dispatch custom event for AuthProvider to react to auth changes
       window.dispatchEvent(new CustomEvent('auth-change'));

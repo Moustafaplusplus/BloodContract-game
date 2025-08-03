@@ -25,7 +25,7 @@ export default function CarManagement() {
   const { data: cars = [], isLoading: carsLoading } = useQuery({
     queryKey: ['admin-cars'],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.get('/api/admin/cars', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -36,7 +36,7 @@ export default function CarManagement() {
   // Car mutations
   const createCarMutation = useMutation({
     mutationFn: (data) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.post('/api/admin/cars', data, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -54,7 +54,7 @@ export default function CarManagement() {
 
   const updateCarMutation = useMutation({
     mutationFn: ({ id, data }) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.put(`/api/admin/cars/${id}`, data, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -72,7 +72,7 @@ export default function CarManagement() {
 
   const deleteCarMutation = useMutation({
     mutationFn: (id) => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.delete(`/api/admin/cars/${id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);
@@ -117,7 +117,7 @@ export default function CarManagement() {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const response = await axios.post('/api/admin/cars/upload-image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',

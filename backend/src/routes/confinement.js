@@ -1,6 +1,6 @@
 import express from 'express';
 import { ConfinementController } from '../controllers/ConfinementController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 
 const router = express.Router();
 

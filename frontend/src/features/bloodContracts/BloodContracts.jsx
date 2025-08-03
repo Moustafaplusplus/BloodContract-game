@@ -59,7 +59,7 @@ const BloodContracts = ({ currentUserId }) => {
     setReward(0);
     setPosterName('');
     setFightResult(null);
-    const token = localStorage.getItem('jwt');
+    const token = null;
     try {
       const res = await fetch(`/api/bloodcontracts/${contract.id}/accept`, {
         method: 'POST',

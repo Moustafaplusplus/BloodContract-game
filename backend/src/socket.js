@@ -2,7 +2,7 @@
 //  backend/src/socket.js  –  unified Socket.IO bootstrap (await fixes)
 // -----------------------------------------------------------------------------
 import { Server } from 'socket.io';
-import jwt from 'jsonwebtoken';
+import admin from 'firebase-admin';
 import { Character } from './models/Character.js';
 import { Message } from './models/Message.js';
 import { GlobalMessage } from './models/GlobalMessage.js';
@@ -53,9 +53,20 @@ export function initSocket(server) {
     }
 
     try {
-      const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
-      socket.data.userId = userId;
-      socket.join(`user:${userId}`);
+      // Verify Firebase ID token
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const firebaseUid = decodedToken.uid;
+      
+      // Get user from database by Firebase UID
+      const { User } = await import('./models/User.js');
+      const user = await User.findOne({ where: { firebaseUid } });
+      
+      if (!user) {
+        return socket.disconnect();
+      }
+      
+      socket.data.userId = user.id;
+      socket.join(`user:${user.id}`);
       
       // User connected successfully
 

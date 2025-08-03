@@ -53,7 +53,7 @@ const CreateContract = ({ currentUserId, onContractCreated }) => {
     }
     setLoading(true);
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const res = await fetch('/api/bloodcontracts', {
         method: 'POST',
         headers: {

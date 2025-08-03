@@ -212,7 +212,7 @@ export default function Gym() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`,
+          'Authorization': `Bearer ${null}`,
         },
         body: JSON.stringify({ energy: energyAmount }),
       });

@@ -12,7 +12,7 @@ import {
 } from '../models/index.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/db.js';
-import jwt from 'jsonwebtoken';
+
 
 export class AdminSystemService {
   // Ban/unban user
@@ -260,15 +260,7 @@ export class AdminSystemService {
       throw new Error('User has no character');
     }
 
-    // Generate token for the user
-    const token = jwt.sign(
-      { id: user.id, characterId: character.id },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' } // Short expiration for security
-    );
-
     return {
-      token,
       user: {
         id: user.id,
         username: user.username,

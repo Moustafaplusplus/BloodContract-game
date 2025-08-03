@@ -35,7 +35,7 @@ import notificationSound from '/notification.mp3';
 import LoadingOrErrorPlaceholder from '@/components/LoadingOrErrorPlaceholder';
 import VipName from '../profile/VipName.jsx';
 import '../profile/vipSparkle.css';
-import { jwtDecode } from 'jwt-decode';
+
 import { getImageUrl } from '@/utils/imageUtils.js';
 
 export default function GlobalChat() {
@@ -51,15 +51,8 @@ export default function GlobalChat() {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editContent, setEditContent] = useState('');
   
-  // Get userId from JWT token instead of localStorage
-  const userId = customToken ? (() => {
-    try {
-      const decoded = jwtDecode(customToken);
-      return decoded.id;
-    } catch {
-      return null;
-    }
-  })() : null;
+  // User ID is handled by the backend through Firebase authentication
+  const userId = customToken ? 'authenticated' : null;
   
   const audioRef = useRef(null);
   const [userInteracted, setUserInteracted] = useState(false);

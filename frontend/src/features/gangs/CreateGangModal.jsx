@@ -18,7 +18,7 @@ export default function CreateGangModal({ onClose }) {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       await axios.post('/api/gangs', { name, description, method }, { headers });
       window.location.reload();

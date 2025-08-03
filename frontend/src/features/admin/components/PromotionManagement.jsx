@@ -24,7 +24,7 @@ export default function PromotionManagement() {
   async function fetchPromotions() {
     setLoading(true);
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const res = await axios.get('/api/tasks/promotions', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -58,7 +58,7 @@ export default function PromotionManagement() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       
       // Clean up form data
       const cleanedForm = {
@@ -87,7 +87,7 @@ export default function PromotionManagement() {
 
   async function handleDelete(id) {
     if (!window.confirm('هل أنت متأكد من حذف هذه الرتبة؟')) return;
-    const token = localStorage.getItem('jwt');
+    const token = null;
     await axios.delete(`/api/tasks/promotions/${id}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

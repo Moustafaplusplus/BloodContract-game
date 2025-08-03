@@ -4,7 +4,7 @@ import axios from "axios"
 import { useState, useEffect, useRef } from "react"
 import { useSocket } from "@/hooks/useSocket"
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth"
-import { jwtDecode } from "jwt-decode"
+
 import { 
   Star, Trophy, Target, Shield, Crown, Calendar, Users, HomeIcon, Edit3, Activity, 
   Skull, Camera, User, Zap, Award, TrendingUp, Sword, Crosshair, MapPin,
@@ -24,7 +24,7 @@ export default function Character() {
   const userId = customToken
     ? (() => {
         try {
-          const { id } = jwtDecode(customToken)
+          // User ID is handled by the backend through Firebase authentication
           return id
         } catch {
           return null
@@ -123,12 +123,11 @@ export default function Character() {
     try {
       const formData = new FormData()
       formData.append("avatar", file)
-      const token = localStorage.getItem("jwt")
+      // Firebase token is automatically handled by axios interceptor
       
       const res = await axios.post("/api/avatar", formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data"
         },
       })
 

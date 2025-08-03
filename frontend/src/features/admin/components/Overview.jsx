@@ -42,7 +42,7 @@ export default function Overview() {
   const { data: systemStats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-system-stats'],
     queryFn: async () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       
       // First, let's check if the user is actually an admin
       try {

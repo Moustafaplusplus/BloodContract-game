@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { ShopController } from '../controllers/ShopController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { adminAuth } from '../middleware/admin.js';
 import { validate } from '../middleware/validation.js';
 import { uploadToFirebase } from '../config/firebase.js';
@@ -63,7 +63,7 @@ const armorUpload = multer({
 });
 
 // POST /api/shop/upload-weapon-image - Upload a weapon image (admin only)
-router.post('/upload-weapon-image', auth, adminAuth, weaponUpload.single('image'), async (req, res) => {
+router.post('/upload-weapon-image', firebaseAuth, adminAuth, weaponUpload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -85,7 +85,7 @@ router.post('/upload-weapon-image', auth, adminAuth, weaponUpload.single('image'
 });
 
 // POST /api/shop/upload-armor-image - Upload an armor image (admin only)
-router.post('/upload-armor-image', auth, adminAuth, armorUpload.single('image'), async (req, res) => {
+router.post('/upload-armor-image', firebaseAuth, adminAuth, armorUpload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });

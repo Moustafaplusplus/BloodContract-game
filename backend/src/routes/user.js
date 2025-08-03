@@ -1,6 +1,6 @@
 import express from 'express';
 import { UserController } from '../controllers/UserController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { validate } from '../middleware/validation.js';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';

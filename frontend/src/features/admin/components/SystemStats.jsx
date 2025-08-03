@@ -14,7 +14,7 @@ export default function SystemStats() {
   const { data: systemStats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-system-stats'],
     queryFn: () => {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       return axios.get('/api/admin/stats', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }).then(res => res.data);

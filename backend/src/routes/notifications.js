@@ -1,31 +1,31 @@
 import express from 'express';
 import { NotificationController } from '../controllers/NotificationController.js';
-import { auth } from '../middleware/auth.js';
+import { firebaseAuth } from '../middleware/firebaseAuth.js';
 import { NotificationService } from '../services/NotificationService.js';
 import { emitNotification } from '../socket.js';
 
 const router = express.Router();
 
 // Get user notifications with pagination
-router.get('/', auth, NotificationController.getNotifications);
+router.get('/', firebaseAuth, NotificationController.getNotifications);
 
 // Get unread notification count
-router.get('/unread-count', auth, NotificationController.getUnreadCount);
+router.get('/unread-count', firebaseAuth, NotificationController.getUnreadCount);
 
 // Mark specific notification as read
-router.patch('/:notificationId/read', auth, NotificationController.markAsRead);
+router.patch('/:notificationId/read', firebaseAuth, NotificationController.markAsRead);
 
 // Mark all notifications as read
-router.patch('/mark-all-read', auth, NotificationController.markAllAsRead);
+router.patch('/mark-all-read', firebaseAuth, NotificationController.markAllAsRead);
 
 // Delete specific notification
-router.delete('/:notificationId', auth, NotificationController.deleteNotification);
+router.delete('/:notificationId', firebaseAuth, NotificationController.deleteNotification);
 
 // Delete all notifications
-router.delete('/', auth, NotificationController.deleteAllNotifications);
+router.delete('/', firebaseAuth, NotificationController.deleteAllNotifications);
 
 // Test endpoint to create a sample notification (remove in production)
-router.post('/test', auth, async (req, res) => {
+router.post('/test', firebaseAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     

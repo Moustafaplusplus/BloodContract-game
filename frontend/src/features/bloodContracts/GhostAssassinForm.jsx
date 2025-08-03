@@ -25,7 +25,7 @@ const GhostAssassinForm = () => {
     }
     setFetchingTarget(true);
     setTargetError('');
-    const token = localStorage.getItem('jwt');
+    const token = null;
     fetch(`/api/profile/${targetId}`, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : '',
@@ -54,7 +54,7 @@ const GhostAssassinForm = () => {
     setError('');
     setResult(null);
     try {
-      const token = localStorage.getItem('jwt');
+      const token = null;
       const res = await fetch('/api/bloodcontracts/ghost-assassin', {
         method: 'POST',
         headers: {
