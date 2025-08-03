@@ -224,6 +224,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
         { to: "/dashboard/dogs", label: "الكلاب", icon: Trophy, feature: "dogs" },
         { to: "/dashboard/special-shop", label: "المتجر الخاص", icon: ShoppingBag, feature: "specialShop" },
         { to: "/dashboard/black-market", label: "السوق السوداء", icon: Search, feature: "blackMarket" },
+        { to: "/dashboard/ministry-mission", label: "مهام الوزارة", icon: Briefcase, feature: "ministryMissions" },
       ]
     },
     {
@@ -234,6 +235,7 @@ export default function Navigation({ isOpen, setIsOpen }) {
         { to: "/dashboard/tasks", label: "المهام", icon: Briefcase, hasNotification: unclaimedCount > 0, notificationCount: unclaimedCount, feature: "tasks" },
         { to: "/dashboard/login-gift", label: "الهدايا", icon: Gift, feature: "loginGift" },
         { to: "/dashboard/ranking", label: "الترتيب", icon: Award, feature: "ranking" },
+        { to: "/dashboard/suggestions", label: "الاقتراحات", icon: Star, feature: "suggestions" },
         { to: "/dashboard/settings", label: "الإعدادات", icon: Settings, feature: "settings" },
       ]
     }

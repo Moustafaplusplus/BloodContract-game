@@ -237,12 +237,10 @@ export class TaskService {
         return { success: false, message: 'Character not found' };
       }
 
-      // Get all active tasks for this user
+      // Get all active tasks (tasks are global templates)
       const activeTasks = await Task.findAll({
         where: {
-          userId,
-          isCompleted: false,
-          expiresAt: { [Op.gt]: new Date() }
+          isActive: true
         }
       });
 
@@ -250,30 +248,40 @@ export class TaskService {
 
       for (const task of activeTasks) {
         if (task.metric === metric) {
-          const currentValue = await this.getCurrentValue(character, metric);
-          const progress = await this.calculateProgress(task, currentValue);
+          // Get or create user progress for this task
+          let userProgress = await UserTaskProgress.findOne({ 
+            where: { userId, taskId: task.id } 
+          });
+          
+          if (!userProgress) {
+            userProgress = await UserTaskProgress.create({ 
+              userId, 
+              taskId: task.id, 
+              progress: 0 
+            });
+          }
 
-          if (progress.progress >= 100 && !task.isCompleted) {
-            task.isCompleted = true;
-            task.completedAt = new Date();
-            await task.save();
-
-            // Award rewards
-            if (task.rewards) {
-              if (task.rewards.money) {
-                character.money += task.rewards.money;
-              }
-              if (task.rewards.experience) {
-                character.exp += task.rewards.experience;
-              }
-              if (task.rewards.blackcoins) {
-                character.blackcoins += task.rewards.blackcoins;
-              }
+          // Get current value for the metric
+          const currentValue = await this.getCurrentMetricValue(character, metric);
+          
+          // Update progress based on metric type
+          if (this.isCumulativeMetric(metric)) {
+            // For cumulative metrics, use the current value directly
+            userProgress.progress = currentValue;
+          } else {
+            // For snapshot metrics, use the current value if it's higher than current progress
+            if (currentValue > userProgress.progress) {
+              userProgress.progress = currentValue;
             }
+          }
 
-            await character.save();
+          // Mark as completed if goal met
+          if (!userProgress.isCompleted && userProgress.progress >= task.goal) {
+            userProgress.isCompleted = true;
             updatedTasks.push(task);
           }
+
+          await userProgress.save();
         }
       }
 
@@ -281,6 +289,62 @@ export class TaskService {
     } catch (error) {
       console.error(`[TaskService] Error updating progress for user ${userId}, metric ${metric}:`, error);
       return { success: false, message: 'Failed to update progress' };
+    }
+  }
+
+  // Get user tasks with progress
+  static async getUserTasks(userId) {
+    try {
+      // Get all active tasks
+      const tasks = await Task.findAll({ where: { isActive: true } });
+      
+      // Get user progress for all tasks
+      const progresses = await UserTaskProgress.findAll({ where: { userId } });
+      const progressMap = {};
+      progresses.forEach(p => { progressMap[p.taskId] = p; });
+      
+      // Combine tasks with user progress
+      const result = tasks.map(task => ({
+        ...task.toJSON(),
+        progress: progressMap[task.id]?.progress || 0,
+        isCompleted: progressMap[task.id]?.isCompleted || false,
+        rewardCollected: progressMap[task.id]?.rewardCollected || false,
+      }));
+      
+      return result;
+    } catch (error) {
+      console.error(`[TaskService] Error getting user tasks for user ${userId}:`, error);
+      return [];
+    }
+  }
+
+  // Get unclaimed tasks count
+  static async getUnclaimedTasksCount(userId) {
+    try {
+      // Count unclaimed regular tasks
+      const unclaimedRegularTasks = await UserTaskProgress.count({
+        where: {
+          userId,
+          isCompleted: true,
+          rewardCollected: false
+        },
+        include: [{
+          model: Task,
+          where: { isActive: true },
+          attributes: []
+        }]
+      });
+
+      // Check daily task availability
+      const dailyTaskStatus = await this.getDailyTaskStatus(userId);
+      const dailyTaskAvailable = dailyTaskStatus.isAvailable ? 1 : 0;
+
+      const totalUnclaimed = unclaimedRegularTasks + dailyTaskAvailable;
+      
+      return totalUnclaimed;
+    } catch (error) {
+      console.error(`[TaskService] Error getting unclaimed tasks count for user ${userId}:`, error);
+      return 0;
     }
   }
 

@@ -669,14 +669,11 @@ export class FightService {
               }
             }
             
-            // Update tasks for both players
-            const [attackerTasks, defenderTasks] = await Promise.all([
-              Task.findAll({ where: { userId: attackerId } }),
-              Task.findAll({ where: { userId: defenderId } })
-            ]);
+            // Update tasks for both players (tasks are global templates)
+            const tasks = await Task.findAll({ where: { isActive: true } });
             
-            io.to(`user:${attackerId}`).emit('tasks:update', attackerTasks);
-            io.to(`user:${defenderId}`).emit('tasks:update', defenderTasks);
+            io.to(`user:${attackerId}`).emit('tasks:update', tasks);
+            io.to(`user:${defenderId}`).emit('tasks:update', tasks);
           }
 
           // Create notification only for the person who was attacked (loser)

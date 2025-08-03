@@ -268,7 +268,7 @@ export class CrimeService {
         
         // Update tasks
         if (success) {
-          const tasks = await Task.findAll({ where: { userId } });
+          const tasks = await Task.findAll({ where: { isActive: true } });
           io.to(String(userId)).emit('tasks:update', tasks);
         }
       }
