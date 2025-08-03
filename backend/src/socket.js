@@ -55,7 +55,7 @@ export function initSocket(server) {
     try {
       const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
       socket.data.userId = userId;
-      socket.join(String(userId));
+      socket.join(`user:${userId}`);
       
       // User connected successfully
 
@@ -267,16 +267,13 @@ export function initSocket(server) {
       const pushBloodContractUpdate = async (targetUserId = userId) => {
         try {
           const now = new Date();
+          console.log(`[Socket] Fetching blood contracts for user ${targetUserId}`);
           
           // Get all available contracts that the user can see and potentially fulfill
           const contracts = await BloodContract.findAll({
             where: {
               status: 'open',
               expiresAt: { [Op.gt]: now },
-              [Op.or]: [
-                { posterId: targetUserId },
-                { posterId: { [Op.ne]: targetUserId }, targetId: { [Op.ne]: targetUserId } },
-              ],
             },
             include: [
               {
@@ -292,6 +289,11 @@ export function initSocket(server) {
               },
             ],
             order: [['createdAt', 'DESC']],
+          });
+
+          console.log(`[Socket] Found ${contracts.length} blood contracts for user ${targetUserId}`);
+          contracts.forEach(contract => {
+            console.log(`[Socket] Contract ${contract.id}: posterId=${contract.posterId}, targetId=${contract.targetId}, status=${contract.status}`);
           });
 
           // Format the contracts with additional information
@@ -326,6 +328,7 @@ export function initSocket(server) {
             };
           }));
           
+          console.log(`[Socket] Formatted ${formattedContracts.length} contracts for user ${targetUserId}:`, formattedContracts);
           io.to(`user:${targetUserId}`).emit('bloodContract:update', formattedContracts);
         } catch (error) {
           console.error(`[Socket] Error pushing blood contract update for user ${targetUserId}:`, error.message);
@@ -710,7 +713,9 @@ export function initSocket(server) {
       // --- Blood Contract Updates ---
       socket.on('bloodContract:request', async () => {
         try {
+          console.log(`[Socket] Blood contract request from user ${userId}`);
           await pushBloodContractUpdate();
+          console.log(`[Socket] Blood contract update sent to user ${userId}`);
         } catch (error) {
           console.error(`[Socket] Error handling blood contract request:`, error.message);
         }
@@ -1038,7 +1043,7 @@ export function initSocket(server) {
           const until = new Date(Date.now() + (durationMinutes || 10) * 60000);
           target.chatMutedUntil = until;
           await target.save();
-          io.to(String(targetUserId)).emit('muted', { until });
+          io.to(`user:${targetUserId}`).emit('muted', { until });
           console.log(`[Global Chat] Emitted muted to user ${targetUserId}`);
           callback && callback({ success: true });
         } catch (err) {
@@ -1075,7 +1080,7 @@ export function initSocket(server) {
           const until = new Date(Date.now() + (durationMinutes || 60) * 60000);
           target.chatBannedUntil = until;
           await target.save();
-          io.to(String(targetUserId)).emit('banned', { until });
+          io.to(`user:${targetUserId}`).emit('banned', { until });
           console.log(`[Global Chat] Emitted banned to user ${targetUserId}`);
           // Optionally disconnect user
           for (const [id, s] of io.of('/').sockets) {

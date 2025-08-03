@@ -134,6 +134,15 @@ const ContractCard = ({ contract, onAttack, tick }) => {
 const ContractsList = ({ onAttack, contracts = [] }) => {
   const [tick, setTick] = useState(0);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[ContractsList] Received contracts:', {
+      contracts,
+      contractsLength: contracts?.length,
+      contractsData: contracts
+    });
+  }, [contracts]);
+
   // Timer to update countdown every second
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 1000);

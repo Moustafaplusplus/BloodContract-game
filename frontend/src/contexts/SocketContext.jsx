@@ -208,6 +208,7 @@ export function SocketProvider({ children }) {
     });
 
     newSocket.on('bloodContract:update', (data) => {
+      console.log('[SocketContext] Blood contract update received:', data);
       setBloodContracts(data);
     });
 

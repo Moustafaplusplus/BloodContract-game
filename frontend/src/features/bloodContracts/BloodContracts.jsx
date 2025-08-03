@@ -22,12 +22,34 @@ const BloodContracts = ({ currentUserId }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [fightResult, setFightResult] = useState(null);
 
+  // Debug logging for blood contracts
+  useEffect(() => {
+    console.log('[BloodContracts] Debug data:', {
+      socket: socket?.connected,
+      bloodContracts,
+      contractsLength: bloodContracts?.length,
+      contractsData: bloodContracts,
+      currentUserId
+    });
+  }, [socket, bloodContracts, currentUserId]);
+
   // Request initial blood contract data when component mounts
   useEffect(() => {
     if (socket && socket.connected) {
+      console.log('[BloodContracts] Requesting blood contracts...');
       requestBloodContracts();
     }
   }, [socket, requestBloodContracts]);
+
+  // Manual test function
+  const testRequest = () => {
+    console.log('[BloodContracts] Manual test - requesting blood contracts');
+    if (socket && socket.connected) {
+      requestBloodContracts();
+    } else {
+      console.log('[BloodContracts] Socket not connected');
+    }
+  };
 
   // Listen for real-time fight results
   useEffect(() => {
@@ -192,6 +214,18 @@ const BloodContracts = ({ currentUserId }) => {
 
       {/* Content Sections with Enhanced Cards */}
       <div className="space-y-4">
+        {/* Test Button */}
+        <div className="bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 shadow-xl shadow-blood-900/20">
+          <div className="p-3 sm:p-4">
+            <button
+              onClick={testRequest}
+              className="bg-blood-600 hover:bg-blood-700 text-white px-4 py-2 rounded-lg"
+            >
+              Test Request Blood Contracts
+            </button>
+          </div>
+        </div>
+
         {/* Ghost Assassin Section */}
         <div className="bg-black/90 backdrop-blur-md rounded-xl border border-blood-500/30 shadow-xl shadow-blood-900/20">
           <div className="p-3 sm:p-4 border-b border-blood-500/20">
