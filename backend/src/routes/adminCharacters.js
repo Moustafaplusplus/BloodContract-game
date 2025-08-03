@@ -6,7 +6,7 @@ import { adminAuth } from '../middleware/admin.js';
 const router = express.Router();
 
 // Apply auth and admin middleware to all admin character routes
-router.use(auth);
+router.use(firebaseAuth);
 router.use(adminAuth);
 
 // Character management routes

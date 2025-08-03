@@ -5,7 +5,7 @@ import { firebaseAuth } from '../middleware/firebaseAuth.js';
 const router = express.Router();
 
 // Apply auth middleware to all inventory routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // GET /api/inventory - Get user's inventory
 router.get('/', InventoryController.getInventory);

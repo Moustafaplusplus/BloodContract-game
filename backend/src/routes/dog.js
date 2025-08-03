@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', DogController.getAllDogs);
 
 // Authenticated routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // GET /api/dogs/user - Get user's dogs
 router.get('/user', DogController.getUserDogs);

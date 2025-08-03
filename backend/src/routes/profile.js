@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/username/:username', ProfileController.getUserProfileByUsername);
 router.get('/:id', ProfileController.getUserProfileById);
 
-router.use(auth);
+router.use(firebaseAuth);
 
 router.get('/', ProfileController.getOwnProfile);
 router.get('/stats', ProfileController.getUserStats);

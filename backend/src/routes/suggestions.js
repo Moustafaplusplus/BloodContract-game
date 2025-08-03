@@ -6,7 +6,7 @@ import { adminAuth } from '../middleware/admin.js';
 const router = express.Router();
 
 // Public routes (require auth)
-router.use(auth);
+router.use(firebaseAuth);
 
 // User routes
 router.post('/', SuggestionController.createSuggestion);

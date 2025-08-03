@@ -9,7 +9,7 @@ router.get('/jail/count', ConfinementController.getJailCount);
 router.get('/hospital/count', ConfinementController.getHospitalCount);
 
 // Apply auth middleware to all confinement routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // Jail routes
 router.get('/jail', ConfinementController.getJailStatus);

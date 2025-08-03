@@ -1,0 +1,33 @@
+[dotenv@17.0.0] injecting env (18) from .env – 🔐 encrypt with dotenvx: https://dotenvx.com
+[DB] Using local database connection
+[dotenv@17.0.0] injecting env (18) from .env – 🔐 encrypt with dotenvx: https://dotenvx.com
+🔄 Initializing Firebase Admin SDK...
+🔄 Error getting existing app: The default Firebase app does not exist. Make sure you call initializeApp() before using any of the Firebase services.
+📋 Firebase service account config: {
+  type: 'service_account',
+  project_id: 'bloodcontractgame',
+  client_email: 'firebase-adminsdk-fbsvc@bloodcontractgame.iam.gserviceaccount.com',
+  private_key_length: 1704
+}
+✅ Firebase Admin SDK initialized successfully
+✅ Firebase project ID: bloodcontractgame
+✅ Firebase client email: firebase-adminsdk-fbsvc@bloodcontractgame.iam.gserviceaccount.com
+[dotenv@17.0.0] injecting env (18) from .env – 🔐 encrypt with dotenvx: https://dotenvx.com
+[DB] Database connection attempt 1/5...
+[DB] Attempting connection...
+[DB] Connection established successfully
+[DB] Disconnecting from database...
+[DB] Disconnected from database
+[DB] Attempting connection...
+[DB] Connection established successfully
+[DB] Database connection has been established successfully.
+[DB] Attempting connection...
+[DB] Connection established successfully
+✅ Database connection and sync completed
+Server listening on http://localhost:3001
+🔄 Starting background jobs...
+✅ Background jobs started
+[DB] Attempting connection...
+[DB] Connection established successfully
+[0mGET /health-simple [32m200[0m 3.204 ms - 133[0m
+[0mGET /health [32m200[0m 1.137 ms - 138[0m

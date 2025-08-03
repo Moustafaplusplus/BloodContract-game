@@ -5,7 +5,7 @@ import { validate } from '../middleware/validation.js';
 
 const router = express.Router();
 
-router.use(auth);
+router.use(firebaseAuth);
 
 router.get('/', BankController.getAccountInfo);
 router.get('/history', BankController.getTransactionHistory);

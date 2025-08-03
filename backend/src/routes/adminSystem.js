@@ -7,7 +7,7 @@ import * as AdminCarHouseDog from '../controllers/AdminSystemController.js';
 const router = express.Router();
 
 // Apply auth and admin middleware to all admin system routes
-router.use(auth);
+router.use(firebaseAuth);
 router.use(adminAuth);
 
 // User management routes

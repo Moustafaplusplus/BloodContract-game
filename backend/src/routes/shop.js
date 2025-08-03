@@ -113,7 +113,7 @@ router.get('/weapons', ShopController.getWeapons);
 router.get('/armors', ShopController.getArmors);
 
 // Apply auth middleware to purchase routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // POST /api/shop/buy/weapon/:id - Buy a weapon
 router.post('/buy/weapon/:id', validate('buyItem'), ShopController.buyWeapon);

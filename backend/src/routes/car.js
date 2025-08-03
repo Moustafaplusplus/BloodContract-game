@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', CarController.getAllCars);
 
 // Apply auth middleware to user-specific routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // GET /api/cars/user - Get user's cars
 router.get('/user', CarController.getUserCars);

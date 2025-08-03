@@ -6,7 +6,7 @@ import { validate } from '../middleware/validation.js';
 const router = express.Router();
 
 // Apply auth middleware to all gang routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // Gang management - specific routes first
 router.post('/', validate('createGang'), GangController.createGang);

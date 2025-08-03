@@ -5,7 +5,7 @@ import { firebaseAuth } from '../middleware/firebaseAuth.js';
 const router = express.Router();
 
 // Apply auth middleware to all house routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // GET /api/houses - Get all available houses
 router.get('/', HouseController.getAllHouses);

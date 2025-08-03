@@ -18,7 +18,7 @@ router.post('/listings/cancel', firebaseAuth, BlackMarketController.cancelListin
 router.get('/:id', BlackMarketController.getItemById);
 
 // Apply auth middleware to user-specific routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // POST /black-market/buy - Buy an item
 router.post('/buy', BlackMarketController.buyItem);

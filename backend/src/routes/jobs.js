@@ -6,7 +6,7 @@ import { adminAuth } from '../middleware/admin.js';
 const router = express.Router();
 
 // Apply auth middleware to all job routes
-router.use(auth);
+router.use(firebaseAuth);
 
 // GET /api/jobs - Get available jobs
 router.get('/', JobsController.getJobs);
