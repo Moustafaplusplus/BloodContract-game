@@ -52,6 +52,6 @@ export function startJailRelease() {
   // Check every 30 seconds
   setInterval(checkJailReleases, 30000);
   
-  // Initial check
-  checkJailReleases();
+  // Wait a moment for database to be ready, then do initial check
+  setTimeout(checkJailReleases, 5000);
 } 

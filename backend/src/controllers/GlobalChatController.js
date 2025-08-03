@@ -4,7 +4,7 @@ import { Character } from '../models/Character.js';
 import { Op } from 'sequelize';
 
 const GlobalChatController = {
-  static async getRecentMessages(req, res) {
+  async getRecentMessages(req, res) {
     try {
       const messages = await GlobalMessage.findAll({
         order: [['createdAt', 'DESC']],

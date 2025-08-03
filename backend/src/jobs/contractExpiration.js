@@ -56,6 +56,6 @@ export function startContractExpirationJob() {
   // Check every 30 seconds
   setInterval(checkContractExpirations, 30000);
   
-  // Initial check
-  checkContractExpirations();
+  // Wait a moment for database to be ready, then do initial check
+  setTimeout(checkContractExpirations, 5000);
 } 

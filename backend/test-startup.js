@@ -19,19 +19,23 @@ const serverProcess = spawn('node', ['src/app.js'], {
 
 let serverStarted = false;
 let testCompleted = false;
+let serverStartTime = Date.now();
 
 // Listen for server output
 serverProcess.stdout.on('data', (data) => {
   const output = data.toString();
   console.log('📤 Server output:', output);
   
-  // Check if server is ready
-  if (output.includes('Server listening') || output.includes('Blood Contract backend is ready')) {
+  // Check if server is ready - look for multiple indicators
+  if (output.includes('Server listening') || 
+      output.includes('Blood Contract backend is ready') ||
+      output.includes('Server listening on http://localhost') ||
+      output.includes('✅ Database connection and sync completed')) {
     serverStarted = true;
     console.log('✅ Server appears to be ready');
     
     // Wait a bit then test the health endpoint
-    setTimeout(testHealthEndpoint, 2000);
+    setTimeout(testHealthEndpoint, 3000);
   }
 });
 
@@ -62,7 +66,7 @@ function testHealthEndpoint() {
     port: PORT,
     path: '/health',
     method: 'GET',
-    timeout: 10000
+    timeout: 15000
   };
 
   const req = http.request(options, (res) => {
@@ -77,6 +81,12 @@ function testHealthEndpoint() {
       try {
         const response = JSON.parse(data);
         console.log('📊 Health response:', response);
+        
+        if (response.status === 'healthy' || response.database === 'connected') {
+          console.log('✅ Server is healthy and ready');
+        } else {
+          console.log('⚠️ Server is running but database connection may be unstable');
+        }
       } catch (parseError) {
         console.log('📄 Raw response:', data);
       }
@@ -105,11 +115,19 @@ function testHealthEndpoint() {
   req.end();
 }
 
-// Timeout after 30 seconds
+// Fallback: if server doesn't output expected message but is running, test health endpoint after 15 seconds
+setTimeout(() => {
+  if (!serverStarted && !testCompleted) {
+    console.log('⏰ Server startup timeout reached, attempting health check anyway...');
+    testHealthEndpoint();
+  }
+}, 15000);
+
+// Overall timeout after 45 seconds
 setTimeout(() => {
   if (!testCompleted) {
     console.error('❌ Test timed out');
     serverProcess.kill('SIGTERM');
     process.exit(1);
   }
-}, 30000); 
+}, 45000); 

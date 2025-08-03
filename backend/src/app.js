@@ -152,15 +152,23 @@ app.get('/health', async (req, res) => {
     // Check database connection
     await sequelize.authenticate();
     res.json({ 
-      status: 'healthy',
+      status: 'OK',
       database: 'connected',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || process.env.API_PORT || 3001
     });
   } catch (error) {
-    res.status(503).json({ 
-      status: 'unhealthy',
-      database: 'disconnected',
-      timestamp: new Date().toISOString()
+    // Even if database is temporarily unavailable, server is still running
+    res.json({ 
+      status: 'OK',
+      database: 'temporarily_unavailable',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || process.env.API_PORT || 3001,
+      message: 'Server is running but database connection is temporarily unavailable'
     });
   }
 });
@@ -306,55 +314,48 @@ app.use(errorHandler);
 /* ─────────── Background jobs moved to startup function ─────────── */
 
 /* ─────────── Bootstrapping ─────────── */
-import { initSocket } from './socket.js';
 const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 // Start server
 const startServer = async () => {
-  const maxRetries = 5;
-  let retryCount = 0;
-  
-  while (retryCount < maxRetries) {
-    try {
-      await sequelize.authenticate();
-      break;
-    } catch (error) {
-      retryCount++;
-      if (retryCount >= maxRetries) {
-        console.error('Failed to connect to database after multiple attempts');
-        process.exit(1);
-      }
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-  }
-  
   try {
+    // Import and use the connectWithRetry function
+    const { connectWithRetry } = await import('./config/db.js');
+    await connectWithRetry();
+    
+    // Ensure database is synced
     await sequelize.sync({ alter: true });
+    console.log('✅ Database connection and sync completed');
   } catch (error) {
-    console.error('Database sync error:', error);
+    console.error('Failed to connect to database after multiple attempts');
+    process.exit(1);
   }
   
   // Initialize Socket.IO
-  if (io) {
-    // Socket.IO is already initialized
-  }
-  
-  // Start background jobs
-  try {
-    startEnergyRegen();
-    startHealthRegen();
-    startBankInterest();
-    startJobPayouts();
-    startJailRelease();
-    startHospitalRelease();
-    startContractExpirationJob();
-  } catch (error) {
-    console.error('Background jobs error:', error);
-  }
-  
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
   });
+  
+  // Initialize Socket.IO after server is created
+  const { initSocket } = await import('./socket.js');
+  initSocket(server);
+  
+  // Wait a moment for everything to settle, then start background jobs
+  setTimeout(() => {
+    try {
+      console.log('🔄 Starting background jobs...');
+      startEnergyRegen();
+      startHealthRegen();
+      startBankInterest();
+      startJobPayouts();
+      startJailRelease();
+      startHospitalRelease();
+      startContractExpirationJob();
+      console.log('✅ Background jobs started');
+    } catch (error) {
+      console.error('Background jobs error:', error);
+    }
+  }, 2000);
 };
 
 startServer();

@@ -129,11 +129,6 @@ async function connectWithRetry(maxRetries = 5) {
   }
 }
 
-// Initialize connection with retry
-connectWithRetry().catch(err => {
-  console.error('[DB] Failed to establish initial database connection:', err);
-});
-
 // Add graceful shutdown handler
 process.on('SIGINT', async () => {
   console.log('[DB] Closing database connection...');
@@ -155,5 +150,5 @@ process.on('SIGTERM', async () => {
   }
 });
 
-export { sequelize };
+export { sequelize, connectWithRetry };
 export default sequelize;

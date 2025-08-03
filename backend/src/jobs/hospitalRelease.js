@@ -43,6 +43,6 @@ export function startHospitalRelease() {
   // Check every 30 seconds
   setInterval(checkHospitalReleases, 30000);
   
-  // Initial check
-  checkHospitalReleases();
+  // Wait a moment for database to be ready, then do initial check
+  setTimeout(checkHospitalReleases, 5000);
 } 
